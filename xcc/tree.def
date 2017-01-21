@@ -1,0 +1,29 @@
+tree_type(ast_tree,                     tree)
+tree_type(ast_type,                     ast_tree)
+tree_type(ast_decl,                     ast_tree)
+tree_type(ast_expr,                     ast_tree)
+tree_type(ast_stmt,                     ast_tree)
+
+tree_type(ast_void_type,                ast_type)
+tree_type(ast_integer_type,             ast_type)
+tree_type(ast_real_type,                ast_type)
+tree_type(ast_array_type,               ast_type)
+tree_type(ast_pointer_type,             ast_type)
+tree_type(ast_function_type,            ast_type)
+tree_type(ast_record_type,              ast_type)
+
+tree_type(ast_variable_decl,            ast_decl)
+tree_type(ast_parameter_decl,           ast_decl)
+tree_type(ast_function_decl,            ast_decl)
+
+tree_type(ast_integer,                  ast_expr)
+tree_type(ast_real,                     ast_expr)
+tree_type(ast_operator,                 ast_expr)
+
+tree_type(ast_nop_stmt,                 ast_stmt)
+tree_type(ast_block_stmt,               ast_stmt)
+
+
+
+
+
