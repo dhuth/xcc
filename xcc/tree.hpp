@@ -90,6 +90,7 @@ template<typename T> struct __property_type_selector {
 
 extern const tree_type __all_tree_types[];
 
+
 enum class tree_type_id : uint64_t {
     tree,
 #ifdef TREE_TYPE
@@ -100,6 +101,7 @@ enum class tree_type_id : uint64_t {
 #undef  TREE_TYPE
     __type_count
 };
+
 
 struct tree_type {
     tree_type_id                                                id;
@@ -125,6 +127,7 @@ struct tree_type {
  * Tree Base Class *
  * =============== */
 
+/** Base type for all tree types */
 struct __tree_base {
 public:
 
@@ -135,6 +138,9 @@ public:
     inline bool is(const tree_type_id tp) const noexcept { return tree_type::is_base_of(tp, this->_type); }
     template<typename T, __is_tree_type<T> = 0>
     inline bool is() const noexcept { return this->is(T::type_id); }
+
+    template<typename T, __is_tree_type<T> = 0>
+    inline T* as() const noexcept { return dynamic_cast<T*>(this); }
 
     inline void pin() noexcept { __tree_base::_pinned.push_back(std::shared_ptr<__tree_base>(this)); }
 
@@ -237,14 +243,18 @@ public:
         size_t                                  index;
         std::vector<std::shared_ptr<TElement>>& vector;
 
-        inline iterator operator++()    const noexcept { return {index+1, vector}; }
-        inline iterator operator++(int) const noexcept { return {index+1, vector}; }
+        inline iterator operator++()          noexcept { return {++index, vector}; }
+        inline iterator operator++(int)       noexcept { return {index++, vector}; }
 
         inline element_t operator*()          noexcept { return vector[index].get(); }
         inline element_t operator*()    const noexcept { return vector[index].get(); }
 
         inline bool operator==(const iterator& other) {
             return (other.index == this->index) && (other.vector == this->vector);
+        }
+
+        inline bool operator!=(const iterator& other) {
+            return (other.index != this->index) || (other.vector != this->vector);
         }
     };
     typedef const iterator                              const_iterator;

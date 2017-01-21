@@ -66,6 +66,22 @@ TEST_F(TreeTest, TreePropertyTest) {
     ASSERT_EQ(i64_t->is_unsigned, false);
 }
 
+TEST_F(TreeTest, TreeList) {
+    list<ast_type> type_list({
+        new ast_void_type(),
+        new ast_integer_type(32, false),
+        new ast_real_type(32)
+    });
+
+    for(auto tp : type_list) {
+        ASSERT_TRUE(tp->is<ast_type>());
+    }
+
+    ASSERT_TRUE(type_list[0]->is<ast_void_type>());
+    ASSERT_TRUE(type_list[1]->is<ast_integer_type>());
+    ASSERT_TRUE(type_list[2]->is<ast_real_type>());
+}
+
 }
 
 
