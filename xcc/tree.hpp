@@ -11,13 +11,14 @@
 #include <cstdint>
 #include <cstdlib>
 
-#include <algorithm>
+//#include <algorithm>
 #include <initializer_list>
-//#include <iostream>
+#include <functional>
+#include <map>
 #include <memory>
 #include <type_traits>
-#include <tuple>
-#include <list>
+//#include <tuple>
+//#include <list>
 #include <vector>
 
 
@@ -35,9 +36,6 @@ struct __tree_property_base;
 template<typename> struct __tree_list_base;
 template<typename> struct __tree_list_tree;
 template<typename> struct __tree_list_value;
-
-template<typename T>
-using __std_list_t = std::list<T>;
 
 
 /* ==================== *
@@ -143,6 +141,7 @@ public:
     inline T* as() const noexcept { return dynamic_cast<T*>(this); }
 
     inline void pin() noexcept { __tree_base::_pinned.push_back(std::shared_ptr<__tree_base>(this)); }
+    inline tree_type_id get_tree_type() const { return this->_type; }
 
 private:
 
@@ -406,6 +405,63 @@ public:
 private:
 
     TValue                                                      _value;
+
+};
+
+
+
+/* =============================== *
+ * Dynamic dispatch tree traversal *
+ * =============================== */
+
+template<typename TReturnType>
+struct dispatch_visitor {
+public:
+
+    dispatch_visitor() = default;
+    virtual ~dispatch_visitor() = default;
+
+    inline TReturnType operator()(__tree_base* t) {
+        return this->_function_map[t->get_tree_type()](t);
+    }
+
+protected:
+
+    template<typename TFuncReturnType,
+             typename TClassType,
+             typename TTreeType>
+    using dispatch_method_type = TFuncReturnType(TClassType::*)(TTreeType*);
+    template<typename TFuncReturnType,
+             typename TTreeType>
+    using dispatch_function_type = TFuncReturnType(*)(TTreeType*);
+
+    template<typename TFuncReturnType,
+             typename TClassType,
+             typename TTreeType,
+             typename std::enable_if<std::is_convertible<TFuncReturnType, TReturnType>::value, int>::type = 0,
+             typename std::enable_if<std::is_base_of<dispatch_visitor<TReturnType>, TClassType>::value, int>::type = 0,
+             __is_tree_type<TTreeType> = 0>
+    inline void addmethod(dispatch_method_type<TFuncReturnType, TClassType, TTreeType> mtd) noexcept {
+        auto wrapf = [&](__tree_base* t) -> TReturnType {
+            return (TReturnType) dynamic_cast<TClassType*>(this)->*mtd(t);
+        };
+        this->_function_map[TTreeType::type_id] = wrapf;
+    }
+
+    template<typename TFuncReturnType,
+             typename TTreeType,
+             typename std::enable_if<std::is_convertible<TFuncReturnType, TReturnType>::value, int>::type = 0,
+             __is_tree_type<TTreeType> = 0>
+    inline void addfunc(dispatch_function_type<TFuncReturnType, TTreeType> func) noexcept {
+        auto wrapf = [&](__tree_base* t) -> TReturnType {
+            return (TReturnType) func(t);
+        };
+    }
+
+private:
+
+    std::map<tree_type_id, std::function<TReturnType(__tree_base*)>>
+                                                                _function_map;
 
 };
 

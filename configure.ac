@@ -9,6 +9,10 @@ AC_PROG_CC
 AC_PROG_CXX
 
 AC_CONFIG_HEADERS([xcc/config.h])
+
+dnl TODO: automate from *.lang files
+dnl         from m4_shell or something
+
 AC_CONFIG_FILES([Makefile
                  xcc/Makefile
                  xcc/xi/Makefile

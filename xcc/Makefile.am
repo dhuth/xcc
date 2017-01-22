@@ -3,9 +3,8 @@ SUBDIRS=xpp xi ardvarc
 bin_PROGRAMS      		= xcc
 
 xcc_core_sources        = tree.cpp
+xcc_core_sources       += ast_builder.cpp
 xcc_core_cxxflags       = -std=c++11
-xcc_core_libs           = -lLLVM-3.9
-xcc_core_ldflags        = -L/usr/lib/llvm-3.9/lib
 
 ## Special source files
 tree.cpp:				$(srcdir)/all_tree_types.def.hpp
