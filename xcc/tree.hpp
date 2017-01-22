@@ -410,7 +410,6 @@ private:
 };
 
 
-
 template<tree_type_id tp, typename base = __tree_base>
 using extend_tree = __extend_tree<tp, base>;
 
@@ -420,7 +419,12 @@ using property = typename __property_type_selector<T>::type;
 template<typename T>
 using list = typename __list_type_selector<T>::type;
 
-}
 
+template<typename T> inline typename __tree_list_tree<T>::      iterator begin(__tree_list_tree<T>* lptr)       noexcept { return lptr->begin(); }
+template<typename T> inline typename __tree_list_tree<T>::      iterator end(__tree_list_tree<T>* lptr)         noexcept { return lptr->end();   }
+template<typename T> inline typename __tree_list_tree<T>::const_iterator begin(const __tree_list_tree<T>* lptr) noexcept { return lptr->begin(); }
+template<typename T> inline typename __tree_list_tree<T>::const_iterator end(const __tree_list_tree<T>* lptr)   noexcept { return lptr->end();   }
+
+}
 
 #endif /* XCC_TREE_HPP_ */

@@ -11,8 +11,8 @@ xcc_core_ldflags        = -L/usr/lib/llvm-3.9/lib
 tree.cpp:				$(srcdir)/all_tree_types.def.hpp
 tree.hpp:               $(srcdir)/all_tree_types.def.hpp
 
-$(srcdir)/all_tree_types.def.hpp:
-	$(srcdir)/generate_front_ends.sh
+$(srcdir)/all_tree_types.def.hpp: $(srcdir)/tree.def
+	env top_srcdir=$(top_srcdir) $(top_srcdir)/generate_front_ends.sh
 
 
 xcc_CXXFLAGS            = $(xcc_core_xccflags)

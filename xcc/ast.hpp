@@ -33,9 +33,13 @@ public:
 struct ast_decl : public extend_tree<tree_type_id::ast_decl, ast_tree> {
 public:
 
-    inline ast_decl(tree_type_id id) noexcept : base_type(id) {
+    inline ast_decl(tree_type_id id, std::string name) noexcept
+            : base_type(id),
+              name(this, name) {
         //...
     }
+
+    property<std::string>                                       name;
 
 };
 
@@ -57,11 +61,88 @@ public:
 
 };
 
+struct ast_record_decl;
+
+struct ast_variable_decl final : public extend_tree<tree_type_id::ast_variable_decl, ast_decl> {
+public:
+
+    inline ast_variable_decl(std::string name, ast_type* type) noexcept
+            : base_type(name),
+              type(this, type) {
+        //...
+    }
+
+    property<ast_type>                                          type;
+
+};
+
+
+struct ast_parameter_decl final : public extend_tree<tree_type_id::ast_parameter_decl, ast_decl> {
+public:
+
+    inline ast_parameter_decl(std::string name, ast_type* type) noexcept
+            : base_type(name),
+              type(this, type) {
+        //...
+    }
+
+    property<ast_type>                                          type;
+};
+
+
+struct ast_function_decl final : public extend_tree<tree_type_id::ast_function_decl, ast_decl> {
+public:
+
+    inline ast_function_decl(std::string name, ast_type* return_type, list<ast_parameter_decl>* parameters, ast_stmt* body) noexcept
+            : base_type(name),
+              return_type(this, return_type),
+              parameters(this, parameters),
+              body(this, body) {
+        //...
+    }
+
+    property<ast_type>                                          return_type;
+    property<list<ast_parameter_decl>>                          parameters;
+    property<ast_stmt>                                          body;
+
+};
+
+
+struct ast_record_member_decl final : public extend_tree<tree_type_id::ast_record_member_decl, ast_decl> {
+public:
+
+    inline ast_record_member_decl(std::string name, ast_type* type) noexcept
+            : base_type(name),
+              parent(nullptr),
+              type(this, type) {
+        //...
+    }
+
+    ast_record_decl*                                            parent;
+    property<ast_type>                                          type;
+};
+
+
+struct ast_record_decl final : public extend_tree<tree_type_id::ast_record_decl, ast_decl> {
+public:
+
+    inline ast_record_decl(std::string name, list<ast_record_member_decl>* members) noexcept
+            : base_type(name),
+              members(this, members) {
+        for(auto m: members) {
+            m->parent = this;
+        }
+    }
+
+    property<list<ast_record_member_decl>>                        members;
+
+};
+
 
 struct ast_void_type final : public extend_tree<tree_type_id::ast_void_type, ast_type> {
 public:
 
-    inline ast_void_type() : base_type() {
+    inline ast_void_type() noexcept : base_type() {
         //...
     }
 
@@ -98,7 +179,7 @@ public:
 struct ast_array_type final : public extend_tree<tree_type_id::ast_array_type, ast_type> {
 public:
 
-    inline ast_array_type(ast_type* element_type, uint64_t size)
+    inline ast_array_type(ast_type* element_type, uint64_t size) noexcept
             : base_type(),
               element_type(this, element_type),
               size(this, size) {
@@ -113,7 +194,7 @@ public:
 struct ast_pointer_type final : public extend_tree<tree_type_id::ast_pointer_type, ast_type> {
 public:
 
-    inline ast_pointer_type(ast_type* element_type)
+    inline ast_pointer_type(ast_type* element_type) noexcept
             : base_type(),
               element_type(this, element_type) {
         //...
@@ -126,7 +207,7 @@ public:
 struct ast_function_type final : public extend_tree<tree_type_id::ast_function_type, ast_type> {
 public:
 
-    inline ast_function_type(ast_type* return_type, list<ast_type>* parameter_types)
+    inline ast_function_type(ast_type* return_type, list<ast_type>* parameter_types) noexcept
             : base_type(),
               return_type(this, return_type),
               parameter_types(this, parameter_types) {
@@ -135,6 +216,19 @@ public:
 
     property<ast_type>                                          return_type;
     property<list<ast_type>>                                    parameter_types;
+
+};
+
+struct ast_record_type final : public extend_tree<tree_type_id::ast_record_type, ast_type> {
+public:
+
+    inline ast_record_type(ast_record_decl* declaration) noexcept
+            : base_type(),
+              declaration(this, declaration) {
+        //...
+    }
+
+    property<ast_record_decl>                                   declaration;
 
 };
 

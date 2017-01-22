@@ -1,6 +1,6 @@
 #!/bin/bash
 
-tree_def_files=./tree.def
+tree_def_files=$top_srcdir/xcc/tree.def
 
 for lang_file in `find . -wholename *.lang | grep -e '\([^/]\+\)/\1.lang'`
 do
@@ -13,6 +13,6 @@ do
 done
 
 
-m4_cmd="m4 -P -I../m4"
-$m4_cmd -Dswitch_tree_types_header ../m4/tree.def.m4 $tree_def_files > all_tree_types.def.hpp
+m4_cmd="m4 -P -I$top_srcdir/m4"
+$m4_cmd -Dswitch_tree_types_header $top_srcdir/m4/tree.def.m4 $tree_def_files > $top_srcdir/xcc/all_tree_types.def.hpp
 
