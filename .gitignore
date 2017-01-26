@@ -68,9 +68,14 @@ Makefile
 *.log
 *.trs
 
+/doc/html
+/doc/latex
 /xcc/config.h*
 /xcc/all_tree_types.def.hpp
+/xcc/all_frontends.def.hpp
+/xcc/all_frontend_compilers.def.hpp
 /xcc/check_tree
+/xcc/check_ast
 /xcc/xcc
 
 # http://www.gnu.org/software/autoconf

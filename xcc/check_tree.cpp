@@ -7,11 +7,31 @@
 
 #include "tree.hpp"
 #include "ast.hpp"
+#include "ast_builder.hpp"
 #include "gtest/gtest.h"
 
 namespace xcc {
 
-class TreeTest : public ::testing::Test { };
+class TreeTest : public ::testing::Test {
+public:
+    TreeTest(): void_tp(),
+                i32(32, false),
+                u32(32, true),
+                u64(64, true),
+                f32(32) {
+        i32.pin();
+        u32.pin();
+        u64.pin();
+        f32.pin();
+    }
+
+    ast_void_type                                               void_tp;
+    ast_integer_type                                            i32;
+    ast_integer_type                                            u32;
+    ast_integer_type                                            u64;
+    ast_real_type                                               f32;
+    ast_default_name_mangler                                             mangler;
+};
 
 TEST_F(TreeTest, TreeTypeAssertions) {
     for(size_t i = 0; i < tree_type::count(); i++) {
@@ -26,15 +46,11 @@ template<typename T>
 static T pass(T value) { return value; }
 
 TEST_F(TreeTest, BasicPropertyTest) {
-    ast_integer_type tp(32, false);
-    uint32_t bw = tp.bitwidth;
-    bool     us = tp.is_unsigned;
+    ASSERT_EQ((uint32_t)this->u32.bitwidth,    32);
+    ASSERT_EQ((bool)    this->u32.is_unsigned, true);
 
-    ASSERT_EQ((uint32_t)tp.bitwidth, 32);
-    ASSERT_EQ((bool)tp.is_unsigned, false);
-
-    ASSERT_EQ(pass<uint64_t>(tp.bitwidth), 32);
-    ASSERT_EQ(pass<int32_t>(tp.bitwidth),  32);
+    ASSERT_EQ(pass<uint64_t>(this->u32.bitwidth), 32);
+    ASSERT_EQ(pass<int32_t>(this->u32.bitwidth),  32);
 }
 
 TEST_F(TreeTest, BasicList) {
@@ -80,6 +96,39 @@ TEST_F(TreeTest, TreeList) {
     ASSERT_TRUE(type_list[0]->is<ast_void_type>());
     ASSERT_TRUE(type_list[1]->is<ast_integer_type>());
     ASSERT_TRUE(type_list[2]->is<ast_real_type>());
+}
+
+TEST_F(TreeTest, TestMangle_Void) {
+    ASSERT_EQ(mangler(&void_tp), "void");
+}
+
+TEST_F(TreeTest, TestMangle_Int) {
+    ASSERT_EQ(mangler(&u32), "u32");
+    ASSERT_EQ(mangler(&i32), "i32");
+}
+
+TEST_F(TreeTest, TestMangle_Float) {
+    ASSERT_EQ(mangler(&f32), "f32");
+}
+
+TEST_F(TreeTest, TestMamgler_Array) {
+    ast_array_type arr_tp(&f32, 6);
+    ASSERT_EQ(mangler(&arr_tp), "f32a$6.$");
+}
+
+TEST_F(TreeTest, TestMangler_Pointer) {
+    ast_pointer_type ptr_tp(&u64);
+    ASSERT_EQ(mangler(&ptr_tp), "u64p");
+}
+
+TEST_F(TreeTest, TestMangler_Function) {
+    ast_function_type func_tp(&i32, new list<ast_type>({&f32, new ast_pointer_type(&u64)}));
+    ASSERT_EQ(mangler(&func_tp), "i32f$f32.u64p.$");
+}
+
+TEST_F(TreeTest, TestMangler_FunctionDecl) {
+    ast_function_decl foo("foo", &u32, new list<ast_parameter_decl>({new ast_parameter_decl("x", &u32)}), nullptr);
+    ASSERT_EQ(mangler(&foo), "fooF$u32.$");
 }
 
 }

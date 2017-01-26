@@ -7,11 +7,14 @@ AM_INIT_AUTOMAKE()
 
 AC_PROG_CC
 AC_PROG_CXX
+AC_PROG_RANLIB
 
 AC_CONFIG_HEADERS([xcc/config.h])
 
 dnl TODO: automate from *.lang files
 dnl         from m4_shell or something
+
+env top_srcdir=$srcdir ./generate_front_ends.sh
 
 AC_CONFIG_FILES([Makefile
                  xcc/Makefile
