@@ -169,6 +169,7 @@ private:
 
     ptr<ast_void_type>                                                  _the_void_type;
     ptr<ast_pointer_type>                                               _the_void_ptr_type;
+    ptr<ast_integer_type>                                               _the_boolean_type;
     std::map<uint32_t, ptr<ast_integer_type>>                           _unsigned_integer_types;
     std::map<uint32_t, ptr<ast_integer_type>>                           _signed_integer_types;
     std::map<uint32_t, ptr<ast_real_type>>                              _real_types;

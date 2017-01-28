@@ -16,7 +16,7 @@
 namespace xcc {
 
 struct translation_unit {
-    ptr<list<ast_function_decl>>                                        functions;
+    ptr<list<ast_function_decl>>                                        global_function_declarations;
 };
 
 

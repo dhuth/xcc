@@ -130,16 +130,22 @@ struct ast_variable_decl final : public extend_tree<tree_type_id::ast_variable_d
 public:
 
     /**
-     * \param
-     * \param
+     * \param name
+     * \param type
+     * \param initial_value
      */
-    inline ast_variable_decl(std::string name, ast_type* type) noexcept
+    inline ast_variable_decl(std::string name, ast_type* type, ast_expr* initial_value = nullptr) noexcept
             : base_type(name),
-              type(this, type) {
+              type(this, type),
+              is_extern(this, false),
+              is_extern_visible(this, true) {
         //...
     }
 
-    property<ast_type>                                          type; //!< variable type
+    property<ast_type>                                          type;               //!< variable type
+    property<ast_expr>                                          initial_value;      //!< initial value
+    property<bool>                                              is_extern;          //!< is defined externally
+    property<bool>                                              is_extern_visible;  //!< is visible outside of this module
 
 };
 
@@ -165,6 +171,25 @@ public:
 
 
 /**
+ * A local variable within a function
+ */
+struct ast_local_decl final : public extend_tree<tree_type_id::ast_local_decl, ast_decl> {
+public:
+    /**
+     * \param name
+     * \param type
+     */
+    inline ast_local_decl(std::string name, ast_type* type) noexcept
+            : base_type(name),
+              type(this, type) {
+        //...
+    }
+
+    property<ast_type>                                          type; //!<
+};
+
+
+/**
  * Function declaration
  */
 struct ast_function_decl final : public extend_tree<tree_type_id::ast_function_decl, ast_decl> {
@@ -180,13 +205,17 @@ public:
             : base_type(name),
               return_type(this, return_type),
               parameters(this, parameters),
-              body(this, body) {
+              body(this, body),
+              is_extern(this, false),
+              is_extern_visible(this, true) {
         //...
     }
 
-    property<ast_type>                                          return_type;    //!<
-    property<list<ast_parameter_decl>>                          parameters;     //!<
-    property<ast_stmt>                                          body;           //!<
+    property<ast_type>                                          return_type;        //!<
+    property<list<ast_parameter_decl>>                          parameters;         //!<
+    property<ast_stmt>                                          body;               //!<
+    property<bool>                                              is_extern;          //!< is defined externally
+    property<bool>                                              is_extern_visible;  //!< is visible outside of this module
 
 };
 
@@ -378,13 +407,15 @@ public:
     /**
      * \param declaration
      */
-    inline ast_record_type(ast_record_decl* declaration) noexcept
+    inline ast_record_type(ast_record_decl* declaration, bool is_packed = false) noexcept
             : base_type(),
-              declaration(this, declaration) {
+              declaration(this, declaration),
+              is_packed(this, is_packed){
         //...
     }
 
     property<ast_record_decl>                                   declaration;    //!<
+    property<bool>                                              is_packed;      //!<
 
 };
 
@@ -460,6 +491,7 @@ enum class ast_op : uint32_t {
     fdiv,                                                               //!< Floating point division
     umod,                                                               //!< Unsigned integer modulo
     imod,                                                               //!< Signed integer modulo
+    fmod,                                                               //!< Floating point modulo
     land,                                                               //!< Logical and
     lor,                                                                //!< Logical or
     lxor,                                                               //!< Logical xor
@@ -592,6 +624,26 @@ public:
     property<ast_expr>                                          arr_expr;   //!<
     property<ast_expr>                                          index_expr; //!<
 
+};
+
+
+/**
+ * A reference to a parameter, local, or global variable
+ */
+struct ast_declref final : public extend_tree<tree_type_id::ast_declref, ast_expr> {
+public:
+
+    /**
+     * \param type
+     * \param variable
+     */
+    inline ast_declref(ast_type* type, ast_decl* declaration) noexcept
+            : base_type(type),
+              declaration(this, declaration){
+        //...
+    }
+
+    property<ast_decl>                                          declaration;   //!<
 };
 
 
