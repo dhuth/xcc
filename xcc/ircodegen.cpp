@@ -64,11 +64,13 @@ llvm::Type* ircode_type_generator::generate_record_type(ast_record_type* rtype) 
 }
 
 llvm::Value* ircode_expr_generator::generate_integer(ast_integer* iexpr) {
-    return new llvm::ConstantInt(context.generate_type(iexpr->type), iexpr->value);
+    return llvm::ConstantInt::get(context.generate_type(iexpr->type), iexpr->value);
 }
 
 llvm::Value* ircode_expr_generator::generate_real(ast_real* fexpr) {
-    return new llvm::ConstantFP(context.generate_type(fexpr->type), fexpr->value);
+    auto ftype      = context.generate_type(fexpr->type);
+    auto fvalue     = llvm::ConstantFP::get(context.llvm_context, fexpr->value);
+    return            context.ir_builder.CreateFPCast(fvalue, ftype);
 }
 
 llvm::Value* ircode_expr_generator::generate_cast(ast_cast* cexpr) {
@@ -99,6 +101,7 @@ llvm::Value* ircode_expr_generator::generate_cast(ast_cast* cexpr) {
         return context.ir_builder.CreatePtrToInt(this->visit(cexpr->expr), context.generate_type(cexpr->type));
     default:
         //TODO: unhandled error
+        break;
     }
     //TODO: error
     return nullptr;
@@ -156,6 +159,7 @@ llvm::Value* ircode_expr_generator::generate_binary_op(ast_binary_op* expr) {
     case ast_op::fcmp_uge:      return context.ir_builder.CreateFCmpUGE(lexpr, rexpr);
     default:
         //TODO: error unandled
+        break;
     }
     //TODO: error
     return nullptr;
@@ -172,6 +176,7 @@ llvm::Value* ircode_expr_generator::generate_unary_op(ast_unary_op* b) {
     case ast_op::lnot:          return context.ir_builder.CreateNot(expr);
     default:
         //TODO: error unhandled
+        break;
     }
     //TODO: error
     return nullptr;
@@ -185,15 +190,32 @@ llvm::Value* ircode_expr_generator::generate_index(ast_index* e) {
     return context.ir_builder.CreateExtractElement(arr_expr, idx_expr);
 }
 
+llvm::Value* ircode_expr_generator::generate_declref(ast_declref* e) {
+    return context.find(e->declaration);
+}
+
 llvm::Value* ircode_expr_generator::generate_deref(ast_deref* e) {
     return context.ir_builder.CreateLoad(context.generate_type(e->type), this->visit(e->expr));
 }
 
 llvm::Value* ircode_expr_generator::generate_addressof(ast_addressof* e) {
     switch(e->expr->get_tree_type()) {
-    case tree_type_id::ast_declref:     return context.find(e->expr->as<ast_declref>()->declaration);
+    case tree_type_id::ast_declref:
+        return context.find(e->expr->as<ast_declref>()->declaration);
     case tree_type_id::ast_index:
+        return context.ir_builder.CreateGEP(context.generate_type(e->type), this->visit(e->as<ast_index>()->arr_expr), this->visit(e->as<ast_index>()->index_expr));
     }
+    //TODO: error unhandled
+    return nullptr;
+}
+
+llvm::Value* ircode_expr_generator::generate_invoke(ast_invoke* e) {
+    auto func = this->visit(e->funcexpr);
+    std::vector<llvm::Value*> args;
+    for(auto a: e->arguments) {
+        args.push_back(this->visit(a));
+    }
+    return context.ir_builder.CreateCall(func, llvm::ArrayRef<llvm::Value*>(args));
 }
 
 void ircode_context::generate_decl(ast_decl* decl) {
@@ -203,6 +225,28 @@ void ircode_context::generate_decl(ast_decl* decl) {
     case tree_type_id::ast_record_decl:     this->generate_record_decl(decl->as<ast_record_decl>());        return;
     }
     //TODO: error unhandled
+}
+
+void ircode_context::generate_variable_decl(ast_variable_decl* var) {
+    auto type               = this->generate_type(var->type);
+    llvm::GlobalVariable*   globalvar;
+    if(var->is_extern_visible) {
+        globalvar = new llvm::GlobalVariable(
+                *this->module.get(),
+                type,
+                false,
+                llvm::GlobalVariable::LinkageTypes::ExternalLinkage,
+                dynamic_cast<llvm::Constant*>(this->generate_expr(var->initial_value)));
+    }
+    else {
+        globalvar = new llvm::GlobalVariable(
+                *this->module.get(),
+                type,
+                false,
+                llvm::GlobalVariable::LinkageTypes::InternalLinkage,
+                dynamic_cast<llvm::Constant*>(this->generate_expr(var->initial_value)));
+    }
+    this->add_declaration(var, globalvar);
 }
 
 void ircode_context::generate_function_decl(ast_function_decl* func) {
@@ -235,6 +279,8 @@ void ircode_context::generate_function_decl(ast_function_decl* func) {
         arg.setName(param_names[i]);
         i++;
     }
+
+    this->add_declaration(func, fvalue);
 }
 
 }

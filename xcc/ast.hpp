@@ -137,6 +137,7 @@ public:
     inline ast_variable_decl(std::string name, ast_type* type, ast_expr* initial_value = nullptr) noexcept
             : base_type(name),
               type(this, type),
+              initial_value(this, initial_value),
               is_extern(this, false),
               is_extern_visible(this, true) {
         //...

@@ -92,7 +92,9 @@ public:
     inline ircode_context(std::string module_name) noexcept
         : llvm_context(),
           ir_builder(this->llvm_context),
-          _local_scope(new local_scope(nullptr)) {
+          _local_scope(new local_scope(nullptr)),
+          generate_expr(*this),
+          generate_type(*this) {
         this->module = llvm::make_unique<llvm::Module>(module_name, this->llvm_context);
     }
     inline ~ircode_context() {
@@ -120,7 +122,7 @@ private:
             auto itr = this->named_values.find(decl);
             if(itr == this->named_values.end()) {
                 if(this->prev != nullptr) {
-                    return prev[decl];
+                    return (*prev)[decl];
                 }
                 //TODO: error
                 return nullptr;
@@ -139,7 +141,7 @@ public:
         this->_local_scope = old_scope->prev;
         delete old_scope;
     }
-    inline void add_local_decl(ast_decl* decl, llvm::Value* value) {
+    inline void add_declaration(ast_decl* decl, llvm::Value* value) {
         this->_local_scope->named_values[decl] = value;
     }
     inline llvm::Value* find(ast_decl* decl) {

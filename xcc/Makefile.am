@@ -8,9 +8,10 @@ xcc_core_sources       += ircodegen.cpp
 xcc_core_sources       += managed_ptr.cpp
 xcc_core_sources       += tree.cpp
 xcc_core_sources       += ast_builder.cpp
-xcc_core_cxxflags       = -std=c++11
 
-xcc_core_libs           = xi/libxi.a
+xcc_core_cxxflags       = -std=c++11 -I@llvm_includedir@
+xcc_core_libs           = xi/libxi.a -lLLVM
+xcc_core_ldflags        = -L@llvm_libdir@
 
 ## Special source files
 xcc.cpp:                $(srcdir)/all_frontends.def.hpp
@@ -21,7 +22,7 @@ tree.hpp:               $(srcdir)/all_tree_types.def.hpp
 xcc_CXXFLAGS            = $(xcc_core_cxxflags)
 xcc_SOURCES             = $(xcc_coure_sources) xcc.cpp
 xcc_LDADD               = $(xcc_core_libs)
-xcc_LDFLAGS             = $(xcc_dore_ldflags)
+xcc_LDFLAGS             = $(xcc_core_ldflags)
 
 
 

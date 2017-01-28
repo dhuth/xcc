@@ -352,6 +352,71 @@ ast_expr* __ast_builder_impl::make_ge_expr(ast_expr* lhs, ast_expr* rhs) const n
     return nullptr;
 }
 
+ast_expr* __ast_builder_impl::make_land_expr(ast_expr* lhs, ast_expr* rhs) const noexcept {
+    auto type       = this->maxtype(lhs->type, rhs->type);
+    assert(type->is<ast_integer_type>());
+    auto lexpr      = this->widen(type, lhs);
+    auto rexpr      = this->widen(type, rhs);
+
+    return new ast_binary_op(this->_the_boolean_type, ast_op::land, lexpr, rexpr);
+}
+
+ast_expr* __ast_builder_impl::make_lor_expr(ast_expr* lhs, ast_expr* rhs) const noexcept {
+    auto type       = this->maxtype(lhs->type, rhs->type);
+    assert(type->is<ast_integer_type>());
+    auto lexpr      = this->widen(type, lhs);
+    auto rexpr      = this->widen(type, rhs);
+
+    return new ast_binary_op(this->_the_boolean_type, ast_op::lor, lexpr, rexpr);
+}
+
+ast_expr* __ast_builder_impl::make_lxor_expr(ast_expr* lhs, ast_expr* rhs) const noexcept {
+    auto type       = this->maxtype(lhs->type, rhs->type);
+    assert(type->is<ast_integer_type>());
+    auto lexpr      = this->widen(type, lhs);
+    auto rexpr      = this->widen(type, rhs);
+
+    return new ast_binary_op(this->_the_boolean_type, ast_op::lxor, lexpr, rexpr);
+}
+
+ast_expr* __ast_builder_impl::make_lnot_expr(ast_expr* expr) const noexcept {
+    assert(expr->type->is<ast_integer_type>());
+    return new ast_unary_op(this->_the_boolean_type, ast_op::lnot, expr);
+}
+
+ast_expr* __ast_builder_impl::make_band_expr(ast_expr* lhs, ast_expr* rhs) const noexcept {
+    auto type       = this->maxtype(lhs->type, rhs->type);
+    assert(type->is<ast_integer_type>());
+    auto lexpr      = this->widen(type, lhs);
+    auto rexpr      = this->widen(type, rhs);
+
+    return new ast_binary_op(type, ast_op::band, lexpr, rexpr);
+}
+
+ast_expr* __ast_builder_impl::make_bor_expr(ast_expr* lhs, ast_expr* rhs) const noexcept {
+    auto type       = this->maxtype(lhs->type, rhs->type);
+    assert(type->is<ast_integer_type>());
+    auto lexpr      = this->widen(type, lhs);
+    auto rexpr      = this->widen(type, rhs);
+
+    return new ast_binary_op(type, ast_op::bor, lexpr, rexpr);
+}
+
+ast_expr* __ast_builder_impl::make_bxor_expr(ast_expr* lhs, ast_expr* rhs) const noexcept {
+    auto type       = this->maxtype(lhs->type, rhs->type);
+    assert(type->is<ast_integer_type>());
+    auto lexpr      = this->widen(type, lhs);
+    auto rexpr      = this->widen(type, rhs);
+
+    return new ast_binary_op(type, ast_op::bxor, lexpr, rexpr);
+}
+
+ast_expr* __ast_builder_impl::make_bnot_expr(ast_expr* expr) const noexcept {
+    assert(expr->type->is<ast_integer_type>());
+    return new ast_unary_op(expr->type, ast_op::bnot, expr);
+}
+
+
 
 static inline bool __sametype(const __ast_builder_impl& builder, const ast_integer_type* lhs, const ast_integer_type* rhs) {
     return (uint32_t) lhs->bitwidth    == (uint32_t) rhs->bitwidth    &&
@@ -407,6 +472,64 @@ bool __ast_builder_impl::sametype(ast_type* lhs, ast_type* rhs) const noexcept {
         }
     }
     return false;
+}
+
+static ast_type* __maxtype(const __ast_builder_impl* builder, ast_integer_type* lhs, ast_type* rhs) {
+    uint32_t                lhs_width       = lhs->bitwidth;
+    bool                    lhs_is_unsigned = lhs->is_unsigned;
+
+    switch(rhs->get_tree_type()) {
+    case tree_type_id::ast_integer_type:
+        {
+            uint32_t        rhs_width       = rhs->as<ast_integer_type>()->bitwidth;
+            bool            rhs_is_unsigned = rhs->as<ast_integer_type>()->is_unsigned;
+
+            return builder->get_integer_type(
+                    std::max(lhs_width, rhs_width),
+                    lhs_is_unsigned & rhs_is_unsigned);
+        }
+    case tree_type_id::ast_real_type:
+        {
+            uint32_t        rhs_width       = rhs->as<ast_real_type>()->bitwidth;
+
+            return builder->get_real_type(
+                    std::max(lhs_width, rhs_width));
+        }
+    }
+    //TODO: unhandled error
+    return nullptr;
+}
+
+static ast_type* __maxtype(const __ast_builder_impl* builder, ast_real_type* lhs, ast_type* rhs) {
+    uint32_t                lhs_width       = lhs->bitwidth;
+
+    switch(rhs->get_tree_type()) {
+    case tree_type_id::ast_real_type:
+        {
+            uint32_t        rhs_width       = rhs->as<ast_real_type>()->bitwidth;
+
+            return builder->get_real_type(std::max(lhs_width, rhs_width));
+        }
+    case tree_type_id::ast_integer_type:
+        {
+            uint32_t        rhs_width       = rhs->as<ast_integer_type>()->bitwidth;
+
+            return builder->get_real_type(std::max(lhs_width, rhs_width));
+        }
+    }
+    //TODO: unhandled error
+    return nullptr;
+}
+
+ast_type* __ast_builder_impl::maxtype(ast_type* lhs, ast_type* rhs) const noexcept {
+    switch(lhs->get_tree_type()) {
+    case tree_type_id::ast_integer_type:
+        return __maxtype(this, lhs->as<ast_integer_type>(), rhs);
+    case tree_type_id::ast_real_type:
+        return __maxtype(this, lhs->as<ast_real_type>(), rhs);
+    }
+    //TODO: unhandled error
+    return nullptr;
 }
 
 ast_expr* __ast_builder_impl::cast_to(ast_integer_type* itype, ast_expr* expr) const noexcept {
@@ -520,6 +643,16 @@ ast_expr* __ast_builder_impl::cast_to(ast_pointer_type* ptype, ast_expr* expr) c
         }
     }
     //TODO: handle error
+    return nullptr;
+}
+
+ast_expr* __ast_builder_impl::widen(ast_type* typedest, ast_expr* expr) const noexcept {
+    switch(typedest->get_tree_type()) {
+    case tree_type_id::ast_integer_type:        return this->cast_to(typedest->as<ast_integer_type>(), expr);
+    case tree_type_id::ast_real_type:           return this->cast_to(typedest->as<ast_real_type>(),    expr);
+    case tree_type_id::ast_pointer_type:        return this->cast_to(typedest->as<ast_pointer_type>(), expr);
+    }
+    //TODO: unhandled error
     return nullptr;
 }
 

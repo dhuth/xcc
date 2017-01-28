@@ -9,6 +9,9 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_RANLIB
 
+AC_SUBST([llvm_includedir], [`llvm-config --includedir`])
+AC_SUBST([llvm_libdir],     [`llvm-config --libdir`])
+
 AC_CONFIG_HEADERS([xcc/config.h])
 
 dnl TODO: automate from *.lang files
