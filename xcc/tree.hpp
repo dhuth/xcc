@@ -30,9 +30,6 @@ namespace xcc {
 template<typename T>
 using ptr = managed_ptr<T>;
 
-template<typename T> inline ptr<T>   __box(T*& v)       { return ptr<T>(v); }
-template<typename T> inline T*       __unbox(ptr<T> p)  { return (T*)p;     }
-
 
 /* ============================= *
  * Forward declarations and tags *
@@ -238,6 +235,11 @@ public:
     inline __tree_list_value(TElement f)                                noexcept : list_t(f)    { }
     inline __tree_list_value(TElement f, const list_ptr_t r)            noexcept : list_t(f, r) { }
     inline __tree_list_value(const list_ptr_t f, TElement l)            noexcept : list_t(f, l) { }
+    inline __tree_list_value(std::vector<TElement> vec)                 noexcept : list_t() {
+        for(auto el: vec) {
+            this->_list.push_back(el);
+        }
+    }
     inline __tree_list_value(std::initializer_list<TElement> init_list) noexcept : list_t()     {
         for(auto el: init_list) {
             this->_list.push_back(el);
@@ -248,6 +250,9 @@ public:
         return this->_list[index];
     }
 
+    inline void append(TElement& el) noexcept {
+        this->_list.push_back(el);
+    }
 };
 
 template<typename TElement>
@@ -270,8 +275,8 @@ public:
         inline iterator operator++()          noexcept { ++index; return *this; }
         inline iterator operator++(int)       noexcept { ++index; return {index-1, vector}; }
 
-        inline element_t operator*()          noexcept { return __unbox(vector[index]); }
-        inline element_t operator*()    const noexcept { return __unbox(vector[index]); }
+        inline element_t operator*()          noexcept { return unbox(vector[index]); }
+        inline element_t operator*()    const noexcept { return unbox(vector[index]); }
 
         inline bool operator==(const iterator& other) {
             return (other.index == this->index) && (other.vector == this->vector);
@@ -284,12 +289,17 @@ public:
     typedef const iterator                              const_iterator;
 
     inline __tree_list_tree()                                           noexcept : list_t()            { }
-    inline __tree_list_tree(element_t f)                                noexcept : list_t(__box(f))    { }
-    inline __tree_list_tree(element_t f, const list_ptr_t r)            noexcept : list_t(__box(f), r) { }
-    inline __tree_list_tree(const list_ptr_t f, element_t l)            noexcept : list_t(f, __box(l)) { }
+    inline __tree_list_tree(element_t f)                                noexcept : list_t(box(f))      { }
+    inline __tree_list_tree(element_t f, const list_ptr_t r)            noexcept : list_t(box(f), r)   { }
+    inline __tree_list_tree(const list_ptr_t f, element_t l)            noexcept : list_t(f, box(l))   { }
+    inline __tree_list_tree(std::vector<element_t> vec)                 noexcept : list_t() {
+        for(auto el : vec) {
+            this->_list.push_back(box(el));
+        }
+    }
     inline __tree_list_tree(std::initializer_list<element_t> init_list) noexcept : list_t() {
         for(auto el : init_list) {
-            this->_list.push_back(__box(el));
+            this->_list.push_back(box(el));
         }
     }
 
@@ -300,7 +310,11 @@ public:
     inline const_iterator end()   const noexcept { return {this->_list.size(), this->_list}; }
 
     inline element_t operator[](size_t index) {
-        return __unbox(this->_list[index]);
+        return unbox(this->_list[index]);
+    }
+
+    inline void append(element_t& el) {
+        this->_list.push_back(box(el));
     }
 
 
@@ -325,13 +339,13 @@ public:
     inline __tree_property_base(__tree_base* parent) noexcept
             : _parent(parent), _index(parent->append_child(nullptr)) { }
 
-    inline __tree_base* __get()                   const noexcept { return __unbox(this->_parent->_child_nodes[this->_index]); }
-    inline void         __set(__tree_base* value)       noexcept {        this->_parent->_child_nodes[this->_index] = __box<__tree_base>(value); }
+    inline __tree_base* __get()                   const noexcept { return unbox(this->_parent->_child_nodes[this->_index]); }
+    inline void         __set(__tree_base* value)       noexcept {        this->_parent->_child_nodes[this->_index] = box<__tree_base>(value); }
 
 private:
 
-    __tree_property_base(const __tree_property_base&) = delete;
-    __tree_property_base(const __tree_property_base&&) = delete;
+    //__tree_property_base(const __tree_property_base&) = delete;
+    //__tree_property_base(const __tree_property_base&&) = delete;
 
     __tree_base*                                                _parent;
     size_t                                                      _index;
@@ -378,6 +392,10 @@ public:
     inline bool operator==(const __tree_property_tree<TOther>& p) {
         return this->__get() == p.get();
     }
+
+private:
+
+
 };
 
 template<typename TTreeListElement>

@@ -65,62 +65,67 @@ public:
 
             ast_void_type*                      get_void_type()                                                     const noexcept;
             ast_integer_type*                   get_integer_type(uint32_t bitwidth, bool is_unsigned)               const noexcept;
+            ast_integer_type*                   get_bool_type()                                                     const noexcept;
             ast_real_type*                      get_real_type(uint32_t bitwidth)                                    const noexcept;
             ast_pointer_type*                   get_pointer_type(ast_type* eltype)                                        noexcept;
             ast_array_type*                     get_array_type(ast_type* artype, uint32_t size)                           noexcept;
-            ast_function_type*                  get_function_type(ast_type*, list<ast_type>*)                             noexcept;
             ast_function_type*                  get_function_type(ast_type*, ptr<list<ast_type>>)                         noexcept;
             ast_record_type*                    get_record_type(ast_record_decl*)                                         noexcept;
 
-
-    virtual ast_expr*                           make_neg_expr(ast_expr*)                                            const noexcept;
-    virtual ast_expr*                           make_add_expr(ast_expr*, ast_expr*)                                 const noexcept;
-    virtual ast_expr*                           make_sub_expr(ast_expr*, ast_expr*)                                 const noexcept;
-    virtual ast_expr*                           make_mul_expr(ast_expr*, ast_expr*)                                 const noexcept;
-    virtual ast_expr*                           make_div_expr(ast_expr*, ast_expr*)                                 const noexcept;
-    virtual ast_expr*                           make_mod_expr(ast_expr*, ast_expr*)                                 const noexcept;
-
-    virtual ast_expr*                           make_eq_expr(ast_expr*, ast_expr*)                                  const noexcept;
-    virtual ast_expr*                           make_ne_expr(ast_expr*, ast_expr*)                                  const noexcept;
-    virtual ast_expr*                           make_lt_expr(ast_expr*, ast_expr*)                                  const noexcept;
-    virtual ast_expr*                           make_le_expr(ast_expr*, ast_expr*)                                  const noexcept;
-    virtual ast_expr*                           make_gt_expr(ast_expr*, ast_expr*)                                  const noexcept;
-    virtual ast_expr*                           make_ge_expr(ast_expr*, ast_expr*)                                  const noexcept;
-
-    virtual ast_expr*                           make_land_expr(ast_expr*, ast_expr*)                                const noexcept;
-    virtual ast_expr*                           make_lor_expr(ast_expr*, ast_expr*)                                 const noexcept;
-    virtual ast_expr*                           make_lxor_expr(ast_expr*, ast_expr*)                                const noexcept;
-    virtual ast_expr*                           make_lnot_expr(ast_expr*)                                           const noexcept;
-
-    virtual ast_expr*                           make_band_expr(ast_expr*, ast_expr*)                                const noexcept;
-    virtual ast_expr*                           make_bor_expr(ast_expr*, ast_expr*)                                 const noexcept;
-    virtual ast_expr*                           make_bxor_expr(ast_expr*, ast_expr*)                                const noexcept;
-    virtual ast_expr*                           make_bnot_expr(ast_expr*)                                           const noexcept;
-
-    virtual ast_expr*                           make_cast_expr(ast_type*, ast_expr*)                                const noexcept;
-    virtual ast_expr*                           make_deref_expr(ast_expr*)                                          const noexcept;
-    virtual ast_expr*                           make_addressof_expr(ast_expr*)                                      const noexcept;
-    virtual ast_expr*                           make_index_expr(ast_expr*, ast_expr*)                               const noexcept;
-    virtual ast_expr*                           make_call_expr(ast_expr*, list<ast_expr>*)                          const noexcept;
+            ast_type*                           get_declaration_type(ast_decl*)                                           noexcept;
 
 
+    virtual ast_expr*                           make_integer(const char* txt, uint8_t radix)                        const noexcept;
+    virtual ast_expr*                           make_real(const char* txt)                                          const noexcept;
+
+    virtual ast_expr*                           make_neg_expr(ast_expr*)                                            const;
+    virtual ast_expr*                           make_add_expr(ast_expr*, ast_expr*)                                 const;
+    virtual ast_expr*                           make_sub_expr(ast_expr*, ast_expr*)                                 const;
+    virtual ast_expr*                           make_mul_expr(ast_expr*, ast_expr*)                                 const;
+    virtual ast_expr*                           make_div_expr(ast_expr*, ast_expr*)                                 const;
+    virtual ast_expr*                           make_mod_expr(ast_expr*, ast_expr*)                                 const;
+
+    virtual ast_expr*                           make_eq_expr(ast_expr*, ast_expr*)                                  const;
+    virtual ast_expr*                           make_ne_expr(ast_expr*, ast_expr*)                                  const;
+    virtual ast_expr*                           make_lt_expr(ast_expr*, ast_expr*)                                  const;
+    virtual ast_expr*                           make_le_expr(ast_expr*, ast_expr*)                                  const;
+    virtual ast_expr*                           make_gt_expr(ast_expr*, ast_expr*)                                  const;
+    virtual ast_expr*                           make_ge_expr(ast_expr*, ast_expr*)                                  const;
+
+    virtual ast_expr*                           make_land_expr(ast_expr*, ast_expr*)                                const;
+    virtual ast_expr*                           make_lor_expr(ast_expr*, ast_expr*)                                 const;
+    virtual ast_expr*                           make_lxor_expr(ast_expr*, ast_expr*)                                const;
+    virtual ast_expr*                           make_lnot_expr(ast_expr*)                                           const;
+
+    virtual ast_expr*                           make_band_expr(ast_expr*, ast_expr*)                                const;
+    virtual ast_expr*                           make_bor_expr(ast_expr*, ast_expr*)                                 const;
+    virtual ast_expr*                           make_bxor_expr(ast_expr*, ast_expr*)                                const;
+    virtual ast_expr*                           make_bnot_expr(ast_expr*)                                           const;
+
+    virtual ast_expr*                           make_cast_expr(ast_type*, ast_expr*)                                const;
+    virtual ast_expr*                           make_declref_expr(ast_decl*);
+    virtual ast_expr*                           make_memberref_expr(ast_expr*, ast_record_member_decl*);
+    virtual ast_expr*                           make_deref_expr(ast_expr*)                                          const;
+    virtual ast_expr*                           make_addressof_expr(ast_expr*);
+    virtual ast_expr*                           make_index_expr(ast_expr*, ast_expr*)                               const;
+    virtual ast_expr*                           make_call_expr(ast_expr*, list<ast_expr>*)                          const;
 
 
             ast_name_mangler_t                  get_mangled_name;
             //ast_folder_t                        fold;
-    virtual bool                                sametype(ast_type*, ast_type*)                                      const noexcept;
+    virtual bool                                sametype(ast_type*, ast_type*)                                      const;
 
-protected:
+//protected:
 
     virtual void                                create_default_types()                                                    noexcept;
-            ast_type*                           maxtype(ast_type*, ast_type*)                                       const noexcept;
-            ast_expr*                           widen(ast_type*, ast_expr*)                                         const noexcept;
+            ast_type*                           maxtype(ast_type*, ast_type*)                                       const;
+            ast_expr*                           widen(ast_type*, ast_expr*)                                         const;
 
 private:
 
-            ast_expr*                           cast_to(ast_integer_type*, ast_expr*)                               const noexcept;
-            ast_expr*                           cast_to(ast_real_type*, ast_expr*)                                  const noexcept;
-            ast_expr*                           cast_to(ast_pointer_type*, ast_expr*)                               const noexcept;
+            ast_expr*                           cast_to(ast_integer_type*, ast_expr*)                               const;
+            ast_expr*                           cast_to(ast_real_type*, ast_expr*)                                  const;
+            ast_expr*                           cast_to(ast_pointer_type*, ast_expr*)                               const;
 
     struct sametype_predicate {
         __ast_builder_impl&                                             builder;
@@ -160,7 +165,7 @@ private:
         inline size_t operator()(const funckey_t& k) const {
             std::hash<ast_type*> hasher;
             auto h = hasher(std::get<0>(k));
-            for(auto p: __unbox(std::get<1>(k))) {
+            for(auto p: unbox(std::get<1>(k))) {
                 h = (h >> 5) | hasher(p);
             }
             return h;
@@ -179,8 +184,6 @@ private:
                                                                         _function_types;
     std::map<std::tuple<ast_type*, uint32_t>, ptr<ast_array_type>>      _array_types;
     std::map<ast_record_decl*, ptr<ast_record_type>>                    _record_types;
-
-    ast_decl*                                                           _context;
 
 };
 

@@ -198,6 +198,12 @@ llvm::Value* ircode_expr_generator::generate_deref(ast_deref* e) {
     return context.ir_builder.CreateLoad(context.generate_type(e->type), this->visit(e->expr));
 }
 
+llvm::Value* ircode_expr_generator::generate_memberref(ast_memberref* e) {
+    auto obj = this->visit(e->objexpr);
+    std::vector<uint32_t> idxs = { (uint32_t) e->member->member_index };
+    return context.ir_builder.CreateExtractValue(obj, llvm::ArrayRef<uint32_t>(idxs));
+}
+
 llvm::Value* ircode_expr_generator::generate_addressof(ast_addressof* e) {
     switch(e->expr->get_tree_type()) {
     case tree_type_id::ast_declref:
@@ -222,7 +228,7 @@ void ircode_context::generate_decl(ast_decl* decl) {
     switch(decl->get_tree_type()) {
     case tree_type_id::ast_variable_decl:   this->generate_variable_decl(decl->as<ast_variable_decl>());    return;
     case tree_type_id::ast_function_decl:   this->generate_function_decl(decl->as<ast_function_decl>());    return;
-    case tree_type_id::ast_record_decl:     this->generate_record_decl(decl->as<ast_record_decl>());        return;
+    //case tree_type_id::ast_record_decl:     this->generate_record_decl(decl->as<ast_record_decl>());        return;
     }
     //TODO: error unhandled
 }
@@ -236,7 +242,7 @@ void ircode_context::generate_variable_decl(ast_variable_decl* var) {
                 type,
                 false,
                 llvm::GlobalVariable::LinkageTypes::ExternalLinkage,
-                dynamic_cast<llvm::Constant*>(this->generate_expr(var->initial_value)));
+                static_cast<llvm::Constant*>(this->generate_expr(var->initial_value)));
     }
     else {
         globalvar = new llvm::GlobalVariable(
@@ -244,7 +250,7 @@ void ircode_context::generate_variable_decl(ast_variable_decl* var) {
                 type,
                 false,
                 llvm::GlobalVariable::LinkageTypes::InternalLinkage,
-                dynamic_cast<llvm::Constant*>(this->generate_expr(var->initial_value)));
+                static_cast<llvm::Constant*>(this->generate_expr(var->initial_value)));
     }
     this->add_declaration(var, globalvar);
 }

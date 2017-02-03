@@ -61,6 +61,9 @@ struct managed_ptr final : __ptr_impl {
     }
 };
 
+template<typename T> inline managed_ptr<T>      box(T*& v)               { return managed_ptr<T>(v); }
+template<typename T> inline T*                  unbox(managed_ptr<T> p)  { return (T*)p;     }
+
 }
 
 #endif /* XPP_MANAGED_PTR_HPP_ */

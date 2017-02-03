@@ -11,6 +11,7 @@
 #include "tree.hpp"
 #include <llvm/ADT/APSInt.h>
 #include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/StringRef.h>
 
 namespace xcc {
 
@@ -648,6 +649,26 @@ public:
 };
 
 
+/*
+ * A reference to a record member
+ */
+struct ast_memberref final : public extend_tree<tree_type_id::ast_memberref, ast_expr> {
+public:
+
+    inline ast_memberref(ast_type* type, ast_expr* objexpr, ast_record_member_decl* member) noexcept
+            : base_type(type),
+              objexpr(this, objexpr),
+              member(this, member) {
+        //...
+    }
+
+    property<ast_expr>                                          objexpr;
+    property<ast_record_member_decl>                            member;
+
+};
+
+
+
 /**
  * A pointer dereference expression
  */
@@ -665,6 +686,7 @@ public:
     }
 
     property<ast_expr>                                          expr;   //!<
+
 };
 
 

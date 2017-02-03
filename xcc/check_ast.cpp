@@ -19,6 +19,8 @@ public:
         this->void_tp                       = builder.get_void_type();
         this->i32                           = builder.get_integer_type(32, false);
         this->u32                           = builder.get_integer_type(32, true);
+        this->i64                           = builder.get_integer_type(64, false);
+        this->u64                           = builder.get_integer_type(64, true);
         this->f32                           = builder.get_real_type(32);
         this->f64                           = builder.get_real_type(64);
 
@@ -60,6 +62,8 @@ public:
     ast_void_type*                                              void_tp;
     ast_integer_type*                                           i32;
     ast_integer_type*                                           u32;
+    ast_integer_type*                                           i64;
+    ast_integer_type*                                           u64;
     ast_real_type*                                              f32;
     ast_real_type*                                              f64;
 
@@ -120,6 +124,16 @@ TEST_F(AstTest, TestSameType_Functions) {
     ASSERT_FALSE(builder.sametype(func_v_i32f64, func_i32_i32f64));
     ASSERT_FALSE(builder.sametype(func_v_i32f64, func_i32_i32));
     ASSERT_FALSE(builder.sametype(func_v_i32f64, func_i32_v));
+}
+
+TEST_F(AstTest, TestMaxType) {
+    this->make_basic_pointer_types();
+
+    ASSERT_TRUE(builder.sametype(builder.maxtype(i32, i32), i32));
+    ASSERT_TRUE(builder.sametype(builder.maxtype(i32, u32), i32));
+    ASSERT_TRUE(builder.sametype(builder.maxtype(i32, f32), f32));
+    ASSERT_TRUE(builder.sametype(builder.maxtype(f32, f64), f64));
+    ASSERT_TRUE(builder.sametype(builder.maxtype(f32, i64), f64));
 }
 
 }

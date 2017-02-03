@@ -10,6 +10,10 @@
 
 namespace xcc {
 
+void translation_unit::append(ast_function_decl* decl) noexcept {
+    (*this->global_function_declarations).append(decl);
+}
+
 const frontend all_frontends[] = {
 #include "all_frontend_compilers.def.hpp"
         {"", "", {""}, NULL}

@@ -63,6 +63,7 @@ public:
         this->addmethod(&ircode_expr_generator::generate_unary_op);
         this->addmethod(&ircode_expr_generator::generate_index);
         this->addmethod(&ircode_expr_generator::generate_declref);
+        this->addmethod(&ircode_expr_generator::generate_memberref);
         this->addmethod(&ircode_expr_generator::generate_deref);
         this->addmethod(&ircode_expr_generator::generate_addressof);
         this->addmethod(&ircode_expr_generator::generate_invoke);
@@ -80,6 +81,7 @@ private:
     llvm::Value*                                    generate_index(ast_index*);
     llvm::Value*                                    generate_declref(ast_declref*);
     llvm::Value*                                    generate_deref(ast_deref*);
+    llvm::Value*                                    generate_memberref(ast_memberref*);
     llvm::Value*                                    generate_addressof(ast_addressof*);
     llvm::Value*                                    generate_invoke(ast_invoke*);
 
@@ -152,7 +154,7 @@ private:
 
     void                                                                generate_function_decl(ast_function_decl*);
     void                                                                generate_variable_decl(ast_variable_decl*);
-    void                                                                generate_record_decl(ast_record_decl*);
+    //void                                                                generate_record_decl(ast_record_decl*);
 
     std::map<ast_decl*, llvm::Value*>                                   _named_declarations;
     local_scope*                                                        _local_scope;

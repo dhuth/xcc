@@ -8,7 +8,7 @@ do
     lang_dir=$(dirname $lang_file)
     lang_name=$(basename $lang_dir)
     
-    tree_lang_files="$tree_lang_files $lang_file"
+    lang_files="$lang_files $lang_file"
     if [ -e $lang_dir/tree.def ]; then
         tree_def_files="$tree_def_files $lang_dir/tree.def"
     fi
