@@ -160,7 +160,8 @@ private:
     __tree_base(const __tree_base&) = delete;
     __tree_base(const __tree_base&&) = delete;
 
-    friend __tree_property_base;
+    template<typename T>
+    friend struct __tree_property_tree;
 
     inline size_t append_child(__tree_base* v) noexcept {
         size_t idx = this->_child_nodes.size();
@@ -333,22 +334,7 @@ struct dispatch_visitor;
 
 struct __tree_property_base {
 public:
-
-    inline __tree_property_base(__tree_base* parent, __tree_base* value) noexcept
-            : _parent(parent), _index(parent->append_child(value)) { }
-    inline __tree_property_base(__tree_base* parent) noexcept
-            : _parent(parent), _index(parent->append_child(nullptr)) { }
-
-    inline __tree_base* __get()                   const noexcept { return unbox(this->_parent->_child_nodes[this->_index]); }
-    inline void         __set(__tree_base* value)       noexcept {        this->_parent->_child_nodes[this->_index] = box<__tree_base>(value); }
-
-private:
-
-    //__tree_property_base(const __tree_property_base&) = delete;
-    //__tree_property_base(const __tree_property_base&&) = delete;
-
-    __tree_base*                                                _parent;
-    size_t                                                      _index;
+    // Anything ???
 
 };
 
@@ -358,8 +344,13 @@ public:
 
     typedef TTreeType*                                          param_type_t;
 
-    inline __tree_property_tree(__tree_base* parent)                   noexcept : __tree_property_base(parent)        { }
-    inline __tree_property_tree(__tree_base* parent, TTreeType* value) noexcept : __tree_property_base(parent, value) { }
+    inline __tree_property_tree(__tree_base* parent) noexcept
+            : __tree_property_base(), _parent(parent), _index(parent->append_child(nullptr)) { }
+    inline __tree_property_tree(__tree_base* parent, TTreeType* value) noexcept
+            : __tree_property_base(), _parent(parent), _index(parent->append_child(value)) { }
+
+    inline __tree_property_tree(const __tree_property_tree<TTreeType>& other) noexcept
+            : __tree_property_base(), _parent(other.shift_address(this)), _index(other._index) { }
 
     inline operator TTreeType*() const noexcept {
         return dynamic_cast<TTreeType*>(this->__get());
@@ -393,7 +384,23 @@ public:
         return this->__get() == p.get();
     }
 
+protected:
+
+    template<typename T>
+    friend struct dispatch_visitor;
+
+    inline __tree_base* __get()                   const noexcept { return unbox(this->_parent->_child_nodes[this->_index]); }
+    inline void         __set(__tree_base* value)       noexcept {        this->_parent->_child_nodes[this->_index] = box<__tree_base>(value); }
+
 private:
+
+    inline __tree_base* shift_address(const __tree_property_tree<TTreeType>* newaddress) const noexcept {
+        std::ptrdiff_t ptrdiff = ((std::intptr_t) this) - ((std::intptr_t)this->_parent);
+        return (__tree_base*)(((std::intptr_t)newaddress) - ptrdiff);
+    }
+
+    __tree_base*                                                _parent;
+    size_t                                                      _index;
 
 
 };

@@ -29,6 +29,7 @@ local.properties
 *.lo
 *.o
 *.obj
+*.dwo
 
 # Precompiled Headers
 *.gch
@@ -96,6 +97,7 @@ Makefile
 /install-sh
 /missing
 stamp-h1
+stamp-h2
 
 # https://www.gnu.org/software/libtool/
 
