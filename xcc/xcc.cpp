@@ -103,7 +103,7 @@ static const argp argp_program {
 
 static xcc::compiler_function get_compiler_by_ext(const std::string& ext) {
     for(int i = 0; !xcc::all_frontends[i].language_name.empty(); i++) {
-        for(int j = 0; j < xcc::all_frontends[i].language_extensions.size(); j++) {
+        for(size_t j = 0; j < xcc::all_frontends[i].language_extensions.size(); j++) {
             if(xcc::all_frontends[i].language_extensions[j] == ext) {
                 return xcc::all_frontends[i].language_compiler;
             }
@@ -132,7 +132,7 @@ static inline std::string getext(std::string filename) {
     return filename.substr(filename.find_last_of('.'));
 }
 
-static void handle_compile_from_file(const std::string& filename, xcc_program_args* args) {
+static std::string handle_compile_from_file(const std::string& filename, xcc_program_args* args) {
     xcc::compiler_function cfunc;
     if(!args->override_compiler_name) {
         cfunc   = get_compiler_by_ext(getext(filename));
@@ -141,7 +141,8 @@ static void handle_compile_from_file(const std::string& filename, xcc_program_ar
         cfunc   = get_compiler_by_name(args->compiler_name, args->compiler_version);
     }
 
-    cfunc(filename.c_str(), args->compiler_args);
+    std::string outfile = (filename.substr(0, filename.find_last_of('.')) + ".ll");
+    cfunc(filename.c_str(), outfile.c_str(), args->compiler_args);
 }
 
 int main(int argc, char** argv) {
@@ -153,9 +154,10 @@ int main(int argc, char** argv) {
 
     auto res = argp_parse(&argp_program, argc, argv, 0, &arg_index, &args);
 
+    std::vector<std::string> llfiles;
     for(auto input_file : args.input_filenames) {
         //TODO: preprocess
-        handle_compile_from_file(input_file, &args);
+        llfiles.push_back(handle_compile_from_file(input_file, &args));
     }
 }
 

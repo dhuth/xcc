@@ -128,6 +128,14 @@ struct tree_type {
     }
 };
 
+#define TREE_TYPE(name, ...)                                    struct name;
+#include "all_tree_types.def.hpp"
+#undef  TREE_TYPE
+
+template<tree_type_id id> struct tree_type_selector { };
+#define TREE_TYPE(name, ...)                                    template<> struct tree_type_selector<tree_type_id::name> { typedef name type; };
+#include "all_tree_types.def.hpp"
+#undef  TREE_TYPE
 
 
 
@@ -149,16 +157,16 @@ public:
 
     template<typename T, __is_tree_type<T> = 0>
     inline T* as() const noexcept { return dynamic_cast<T*>(const_cast<__tree_base*>(this)); }
-
-    inline void pin() noexcept {
-        //TODO: memory management
-    }
     inline tree_type_id get_tree_type() const { return this->_type; }
 
-private:
+    inline __tree_base(const __tree_base& other) noexcept
+            : _type(other._type) {
+        for(auto p: other._child_nodes) {
+            this->_child_nodes.push_back(p);
+        }
+    }
 
-    __tree_base(const __tree_base&) = delete;
-    __tree_base(const __tree_base&&) = delete;
+private:
 
     template<typename T>
     friend struct __tree_property_tree;
@@ -173,6 +181,7 @@ private:
     std::vector<ptr<__tree_base>>                               _child_nodes;
 
 };
+
 
 template<tree_type_id VType, typename TBase = __tree_base, __is_tree_type<TBase> = 0>
 struct __extend_tree : public TBase {
@@ -461,9 +470,9 @@ private:
 
 
 
-/* =============================== *
- * Dynamic dispatch tree traversal *
- * =============================== */
+/* ======================== *
+ * Dynamic dispatch visitor *
+ * ======================== */
 
 template<typename TReturnType>
 struct dispatch_visitor {

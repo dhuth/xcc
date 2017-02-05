@@ -11,10 +11,10 @@ AC_PROG_RANLIB
 
 AC_SUBST([llvm_version],    [5.0])
 
-AC_SUBST([llvm_includedir], [`llvm-config-$llvm_version --includedir`])
 AC_SUBST([llvm_libs],       [`llvm-config-$llvm_version --libs core`])
-AC_SUBST([llvm_cxxflags],   [`llvm-config-$llvm_version --cxxflags`])
+AC_SUBST([llvm_cppflags],   [`llvm-config-$llvm_version --cppflags`])
 AC_SUBST([llvm_libdir],     [`llvm-config-$llvm_version --libdir`])
+AC_SUBST([llvm_ldflags],    [`llvm-config-$llvm_version --ldflags`])
 
 AC_CONFIG_HEADERS([xcc/config.h])
 

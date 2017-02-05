@@ -16,13 +16,13 @@
 namespace xcc {
 
 struct translation_unit {
-    ptr<list<ast_function_decl>>                                        global_function_declarations;
+    std::vector<ptr<ast_function_decl>>                                 global_function_declarations;
 
     void append(ast_function_decl*) noexcept;
 };
 
 
-typedef int (*compiler_function)(const char*, std::vector<std::string>&);
+typedef int (*compiler_function)(const char*, const char*, std::vector<std::string>&);
 
 enum class compiler_stage : uint32_t {
     preprocessor,

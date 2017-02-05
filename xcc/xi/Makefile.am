@@ -4,8 +4,8 @@ libxi_a_SOURCES     = xi.cpp
 libxi_a_SOURCES    += xi-parser.cpp
 libxi_a_SOURCES    += xi-lex.cpp
 libxi_a_SOURCES    += xi_builder.cpp
-libxi_a_CPPFLAGS    =
-libxi_a_CXXFLAGS    = -std=c++11
+libxi_a_CPPFLAGS    = @llvm_cppflags@
+libxi_a_CXXFLAGS    = -std=c++11 -pthread
 
 BUILT_SOURCES       = $(srcdir)/xi-parser.hpp
 BUILT_SOURCES      += $(srcdir)/xi-lex.hpp

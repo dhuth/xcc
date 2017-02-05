@@ -102,6 +102,7 @@ public:
     virtual ast_expr*                           make_bxor_expr(ast_expr*, ast_expr*)                                const;
     virtual ast_expr*                           make_bnot_expr(ast_expr*)                                           const;
 
+
     virtual ast_expr*                           make_cast_expr(ast_type*, ast_expr*)                                const;
     virtual ast_expr*                           make_declref_expr(ast_decl*);
     virtual ast_expr*                           make_memberref_expr(ast_expr*, ast_record_member_decl*);
@@ -110,6 +111,10 @@ public:
     virtual ast_expr*                           make_index_expr(ast_expr*, ast_expr*)                               const;
     virtual ast_expr*                           make_call_expr(ast_expr*, list<ast_expr>*)                          const;
 
+    virtual ast_stmt*                           make_nop_stmt()                                                     const noexcept;
+    virtual ast_stmt*                           make_expr_stmt(ast_expr*)                                           const noexcept;
+
+    virtual uint32_t                            foldu32(ast_expr* e)                                                const;
 
             ast_name_mangler_t                  get_mangled_name;
             //ast_folder_t                        fold;
@@ -184,6 +189,8 @@ private:
                                                                         _function_types;
     std::map<std::tuple<ast_type*, uint32_t>, ptr<ast_array_type>>      _array_types;
     std::map<ast_record_decl*, ptr<ast_record_type>>                    _record_types;
+
+    ptr<ast_stmt>                                                       _the_nop_stmt;
 
 };
 

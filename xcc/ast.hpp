@@ -121,9 +121,6 @@ public:
 };
 
 
-struct ast_record_decl;
-
-
 /**
  * Global variable declaration
  */
@@ -220,9 +217,6 @@ public:
     property<bool>                                              is_extern_visible;  //!< is visible outside of this module
 
 };
-
-
-struct ast_record_decl;
 
 
 /**

@@ -11,7 +11,7 @@
 namespace xcc {
 
 void translation_unit::append(ast_function_decl* decl) noexcept {
-    (*this->global_function_declarations).append(decl);
+    this->global_function_declarations.push_back(box(decl));
 }
 
 const frontend all_frontends[] = {

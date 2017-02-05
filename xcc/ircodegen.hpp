@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "ast.hpp"
+#include "frontend.hpp"
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/IRBuilder.h>
@@ -103,6 +104,7 @@ public:
         delete this->_local_scope;
     }
 
+    void generate(translation_unit& tu, const char* outfile);
     void generate_decl(ast_decl* decl);
 
     llvm::LLVMContext                                                   llvm_context;
@@ -111,7 +113,7 @@ public:
     ircode_expr_generator                                               generate_expr;
     ircode_type_generator                                               generate_type;
 
-private:
+//private:
 
     struct local_scope {
         inline local_scope(local_scope* prev): prev(prev) { }
@@ -133,8 +135,6 @@ private:
         }
     };
 
-public:
-
     inline void begin_scope() {
         this->_local_scope = new local_scope(this->_local_scope);
     }
@@ -154,7 +154,9 @@ private:
 
     void                                                                generate_function_decl(ast_function_decl*);
     void                                                                generate_variable_decl(ast_variable_decl*);
-    //void                                                                generate_record_decl(ast_record_decl*);
+
+    void                                                                generate_function_body(ast_function_decl*);
+    void                                                                generate_stmt(llvm::BasicBlock* bb, ast_stmt* stmt);
 
     std::map<ast_decl*, llvm::Value*>                                   _named_declarations;
     local_scope*                                                        _local_scope;

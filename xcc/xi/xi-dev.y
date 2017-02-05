@@ -24,8 +24,16 @@
         OP_LPAREN                           "("
         OP_RPAREN                           ")"
         
+        OP_COLON                            ":"
+        OP_DOUBLE_COLON                     "::"
+        OP_SEMICOLON                        ";"
+        
         OP_COMA                             ","
         OP_DOT                              "."
+        
+        OP_PLUS                             "+"
+        OP_MINUS                            "-"
+        OP_STAR                             "*"
         
         KW_NAMESPACE                        "namespace"
         KW_TYPEDEF                          "typedef"
@@ -49,6 +57,9 @@
 %type   <expr>                              LITERAL_FLOAT
 
 %type   <type>                              type
+%type   <type>                              postfix-type
+%type   <type>                              prefix-type
+%type   <type>                              basic-type
 
 
 %code {
@@ -58,29 +69,24 @@ extern void yyerror(xcc::translation_unit& tu, xi_builder_t& builder, const char
 %param                              {xcc::translation_unit& tu}
 %param                              {xi_builder_t&          builder}
 
-%start      translation-unit
+%start  type
 %%
-type
-                :   TOK_TYPE
-                ;
 
-translation-unit
-                :   global-decl-list-opt
-                ;
-global-decl-list-opt
-                :   global-decl-list
-                |   %empty
-                ;
-global-decl-list
-                :   global-decl-list global-decl
-                |   global-decl
-                ;
-global-decl
-                :   global-function-decl
-                ;
-global-function-decl
-                :   TOK_IDENTIFIER
-                ;
+type
+        :   postfix-type                                                                            { $$ = $1; }
+        ;
+postfix-type
+        :   prefix-type                                                                             { $$ = $1; }
+        ;
+prefix-type
+        :   basic-type                                                                              { $$ = $1; }
+        ;
+basic-type
+        :   TOK_IDENTIFIER                                                                          { $$ = builder.get_named_type($1); }
+        |   TOK_TYPE                                                                                { $$ = $1; }
+        |   OP_LPAREN type OP_RPAREN                                                                { $$ = $2; }
+        ;
+
 %%
 
 void yyerror(xcc::translation_unit& tu, xi_builder_t& builder, const char* msg) {

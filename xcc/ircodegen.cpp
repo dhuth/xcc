@@ -8,6 +8,9 @@
 #include <cassert>
 #include "ircodegen.hpp"
 
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/raw_ostream.h>
+
 namespace xcc {
 
 llvm::Type* ircode_type_generator::generate_void_type(ast_void_type*) {
@@ -224,6 +227,21 @@ llvm::Value* ircode_expr_generator::generate_invoke(ast_invoke* e) {
     return context.ir_builder.CreateCall(func, llvm::ArrayRef<llvm::Value*>(args));
 }
 
+void ircode_context::generate(translation_unit& tu, const char* outfile) {
+    for(auto fdecl: tu.global_function_declarations) {
+        this->generate_function_decl(unbox(fdecl));
+    }
+    for(auto fdecl: tu.global_function_declarations) {
+        this->generate_function_body(unbox(fdecl));
+    }
+
+    std::error_code ec;
+    llvm::raw_fd_ostream outstream(outfile, ec, llvm::sys::fs::F_None);
+
+    this->module->print(outstream, nullptr);
+
+}
+
 void ircode_context::generate_decl(ast_decl* decl) {
     switch(decl->get_tree_type()) {
     case tree_type_id::ast_variable_decl:   this->generate_variable_decl(decl->as<ast_variable_decl>());    return;
@@ -287,6 +305,29 @@ void ircode_context::generate_function_decl(ast_function_decl* func) {
     }
 
     this->add_declaration(func, fvalue);
+}
+
+void ircode_context::generate_function_body(ast_function_decl* decl) {
+    auto fvalue = static_cast<llvm::Function*>(this->find(decl));
+
+    this->begin_scope();
+
+    uint32_t i = 0;
+    for(auto& arg: fvalue->args()) {
+        this->add_declaration(decl->parameters[i], &arg);
+        i++;
+    }
+    llvm::BasicBlock*   bb = llvm::BasicBlock::Create(this->llvm_context, (std::string) decl->name, fvalue);
+    this->ir_builder.SetInsertPoint(bb);
+
+    this->generate_stmt(bb, decl->body);
+
+    this->ir_builder.ClearInsertionPoint();
+    this->end_scope();
+}
+
+void ircode_context::generate_stmt(llvm::BasicBlock* bb, ast_stmt* stmt) {
+    //...
 }
 
 }

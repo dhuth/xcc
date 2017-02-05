@@ -74,7 +74,8 @@ std::string ast_default_name_mangler::mangle_record_type(ast_record_type* tp) {
 __ast_builder_impl::__ast_builder_impl(ast_name_mangler_t mangler) noexcept
             : get_mangled_name(mangler),
               _pointer_types(0, std::hash<ast_type*>(), sametype_predicate(*this)),
-              _function_types(0, functype_hasher(*this), samefunctype_predicate(*this)) {
+              _function_types(0, functype_hasher(*this), samefunctype_predicate(*this)),
+              _the_nop_stmt(new ast_nop_stmt()) {
     this->create_default_types();
 }
 
@@ -502,6 +503,24 @@ ast_expr* __ast_builder_impl::make_call_expr(ast_expr* fexpr, list<ast_expr>* ar
     return new ast_invoke(t, fexpr, args);
 }
 
+uint32_t __ast_builder_impl::foldu32(ast_expr* e) const {
+    switch(e->get_tree_type()) {
+    case tree_type_id::ast_integer:
+        {
+            llvm::APSInt value = e->as<ast_integer>()->value;
+            return std::atoi(value.toString(10).c_str());
+        }
+    }
+    throw std::runtime_error("unhandled expr " + std::to_string((int) e->get_tree_type()) + " in foldu32\n");
+}
+
+ast_stmt* __ast_builder_impl::make_nop_stmt() const noexcept {
+    return this->_the_nop_stmt;
+}
+
+ast_stmt* __ast_builder_impl::make_expr_stmt(ast_expr* e) const noexcept {
+    return new ast_expr_stmt(e);
+}
 
 static inline bool __sametype(const __ast_builder_impl& builder, const ast_integer_type* lhs, const ast_integer_type* rhs) {
     return (uint32_t) lhs->bitwidth    == (uint32_t) rhs->bitwidth    &&
