@@ -59,9 +59,13 @@ struct managed_ptr final : __ptr_impl {
     inline operator T*() const noexcept {
         return reinterpret_cast<T*>(this->_internal_ptr);
     }
+
+    inline T* operator->() const noexcept {
+        return reinterpret_cast<T*>(this->_internal_ptr);
+    }
 };
 
-template<typename T> inline managed_ptr<T>      box(T*& v)               { return managed_ptr<T>(v); }
+template<typename T> inline managed_ptr<T>      box(T* v)                { return managed_ptr<T>(v); }
 template<typename T> inline T*                  unbox(managed_ptr<T> p)  { return (T*)p;     }
 
 }

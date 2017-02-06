@@ -132,11 +132,6 @@ ast_array_type* __ast_builder_impl::get_array_type(ast_type* eltype, uint32_t si
     return this->_array_types[key];
 }
 
-//ast_function_type* __ast_builder_impl::get_function_type(ast_type* rtype, list<ast_type>* params) noexcept {
-//    ptr<list<ast_type>> p(params);
-//    return this->get_function_type(rtype, p);
-//}
-
 ast_function_type* __ast_builder_impl::get_function_type(ast_type* rtype, ptr<list<ast_type>> params) noexcept {
     auto key = funckey_t(rtype, unbox(params));
     if(this->_function_types.find(key) == this->_function_types.end()) {
@@ -200,6 +195,14 @@ ast_expr* __ast_builder_impl::make_real(const char* txt) const noexcept {
     llvm::APFloat value(std::atof(txt));
 
     return new ast_real(this->get_real_type(64), value);
+}
+
+ast_expr* __ast_builder_impl::make_zero(ast_type* tp) const noexcept {
+    switch(tp->get_tree_type()) {
+    case tree_type_id::ast_integer_type:        return new ast_integer(tp, llvm::APSInt::get(0));
+    case tree_type_id::ast_real_type:           return new ast_real(tp,    llvm::APFloat(0.0));
+    }
+    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) tp->get_tree_type()));
 }
 
 ast_expr* __ast_builder_impl::make_add_expr(ast_expr* lhs, ast_expr* rhs) const {

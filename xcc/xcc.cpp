@@ -129,7 +129,7 @@ static xcc::compiler_function get_compiler_by_name(const std::string& name, cons
 }
 
 static inline std::string getext(std::string filename) {
-    return filename.substr(filename.find_last_of('.'));
+    return filename.substr(filename.find_last_of('.') + 1);
 }
 
 static std::string handle_compile_from_file(const std::string& filename, xcc_program_args* args) {
@@ -143,6 +143,8 @@ static std::string handle_compile_from_file(const std::string& filename, xcc_pro
 
     std::string outfile = (filename.substr(0, filename.find_last_of('.')) + ".ll");
     cfunc(filename.c_str(), outfile.c_str(), args->compiler_args);
+
+    return outfile;
 }
 
 int main(int argc, char** argv) {

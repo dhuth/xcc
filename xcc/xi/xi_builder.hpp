@@ -22,6 +22,7 @@ public:
     virtual ~xi_builder() = default;
 
     virtual ast_type*                               get_named_type(const char* name);
+    virtual ast_variable_decl*                      define_variable(ast_type*, const char*);
 
 private:
 
@@ -37,6 +38,7 @@ public:
 
     virtual ast_type*                               find_type(const char* name) = 0;
     virtual void                                    add_type(const char* name, ast_type* tp) = 0;
+    virtual void                                    add_decl(const char* name, ast_variable_decl* decl) = 0;
 
 };
 
@@ -47,11 +49,13 @@ public:
     virtual ~xi_global_scope() = default;
 
     virtual ast_type*                               find_type(const char* name) final override;
-    virtual void                                    add_type(const char* name, ast_type* tp);
+    virtual void                                    add_type(const char* name, ast_type* tp) final override;
+    virtual void                                    add_decl(const char* name, ast_variable_decl* tp) final override;
 
 private:
 
     std::unordered_map<std::string, ptr<ast_type>>                      _named_types;
+    std::unordered_map<std::string, ptr<ast_decl>>                      _named_decls;
 
 
 };

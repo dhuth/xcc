@@ -20,7 +20,7 @@
 
 %}
 
-IDENTIFIER                                          [a-zA-Z_][a-zA-Z0-9_]
+IDENTIFIER                                          [a-zA-Z_][a-zA-Z0-9_]*
 DIGIT                                               [0-9]
 DIGIT_HEX_LOWER                                     [0-9a-f]
 DIGIT_HEX_UPPER                                     [0-9A-F]

@@ -69,7 +69,7 @@ extern void yyerror(xcc::translation_unit& tu, xi_builder_t& builder, const char
 %param                              {xcc::translation_unit& tu}
 %param                              {xi_builder_t&          builder}
 
-%start  type
+%start  translation-unit
 %%
 
 type
@@ -87,9 +87,32 @@ basic-type
         |   OP_LPAREN type OP_RPAREN                                                                { $$ = $2; }
         ;
 
+
+global-decl-list-opt
+        :   global-decl-list
+        |   %empty
+        ;
+global-decl-list
+        :   global-decl global-decl-list
+        |   global-decl
+        ;
+global-decl
+        :   global-variable
+        ;
+
+
+global-variable
+        :   type TOK_IDENTIFIER OP_SEMICOLON                                                       { tu.append(builder.define_variable($1, $2)); }
+        ;
+
+
+translation-unit
+        :   global-decl-list-opt TOK_EOF
+        ;
 %%
 
 void yyerror(xcc::translation_unit& tu, xi_builder_t& builder, const char* msg) {
+    printf("%s\n", msg);
 }
 
 

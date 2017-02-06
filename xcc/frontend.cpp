@@ -14,6 +14,10 @@ void translation_unit::append(ast_function_decl* decl) noexcept {
     this->global_function_declarations.push_back(box(decl));
 }
 
+void translation_unit::append(ast_variable_decl* decl) noexcept {
+    this->global_variable_declarations.push_back(box(decl));
+}
+
 const frontend all_frontends[] = {
 #include "all_frontend_compilers.def.hpp"
         {"", "", {""}, NULL}

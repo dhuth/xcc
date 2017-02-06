@@ -78,6 +78,8 @@ public:
     virtual ast_expr*                           make_integer(const char* txt, uint8_t radix)                        const noexcept;
     virtual ast_expr*                           make_real(const char* txt)                                          const noexcept;
 
+    virtual ast_expr*                           make_zero(ast_type* tp)                                             const noexcept;
+
     virtual ast_expr*                           make_neg_expr(ast_expr*)                                            const;
     virtual ast_expr*                           make_add_expr(ast_expr*, ast_expr*)                                 const;
     virtual ast_expr*                           make_sub_expr(ast_expr*, ast_expr*)                                 const;

@@ -228,9 +228,14 @@ llvm::Value* ircode_expr_generator::generate_invoke(ast_invoke* e) {
 }
 
 void ircode_context::generate(translation_unit& tu, const char* outfile) {
+    for(auto vdecl: tu.global_variable_declarations) {
+        this->generate_variable_decl(unbox(vdecl));
+    }
+
     for(auto fdecl: tu.global_function_declarations) {
         this->generate_function_decl(unbox(fdecl));
     }
+
     for(auto fdecl: tu.global_function_declarations) {
         this->generate_function_body(unbox(fdecl));
     }
@@ -260,7 +265,8 @@ void ircode_context::generate_variable_decl(ast_variable_decl* var) {
                 type,
                 false,
                 llvm::GlobalVariable::LinkageTypes::ExternalLinkage,
-                static_cast<llvm::Constant*>(this->generate_expr(var->initial_value)));
+                static_cast<llvm::Constant*>(this->generate_expr(var->initial_value)),
+                (std::string) var->name);
     }
     else {
         globalvar = new llvm::GlobalVariable(
@@ -268,7 +274,8 @@ void ircode_context::generate_variable_decl(ast_variable_decl* var) {
                 type,
                 false,
                 llvm::GlobalVariable::LinkageTypes::InternalLinkage,
-                static_cast<llvm::Constant*>(this->generate_expr(var->initial_value)));
+                static_cast<llvm::Constant*>(this->generate_expr(var->initial_value)),
+                (std::string) var->name);
     }
     this->add_declaration(var, globalvar);
 }

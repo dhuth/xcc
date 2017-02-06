@@ -17,8 +17,10 @@ namespace xcc {
 
 struct translation_unit {
     std::vector<ptr<ast_function_decl>>                                 global_function_declarations;
+    std::vector<ptr<ast_variable_decl>>                                 global_variable_declarations;
 
     void append(ast_function_decl*) noexcept;
+    void append(ast_variable_decl*) noexcept;
 };
 
 
