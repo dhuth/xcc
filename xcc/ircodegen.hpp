@@ -156,7 +156,7 @@ private:
     void                                                                generate_variable_decl(ast_variable_decl*);
 
     void                                                                generate_function_body(ast_function_decl*);
-    void                                                                generate_stmt(llvm::BasicBlock* bb, ast_stmt* stmt);
+    void                                                                generate_stmt(ast_stmt* stmt);
 
     std::map<ast_decl*, llvm::Value*>                                   _named_declarations;
     local_scope*                                                        _local_scope;

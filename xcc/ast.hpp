@@ -9,6 +9,10 @@
 #define AST_HPP_
 
 #include "tree.hpp"
+
+#include <iostream>
+#include <sstream>
+
 #include <llvm/ADT/APSInt.h>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/StringRef.h>

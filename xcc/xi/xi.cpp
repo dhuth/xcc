@@ -5,9 +5,9 @@
  *      Author: derick
  */
 
+#include <xi_internal.hpp>
 #include <cstdio>
 
-#include "xi-internal.hpp"
 #include "xi-parser.hpp"
 #include "xi-lex.hpp"
 #include "xi.hpp"
@@ -18,7 +18,7 @@ namespace xcc {
 
 int ximain(const char* input_filename, const char* output_file, std::vector<std::string>& args) {
     translation_unit            unit;
-    xi_builder_t                builder;
+    xi_builder_t                builder(unit);
     std::string                 output_filename;
 
     //TODO: handle compiler args
@@ -28,8 +28,6 @@ int ximain(const char* input_filename, const char* output_file, std::vector<std:
 
 
     ircode_context ctx(output_filename);
-
-    //TODO: handle target args
 
     ctx.generate(unit, output_file);
 

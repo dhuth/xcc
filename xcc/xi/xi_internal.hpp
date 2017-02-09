@@ -9,6 +9,7 @@
 #define XI_XI_INTERNAL_HPP_
 
 #include "frontend.hpp"
+#include "xi_tree.hpp"
 #include "xi_builder.hpp"
 
 typedef xcc::xi_builder                                                 xi_builder_t;

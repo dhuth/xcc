@@ -327,14 +327,24 @@ void ircode_context::generate_function_body(ast_function_decl* decl) {
     llvm::BasicBlock*   bb = llvm::BasicBlock::Create(this->llvm_context, (std::string) decl->name, fvalue);
     this->ir_builder.SetInsertPoint(bb);
 
-    this->generate_stmt(bb, decl->body);
+    this->generate_stmt(decl->body);
 
     this->ir_builder.ClearInsertionPoint();
     this->end_scope();
 }
 
-void ircode_context::generate_stmt(llvm::BasicBlock* bb, ast_stmt* stmt) {
-    //...
+void ircode_context::generate_stmt(ast_stmt* stmt) {
+    switch(stmt->get_tree_type()) {
+    case tree_type_id::ast_assign_stmt:     break;
+    case tree_type_id::ast_block_stmt:      break;
+    case tree_type_id::ast_break_stmt:      break;
+    case tree_type_id::ast_continue_stmt:   break;
+    case tree_type_id::ast_expr_stmt:       break;
+    case tree_type_id::ast_if_stmt:         break;
+    case tree_type_id::ast_for_stmt:        break;
+    case tree_type_id::ast_nop_stmt:        break;
+    case tree_type_id::ast_return_stmt:     break;
+    }
 }
 
 }

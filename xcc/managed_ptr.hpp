@@ -47,7 +47,7 @@ struct managed_ptr final : __ptr_impl {
     //inline managed_ptr(const managed_ptr<T>&& other) noexcept : __ptr_impl(other._internal_ptr) {
     //    this->incr_ref();
     //}
-    inline managed_ptr<T>& operator=(managed_ptr<T>&& other) {
+    inline const managed_ptr<T>& operator=(const managed_ptr<T>& other) {
         if(this->decr_ref() == 0) {
             delete reinterpret_cast<T*>(this->_internal_ptr);
         }
