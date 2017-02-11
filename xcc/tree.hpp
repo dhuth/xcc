@@ -159,6 +159,8 @@ public:
     inline T* as() const noexcept { return dynamic_cast<T*>(const_cast<__tree_base*>(this)); }
     inline tree_type_id get_tree_type() const { return this->_type; }
 
+    inline const char* get_tree_type_name() const { return __all_tree_types[(size_t) this->_type].name; };
+
     inline __tree_base(const __tree_base& other) noexcept
             : _type(other._type) {
         for(auto p: other._child_nodes) {

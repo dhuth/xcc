@@ -24,7 +24,7 @@ int ximain(const char* input_filename, const char* output_file, std::vector<std:
     //TODO: handle compiler args
 
     xiin = fopen(input_filename, "r");
-    xiparse(unit, builder);
+    xiparse(builder);
 
 
     ircode_context ctx(output_filename);

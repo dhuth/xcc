@@ -182,13 +182,15 @@ public:
      * \param name
      * \param type
      */
-    inline ast_local_decl(std::string name, ast_type* type) noexcept
+    inline ast_local_decl(std::string name, ast_type* type, ast_expr* init_value) noexcept
             : base_type(name),
-              type(this, type) {
+              type(this, type),
+              init_value(this, init_value) {
         //...
     }
 
-    property<ast_type>                                          type; //!<
+    property<ast_type>                                          type;           //!<
+    property<ast_expr>                                          init_value;     //!<
 };
 
 
@@ -466,6 +468,8 @@ public:
  * All binary and unary operators
  */
 enum class ast_op : uint32_t {
+    none,
+    // Low level operators
     bitcast,                                                            //!< Bitcast, (only changes type)
     trunc,                                                              //!< Convert to a smaller integer
     zext,                                                               //!< Zero extend
@@ -480,11 +484,11 @@ enum class ast_op : uint32_t {
     utop,                                                               //!< Unsigned integer to pointer
     ineg,                                                               //!< Signed integer negation
     fneg,                                                               //!< Floating point negation
-    add,                                                                //!< Integer add
+    iadd,                                                               //!< Integer add
     fadd,                                                               //!< Floating point add
-    sub,                                                                //!< Integer subtract
+    isub,                                                                //!< Integer subtract
     fsub,                                                               //!< Floating point subtract
-    mul,                                                                //!< Integer multiply
+    imul,                                                                //!< Integer multiply
     fmul,                                                               //!< Floating point multiply
     udiv,                                                               //!< Unsigned integer divide
     idiv,                                                               //!< Signed integer divide
@@ -494,7 +498,6 @@ enum class ast_op : uint32_t {
     fmod,                                                               //!< Floating point modulo
     land,                                                               //!< Logical and
     lor,                                                                //!< Logical or
-    lxor,                                                               //!< Logical xor
     lnot,                                                               //!< Logical not
     band,                                                               //!< Binary and
     bor,                                                                //!< Binary or
@@ -526,7 +529,33 @@ enum class ast_op : uint32_t {
     fcmp_uge,                                                           //!< Floating point unordered greater than or equal
     fcmp_true,                                                          //!< Floating point always true
     fcmp_false,                                                         //!< Floating point always false
+    // High level operators
+    __high_level,
+    add,
+    sub,
+    mul,
+    div,
+    mod,
+    shl,
+    shr,
+    eq,
+    ne,
+    le,
+    lt,
+    ge,
+    gt,
+    logical_and,
+    logical_or,
+    logical_not,
+    binary_and,
+    binary_or,
+    binary_xor,
+    binary_not,
 };
+
+inline bool is_highlevel_op(ast_op op) {
+    return ((uint32_t) op) > ((uint32_t) ast_op::__high_level);
+}
 
 
 /**
@@ -790,6 +819,22 @@ public:
 
 
 /**
+ * Declaration of a local variable
+ */
+struct ast_decl_stmt final : public extend_tree<tree_type_id::ast_decl_stmt, ast_stmt> {
+public:
+
+    inline ast_decl_stmt(ast_local_decl* decl) noexcept
+            : base_type(),
+              decl(this, decl) {
+        //...
+    }
+
+    property<ast_local_decl>                                    decl;   //!<
+};
+
+
+/**
  * A block statement with local variable declarations that are initialized
  *  at the begining of the block, and destroyed at the end
  */
@@ -800,14 +845,14 @@ public:
      * \param decls list of declarations
      * \param stmts a sequence of statements to be executed in order
      */
-    inline ast_block_stmt(list<ast_variable_decl>* decls, list<ast_stmt>* stmts) noexcept
+    inline ast_block_stmt(list<ast_local_decl>* locals, list<ast_stmt>* stmts) noexcept
             : base_type(),
-              decls(this, decls),
+              decls(this, locals),
               stmts(this, stmts) {
         //...
     }
 
-    property<list<ast_variable_decl>>                           decls;  //!<
+    property<list<ast_local_decl>>                              decls;  //!<
     property<list<ast_stmt>>                                    stmts;  //!<
 
 };
@@ -873,17 +918,19 @@ public:
      * \param condition
      * \param each_stmt
      */
-    inline ast_for_stmt(ast_stmt* init_stmt, ast_expr* condition, ast_stmt* each_stmt) noexcept
+    inline ast_for_stmt(ast_stmt* init_stmt, ast_expr* condition, ast_stmt* each_stmt, ast_stmt* body) noexcept
             : base_type(),
               init_stmt(this, init_stmt),
               condition(this, condition),
-              each_stmt(this, each_stmt) {
+              each_stmt(this, each_stmt),
+              body(this, body) {
         //...
     }
 
     property<ast_stmt>                                          init_stmt;  //!<
     property<ast_expr>                                          condition;  //!<
     property<ast_stmt>                                          each_stmt;  //!<
+    property<ast_stmt>                                          body;
 
 };
 

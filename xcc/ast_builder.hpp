@@ -78,33 +78,10 @@ public:
     virtual ast_expr*                           make_integer(const char* txt, uint8_t radix)                        const noexcept;
     virtual ast_expr*                           make_real(const char* txt)                                          const noexcept;
 
+    // Expressions
     virtual ast_expr*                           make_zero(ast_type* tp)                                             const noexcept;
-
-    virtual ast_expr*                           make_neg_expr(ast_expr*)                                            const;
-    virtual ast_expr*                           make_add_expr(ast_expr*, ast_expr*)                                 const;
-    virtual ast_expr*                           make_sub_expr(ast_expr*, ast_expr*)                                 const;
-    virtual ast_expr*                           make_mul_expr(ast_expr*, ast_expr*)                                 const;
-    virtual ast_expr*                           make_div_expr(ast_expr*, ast_expr*)                                 const;
-    virtual ast_expr*                           make_mod_expr(ast_expr*, ast_expr*)                                 const;
-
-    virtual ast_expr*                           make_eq_expr(ast_expr*, ast_expr*)                                  const;
-    virtual ast_expr*                           make_ne_expr(ast_expr*, ast_expr*)                                  const;
-    virtual ast_expr*                           make_lt_expr(ast_expr*, ast_expr*)                                  const;
-    virtual ast_expr*                           make_le_expr(ast_expr*, ast_expr*)                                  const;
-    virtual ast_expr*                           make_gt_expr(ast_expr*, ast_expr*)                                  const;
-    virtual ast_expr*                           make_ge_expr(ast_expr*, ast_expr*)                                  const;
-
-    virtual ast_expr*                           make_land_expr(ast_expr*, ast_expr*)                                const;
-    virtual ast_expr*                           make_lor_expr(ast_expr*, ast_expr*)                                 const;
-    virtual ast_expr*                           make_lxor_expr(ast_expr*, ast_expr*)                                const;
-    virtual ast_expr*                           make_lnot_expr(ast_expr*)                                           const;
-
-    virtual ast_expr*                           make_band_expr(ast_expr*, ast_expr*)                                const;
-    virtual ast_expr*                           make_bor_expr(ast_expr*, ast_expr*)                                 const;
-    virtual ast_expr*                           make_bxor_expr(ast_expr*, ast_expr*)                                const;
-    virtual ast_expr*                           make_bnot_expr(ast_expr*)                                           const;
-
-
+    virtual ast_expr*                           make_op_expr(ast_op, ast_expr*);
+    virtual ast_expr*                           make_op_expr(ast_op, ast_expr*, ast_expr*);
     virtual ast_expr*                           make_cast_expr(ast_type*, ast_expr*)                                const;
     virtual ast_expr*                           make_declref_expr(ast_decl*);
     virtual ast_expr*                           make_memberref_expr(ast_expr*, ast_record_member_decl*);
@@ -113,11 +90,21 @@ public:
     virtual ast_expr*                           make_index_expr(ast_expr*, ast_expr*)                               const;
     virtual ast_expr*                           make_call_expr(ast_expr*, list<ast_expr>*)                          const;
 
+    // Statments
     virtual ast_stmt*                           make_nop_stmt()                                                     const noexcept;
     virtual ast_stmt*                           make_expr_stmt(ast_expr*)                                           const noexcept;
+    virtual ast_stmt*                           make_assign_stmt(ast_expr* lhs, ast_expr* rhs)                            noexcept;
+    virtual ast_stmt*                           make_if_stmt(ast_expr*,ast_stmt*,ast_stmt*)                         const noexcept;
+    virtual ast_stmt*                           make_while_stmt(ast_expr*,ast_stmt*)                                const noexcept;
+    virtual ast_stmt*                           make_for_stmt(ast_stmt*,ast_expr*,ast_stmt*,ast_stmt*)              const noexcept;
+    virtual ast_stmt*                           make_return_stmt(ast_type*, ast_expr*)                              const noexcept;
+    virtual ast_stmt*                           make_break_stmt()                                                   const noexcept;
+    virtual ast_stmt*                           make_continue_stmt()                                                const noexcept;
 
+    // Utility
     virtual uint32_t                            foldu32(ast_expr* e)                                                const;
 
+    // Anylasis
             ast_name_mangler_t                  get_mangled_name;
             //ast_folder_t                        fold;
     virtual bool                                sametype(ast_type*, ast_type*)                                      const;
@@ -144,14 +131,14 @@ private:
         }
     };
 
-    typedef std::tuple<ast_type*, ptr<list<ast_type>>>                 funckey_t;
+    typedef std::tuple<ast_type*, ptr<list<ast_type>>>                 functypekey_t;
 
     struct samefunctype_predicate {
         __ast_builder_impl&                                             builder;
 
         inline samefunctype_predicate(__ast_builder_impl& builder): builder(builder) { }
 
-        inline bool operator()(funckey_t const& lhs, funckey_t const& rhs) const {
+        inline bool operator()(functypekey_t const& lhs, functypekey_t const& rhs) const {
             auto lhs_rt = std::get<0>(lhs);
             auto rhs_rt = std::get<0>(rhs);
             auto lhs_params = std::get<1>(lhs);
@@ -169,7 +156,7 @@ private:
 
         inline functype_hasher(__ast_builder_impl& builder): builder(builder) { }
 
-        inline size_t operator()(const funckey_t& k) const {
+        inline size_t operator()(const functypekey_t& k) const {
             std::hash<ast_type*> hasher;
             auto h = hasher(std::get<0>(k));
             for(auto p: unbox(std::get<1>(k))) {
@@ -182,17 +169,22 @@ private:
     ptr<ast_void_type>                                                  _the_void_type;
     ptr<ast_pointer_type>                                               _the_void_ptr_type;
     ptr<ast_integer_type>                                               _the_boolean_type;
+    ptr<ast_stmt>                                                       _the_nop_stmt;
+    ptr<ast_stmt>                                                       _the_break_stmt;
+    ptr<ast_stmt>                                                       _the_continue_stmt;
+
     std::map<uint32_t, ptr<ast_integer_type>>                           _unsigned_integer_types;
     std::map<uint32_t, ptr<ast_integer_type>>                           _signed_integer_types;
     std::map<uint32_t, ptr<ast_real_type>>                              _real_types;
     std::unordered_map<ast_type*, ptr<ast_pointer_type>, std::hash<ast_type*>, sametype_predicate>
                                                                         _pointer_types;
-    std::unordered_map<funckey_t, ptr<ast_function_type>, functype_hasher, samefunctype_predicate>
+    std::unordered_map<functypekey_t, ptr<ast_function_type>, functype_hasher, samefunctype_predicate>
                                                                         _function_types;
     std::map<std::tuple<ast_type*, uint32_t>, ptr<ast_array_type>>      _array_types;
     std::map<ast_record_decl*, ptr<ast_record_type>>                    _record_types;
 
-    ptr<ast_stmt>                                                       _the_nop_stmt;
+    ptr<ast_decl>                                                       _decl_context;
+    ptr<ast_block_stmt>                                                 _block_context;
 
 };
 

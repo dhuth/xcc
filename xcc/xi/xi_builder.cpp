@@ -12,10 +12,6 @@ namespace xcc {
 xi_builder::xi_builder(translation_unit& tu) : ast_builder<>(), tu(tu), scope(new xi_global_scope()) { }
 
 
-ast_type* xi_builder::identifier_as_type(const char* name) {
-    return this->scope->find_type(name);
-}
-
 void xi_builder::define_typedef(const char* name, ast_type* type) {
     this->scope->add_type(name, type);
 }
@@ -39,11 +35,6 @@ ast_variable_decl* xi_builder::define_global_variable(ast_type* type, const char
     this->scope->add_decl(name, var);
     this->tu.append(var);
     return var;
-}
-
-ast_expr* xi_builder::identifier_as_expr(const char* name) {
-    //TODO: better ???
-    return this->make_declref_expr(this->scope->find_decl(name));
 }
 
 ast_expr* xi_builder::make_op(xi_operator op, ast_expr* expr) {

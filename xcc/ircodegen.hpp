@@ -154,12 +154,24 @@ private:
 
     void                                                                generate_function_decl(ast_function_decl*);
     void                                                                generate_variable_decl(ast_variable_decl*);
+    void                                                                generate_local_decl(ast_local_decl*);
 
     void                                                                generate_function_body(ast_function_decl*);
-    void                                                                generate_stmt(ast_stmt* stmt);
+    void                                                                generate_stmt(ast_stmt*, llvm::BasicBlock* break_target, llvm::BasicBlock* continue_target);
+
+    void                                                                generate_expr_stmt(ast_expr_stmt*);
+    void                                                                generate_assign_stmt(ast_assign_stmt*);
+    void                                                                generate_block_stmt(ast_block_stmt*, llvm::BasicBlock*, llvm::BasicBlock*);
+    void                                                                generate_if_stmt(ast_if_stmt*, llvm::BasicBlock*, llvm::BasicBlock*);
+    void                                                                generate_while_stmt(ast_while_stmt*, llvm::BasicBlock*, llvm::BasicBlock*);
+    void                                                                generate_for_stmt(ast_for_stmt*, llvm::BasicBlock*, llvm::BasicBlock*);
+    void                                                                generate_return_stmt(ast_return_stmt*);
+    void                                                                generate_continue_stmt(llvm::BasicBlock*);
+    void                                                                generate_break_stmt(llvm::BasicBlock*);
 
     std::map<ast_decl*, llvm::Value*>                                   _named_declarations;
     local_scope*                                                        _local_scope;
+    llvm::BasicBlock*                                                   _header_bb;
 
 };
 

@@ -61,12 +61,9 @@ public:
     virtual ~xi_builder() = default;
 
             xi_const_type*                          get_const_type(ast_type*) const noexcept;
-    virtual ast_type*                               identifier_as_type(const char* name);
     virtual void                                    define_typedef(const char*, ast_type*);
     virtual ast_variable_decl*                      define_global_variable(ast_type*, const char*, bool is_extern = false);
     virtual ast_variable_decl*                      define_global_variable(ast_type*, const char*, ast_expr*);
-
-    virtual ast_expr*                               identifier_as_expr(const char*);
 
             ast_expr*                               make_op(xi_operator op, ast_expr*);
             ast_expr*                               make_op(xi_operator op, ast_expr*, ast_expr*);

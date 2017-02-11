@@ -116,11 +116,11 @@ llvm::Value* ircode_expr_generator::generate_binary_op(ast_binary_op* expr) {
     auto rexpr = this->visit(expr->rhs);
     switch((ast_op) expr->op) {
 
-    case ast_op::add:           return context.ir_builder.CreateAdd(lexpr, rexpr);
+    case ast_op::iadd:          return context.ir_builder.CreateAdd(lexpr, rexpr);
     case ast_op::fadd:          return context.ir_builder.CreateFAdd(lexpr, rexpr);
-    case ast_op::sub:           return context.ir_builder.CreateSub(lexpr, rexpr);
+    case ast_op::isub:          return context.ir_builder.CreateSub(lexpr, rexpr);
     case ast_op::fsub:          return context.ir_builder.CreateFSub(lexpr, rexpr);
-    case ast_op::mul:           return context.ir_builder.CreateMul(lexpr, rexpr);
+    case ast_op::imul:          return context.ir_builder.CreateMul(lexpr, rexpr);
     case ast_op::fmul:          return context.ir_builder.CreateFMul(lexpr, rexpr);
     case ast_op::idiv:          return context.ir_builder.CreateSDiv(lexpr, rexpr);
     case ast_op::udiv:          return context.ir_builder.CreateUDiv(lexpr, rexpr);
@@ -131,7 +131,6 @@ llvm::Value* ircode_expr_generator::generate_binary_op(ast_binary_op* expr) {
 
     case ast_op::land:          return context.ir_builder.CreateAnd(lexpr, rexpr);
     case ast_op::lor:           return context.ir_builder.CreateOr(lexpr, rexpr);
-    case ast_op::lxor:          return context.ir_builder.CreateXor(lexpr, rexpr);
     case ast_op::band:          return context.ir_builder.CreateAnd(lexpr, rexpr);
     case ast_op::bor:           return context.ir_builder.CreateOr(lexpr, rexpr);
     case ast_op::bxor:          return context.ir_builder.CreateXor(lexpr, rexpr);
@@ -194,7 +193,7 @@ llvm::Value* ircode_expr_generator::generate_index(ast_index* e) {
 }
 
 llvm::Value* ircode_expr_generator::generate_declref(ast_declref* e) {
-    return context.find(e->declaration);
+    return context.ir_builder.CreateLoad(context.find(e->declaration));
 }
 
 llvm::Value* ircode_expr_generator::generate_deref(ast_deref* e) {
@@ -213,9 +212,9 @@ llvm::Value* ircode_expr_generator::generate_addressof(ast_addressof* e) {
         return context.find(e->expr->as<ast_declref>()->declaration);
     case tree_type_id::ast_index:
         return context.ir_builder.CreateGEP(context.generate_type(e->type), this->visit(e->as<ast_index>()->arr_expr), this->visit(e->as<ast_index>()->index_expr));
+    default:
+        throw std::runtime_error(std::string("unhandled ") + std::string(e->expr->get_tree_type_name()) + std::string(" in ircode_expr_generator::generate_addressof"));
     }
-    //TODO: error unhandled
-    return nullptr;
 }
 
 llvm::Value* ircode_expr_generator::generate_invoke(ast_invoke* e) {
@@ -251,9 +250,10 @@ void ircode_context::generate_decl(ast_decl* decl) {
     switch(decl->get_tree_type()) {
     case tree_type_id::ast_variable_decl:   this->generate_variable_decl(decl->as<ast_variable_decl>());    return;
     case tree_type_id::ast_function_decl:   this->generate_function_decl(decl->as<ast_function_decl>());    return;
-    //case tree_type_id::ast_record_decl:     this->generate_record_decl(decl->as<ast_record_decl>());        return;
+    case tree_type_id::ast_local_decl:      this->generate_local_decl(decl->as<ast_local_decl>());          return;
+    default:
+        throw std::runtime_error(std::string("unhandled ") + std::string(decl->get_tree_type_name()) + std::string(" in ircode_context::generate_decl"));
     }
-    //TODO: error unhandled
 }
 
 void ircode_context::generate_variable_decl(ast_variable_decl* var) {
@@ -314,6 +314,16 @@ void ircode_context::generate_function_decl(ast_function_decl* func) {
     this->add_declaration(func, fvalue);
 }
 
+void ircode_context::generate_local_decl(ast_local_decl* decl) {
+    auto bb = this->ir_builder.GetInsertBlock();
+    this->ir_builder.SetInsertPoint(this->_header_bb);
+
+    auto type = this->generate_type(decl->type);
+    this->add_declaration(decl, this->ir_builder.CreateAlloca(type, nullptr, (std::string) decl->name));
+
+    this->ir_builder.SetInsertPoint(bb);
+}
+
 void ircode_context::generate_function_body(ast_function_decl* decl) {
     auto fvalue = static_cast<llvm::Function*>(this->find(decl));
 
@@ -324,27 +334,148 @@ void ircode_context::generate_function_body(ast_function_decl* decl) {
         this->add_declaration(decl->parameters[i], &arg);
         i++;
     }
-    llvm::BasicBlock*   bb = llvm::BasicBlock::Create(this->llvm_context, (std::string) decl->name, fvalue);
+    this->_header_bb        = llvm::BasicBlock::Create(this->llvm_context, "header", fvalue);
+
+    llvm::BasicBlock*   bb  = llvm::BasicBlock::Create(this->llvm_context, "body");
+
     this->ir_builder.SetInsertPoint(bb);
 
-    this->generate_stmt(decl->body);
+    this->generate_stmt(decl->body, nullptr, nullptr);
 
+    this->ir_builder.SetInsertPoint(this->_header_bb);
+    this->ir_builder.CreateBr(bb);
     this->ir_builder.ClearInsertionPoint();
+
+    this->end_scope();
+
+    //TODO: post function generation
+}
+
+void ircode_context::generate_stmt(ast_stmt* stmt, llvm::BasicBlock* continue_target, llvm::BasicBlock* break_target) {
+    //TODO: setup and cleanup ???
+
+    switch(stmt->get_tree_type()) {
+    case tree_type_id::ast_assign_stmt:     this->generate_assign_stmt(stmt->as<ast_assign_stmt>());                                    break;
+    case tree_type_id::ast_block_stmt:      this->generate_block_stmt(stmt->as<ast_block_stmt>(), continue_target, break_target);       break;
+    case tree_type_id::ast_break_stmt:      this->generate_break_stmt(break_target);                                                    break;
+    case tree_type_id::ast_continue_stmt:   this->generate_continue_stmt(continue_target);                                              break;
+    case tree_type_id::ast_expr_stmt:       this->generate_expr_stmt(stmt->as<ast_expr_stmt>());                                        break;
+    case tree_type_id::ast_if_stmt:         this->generate_if_stmt(stmt->as<ast_if_stmt>(), continue_target, break_target);             break;
+    case tree_type_id::ast_for_stmt:        this->generate_for_stmt(stmt->as<ast_for_stmt>(), continue_target, break_target);           break;
+    case tree_type_id::ast_nop_stmt:        /* do nothing */                                                                            break;
+    case tree_type_id::ast_return_stmt:     this->generate_return_stmt(stmt->as<ast_return_stmt>());                                    break;
+    case tree_type_id::ast_while_stmt:      this->generate_while_stmt(stmt->as<ast_while_stmt>(), continue_target, break_target);       break;
+    default:
+        throw std::runtime_error(std::string("unhandled ") + std::string(stmt->get_tree_type_name()) + std::string(" in ircode_context::generate_stmt"));
+    }
+}
+
+void ircode_context::generate_assign_stmt(ast_assign_stmt* stmt) {
+    assert(stmt->lhs->is<ast_addressof>());
+
+    auto val        = this->generate_expr(stmt->rhs);
+    auto addr       = this->generate_expr(stmt->lhs);
+
+    this->ir_builder.CreateStore(val, addr);
+}
+
+void ircode_context::generate_block_stmt(ast_block_stmt* stmt, llvm::BasicBlock* ct, llvm::BasicBlock* bt) {
+    this->begin_scope();
+    for(auto l: stmt->decls) {
+        this->generate_decl(l);
+    }
+    for(auto s: stmt->stmts) {
+        this->generate_stmt(s, ct, bt);
+    }
     this->end_scope();
 }
 
-void ircode_context::generate_stmt(ast_stmt* stmt) {
-    switch(stmt->get_tree_type()) {
-    case tree_type_id::ast_assign_stmt:     break;
-    case tree_type_id::ast_block_stmt:      break;
-    case tree_type_id::ast_break_stmt:      break;
-    case tree_type_id::ast_continue_stmt:   break;
-    case tree_type_id::ast_expr_stmt:       break;
-    case tree_type_id::ast_if_stmt:         break;
-    case tree_type_id::ast_for_stmt:        break;
-    case tree_type_id::ast_nop_stmt:        break;
-    case tree_type_id::ast_return_stmt:     break;
+void ircode_context::generate_break_stmt(llvm::BasicBlock* bt) {
+    this->ir_builder.CreateBr(bt);
+}
+
+void ircode_context::generate_continue_stmt(llvm::BasicBlock* ct) {
+    this->ir_builder.CreateBr(ct);
+}
+
+void ircode_context::generate_expr_stmt(ast_expr_stmt* stmt) {
+    this->generate_expr(stmt->expr);
+}
+
+void ircode_context::generate_for_stmt(ast_for_stmt* stmt, llvm::BasicBlock* ct, llvm::BasicBlock* bt) {
+    //TODO: llvm loop vectorization stuff
+
+    llvm::BasicBlock* prelogue          = llvm::BasicBlock::Create(this->llvm_context);
+    llvm::BasicBlock* body              = llvm::BasicBlock::Create(this->llvm_context);
+    llvm::BasicBlock* prologue          = llvm::BasicBlock::Create(this->llvm_context);
+    llvm::BasicBlock* continue_block    = llvm::BasicBlock::Create(this->llvm_context);
+
+    this->generate_stmt(stmt->init_stmt, ct, bt);
+    this->ir_builder.CreateBr(prelogue);
+
+    this->ir_builder.SetInsertPoint(prelogue);
+    this->ir_builder.CreateCondBr(this->generate_expr(stmt->condition), body, continue_block);
+
+    this->ir_builder.SetInsertPoint(body);
+    this->generate_stmt(stmt->body, prologue, continue_block);
+    if(!this->ir_builder.GetInsertBlock()->getTerminator()) {
+        this->ir_builder.CreateBr(prologue);
     }
+
+    this->ir_builder.SetInsertPoint(prologue);
+    this->generate_stmt(stmt->each_stmt, ct, bt);
+    this->ir_builder.CreateBr(prelogue);
+
+    this->ir_builder.SetInsertPoint(continue_block);
+}
+
+void ircode_context::generate_if_stmt(ast_if_stmt* stmt, llvm::BasicBlock* ct, llvm::BasicBlock* bt) {
+    llvm::BasicBlock* true_block        = llvm::BasicBlock::Create(this->llvm_context);
+    llvm::BasicBlock* false_block       = llvm::BasicBlock::Create(this->llvm_context);
+    llvm::BasicBlock* continue_block    = llvm::BasicBlock::Create(this->llvm_context);
+
+    this->ir_builder.CreateCondBr(this->generate_expr(stmt->condition), true_block, false_block);
+
+    this->ir_builder.SetInsertPoint(true_block);
+    this->generate_stmt(stmt->true_stmt, ct, bt);
+    if(!this->ir_builder.GetInsertBlock()->getTerminator()) {
+        this->ir_builder.CreateBr(continue_block);
+    }
+
+    this->ir_builder.SetInsertPoint(false_block);
+    this->generate_stmt(stmt->false_stmt, ct, bt);
+    if(!this->ir_builder.GetInsertBlock()->getTerminator()) {
+        this->ir_builder.CreateBr(continue_block);
+    }
+
+    this->ir_builder.SetInsertPoint(continue_block);
+}
+
+void ircode_context::generate_return_stmt(ast_return_stmt* ret) {
+    if(ret->expr) {
+        this->ir_builder.CreateRet(this->generate_expr(ret->expr));
+    }
+    else {
+        this->ir_builder.CreateRetVoid();
+    }
+}
+
+void ircode_context::generate_while_stmt(ast_while_stmt* stmt, llvm::BasicBlock* ct, llvm::BasicBlock* bt) {
+    llvm::BasicBlock*       prologue        = llvm::BasicBlock::Create(this->llvm_context);
+    llvm::BasicBlock*       body            = llvm::BasicBlock::Create(this->llvm_context);
+    llvm::BasicBlock*       continue_block  = llvm::BasicBlock::Create(this->llvm_context);
+
+    this->ir_builder.CreateBr(prologue);
+    this->ir_builder.SetInsertPoint(prologue);
+    this->ir_builder.CreateCondBr(this->generate_expr(stmt->condition), body, continue_block);
+
+    this->ir_builder.SetInsertPoint(body);
+    this->generate_stmt(stmt->stmt, prologue, continue_block);
+    if(!this->ir_builder.GetInsertBlock()->getTerminator()) {
+        this->ir_builder.CreateBr(prologue);
+    }
+
+    this->ir_builder.SetInsertPoint(continue_block);
 }
 
 }

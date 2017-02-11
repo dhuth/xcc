@@ -75,7 +75,9 @@ __ast_builder_impl::__ast_builder_impl(ast_name_mangler_t mangler) noexcept
             : get_mangled_name(mangler),
               _pointer_types(0, std::hash<ast_type*>(), sametype_predicate(*this)),
               _function_types(0, functype_hasher(*this), samefunctype_predicate(*this)),
-              _the_nop_stmt(new ast_nop_stmt()) {
+              _the_nop_stmt(new ast_nop_stmt()),
+              _the_break_stmt(new ast_break_stmt()),
+              _the_continue_stmt(new ast_continue_stmt()) {
     this->create_default_types();
 }
 
@@ -133,7 +135,7 @@ ast_array_type* __ast_builder_impl::get_array_type(ast_type* eltype, uint32_t si
 }
 
 ast_function_type* __ast_builder_impl::get_function_type(ast_type* rtype, ptr<list<ast_type>> params) noexcept {
-    auto key = funckey_t(rtype, unbox(params));
+    auto key = functypekey_t(rtype, unbox(params));
     if(this->_function_types.find(key) == this->_function_types.end()) {
         this->_function_types[key] = new ast_function_type(rtype, params);
     }
@@ -205,262 +207,6 @@ ast_expr* __ast_builder_impl::make_zero(ast_type* tp) const noexcept {
     throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) tp->get_tree_type()));
 }
 
-ast_expr* __ast_builder_impl::make_add_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto t = this->maxtype(lhs->type, rhs->type);
-
-    switch(t->get_tree_type()) {
-    case tree_type_id::ast_integer_type:
-        return new ast_binary_op(t, ast_op::add, this->widen(t, lhs), this->widen(t, rhs));
-    case tree_type_id::ast_real_type:
-        return new ast_binary_op(t, ast_op::fadd, this->widen(t, lhs), this->widen(t, rhs));
-    }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) t->get_tree_type()));
-}
-
-ast_expr* __ast_builder_impl::make_sub_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto t = this->maxtype(lhs->type, rhs->type);
-
-    switch(t->get_tree_type()) {
-    case tree_type_id::ast_integer_type:
-        return new ast_binary_op(t, ast_op::sub, this->widen(t, lhs), this->widen(t, rhs));
-    case tree_type_id::ast_real_type:
-        return new ast_binary_op(t, ast_op::fsub, this->widen(t, lhs), this->widen(t, rhs));
-    }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) t->get_tree_type()));
-}
-
-ast_expr* __ast_builder_impl::make_mul_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto t = this->maxtype(lhs->type, rhs->type);
-
-    switch(t->get_tree_type()) {
-    case tree_type_id::ast_integer_type:
-        return new ast_binary_op(t, ast_op::mul, this->widen(t, lhs), this->widen(t, rhs));
-    case tree_type_id::ast_real_type:
-        return new ast_binary_op(t, ast_op::fmul, this->widen(t, lhs), this->widen(t, rhs));
-    }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) t->get_tree_type()));
-}
-
-ast_expr* __ast_builder_impl::make_div_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto t = this->maxtype(lhs->type, rhs->type);
-
-    switch(t->get_tree_type()) {
-    case tree_type_id::ast_integer_type:
-        if((bool) t->as<ast_integer_type>()->is_unsigned) {
-            return new ast_binary_op(t, ast_op::udiv, this->widen(t, lhs), this->widen(t, rhs));
-        }
-        else {
-            return new ast_binary_op(t, ast_op::idiv, this->widen(t, lhs), this->widen(t, rhs));
-        }
-    case tree_type_id::ast_real_type:
-        return new ast_binary_op(t, ast_op::fdiv, this->widen(t, lhs), this->widen(t, rhs));
-    }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) t->get_tree_type()));
-}
-
-ast_expr* __ast_builder_impl::make_mod_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto t = this->maxtype(lhs->type, rhs->type);
-
-    switch(t->get_tree_type()) {
-    case tree_type_id::ast_integer_type:
-        if((bool) t->as<ast_integer_type>()->is_unsigned) {
-            return new ast_binary_op(t, ast_op::umod, this->widen(t, lhs), this->widen(t, rhs));
-        }
-        else {
-            return new ast_binary_op(t, ast_op::imod, this->widen(t, lhs), this->widen(t, rhs));
-        }
-    case tree_type_id::ast_real_type:
-        return new ast_binary_op(t, ast_op::fmod, this->widen(t, lhs), this->widen(t, rhs));
-    }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) t->get_tree_type()));
-}
-
-ast_expr* __ast_builder_impl::make_neg_expr(ast_expr* e) const {
-    if(e->type->is<ast_integer_type>()) {
-        return new ast_unary_op(e->type, ast_op::ineg, e);
-    }
-    else if(e->type->is<ast_real_type>()) {
-        return new ast_unary_op(e->type, ast_op::fneg, e);
-    }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) e->type->get_tree_type()));
-}
-
-ast_expr* __ast_builder_impl::make_eq_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto t      = this->maxtype(lhs->type, rhs->type);
-    auto lexpr  = this->widen(t, lhs);
-    auto rexpr  = this->widen(t, rhs);
-
-    if(t->is<ast_real_type>()) {
-        return new ast_binary_op(this->_the_boolean_type, ast_op::fcmp_oeq, rexpr, lexpr);
-    }
-    else if(t->is<ast_integer_type>() || t->is<ast_pointer_type>()) {
-        return new ast_binary_op(this->_the_boolean_type, ast_op::cmp_eq, rexpr, lexpr);
-    }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) t->get_tree_type()));
-}
-
-ast_expr* __ast_builder_impl::make_ne_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto t      = this->maxtype(lhs->type, rhs->type);
-    auto rexpr  = this->widen(t, lhs);
-    auto lexpr  = this->widen(t, rhs);
-
-    if(t->is<ast_real_type>()) {
-        return new ast_binary_op(this->_the_boolean_type, ast_op::fcmp_one, rexpr, lexpr);
-    }
-    else if(t->is<ast_integer_type>() || t->is<ast_pointer_type>()) {
-        return new ast_binary_op(this->_the_boolean_type, ast_op::cmp_ne, rexpr, lexpr);
-    }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) t->get_tree_type()));
-}
-
-ast_expr* __ast_builder_impl::make_lt_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto t      = this->maxtype(lhs->type, rhs->type);
-    auto rexpr  = this->widen(t, lhs);
-    auto lexpr  = this->widen(t, rhs);
-
-    switch(t->get_tree_type()) {
-    case tree_type_id::ast_real_type:
-        return new ast_binary_op(this->_the_boolean_type, ast_op::fcmp_olt, rexpr, lexpr);
-    case tree_type_id::ast_integer_type:
-        if((bool) t->as<ast_integer_type>()->is_unsigned) {
-            return new ast_binary_op(this->_the_boolean_type, ast_op::icmp_ult, rexpr, lexpr);
-        }
-        else {
-            return new ast_binary_op(this->_the_boolean_type, ast_op::icmp_slt, rexpr, lexpr);
-        }
-    case tree_type_id::ast_pointer_type:
-        return new ast_binary_op(this->_the_boolean_type, ast_op::icmp_ult, rexpr, lexpr);
-    }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) t->get_tree_type()));
-}
-
-ast_expr* __ast_builder_impl::make_le_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto t      = this->maxtype(lhs->type, rhs->type);
-    auto rexpr  = this->widen(t, lhs);
-    auto lexpr  = this->widen(t, rhs);
-
-    switch(t->get_tree_type()) {
-    case tree_type_id::ast_real_type:
-        return new ast_binary_op(this->_the_boolean_type, ast_op::fcmp_ole, rexpr, lexpr);
-    case tree_type_id::ast_integer_type:
-        if((bool) t->as<ast_integer_type>()->is_unsigned) {
-            return new ast_binary_op(this->_the_boolean_type, ast_op::icmp_ule, rexpr, lexpr);
-        }
-        else {
-            return new ast_binary_op(this->_the_boolean_type, ast_op::icmp_sle, rexpr, lexpr);
-        }
-    case tree_type_id::ast_pointer_type:
-        return new ast_binary_op(this->_the_boolean_type, ast_op::icmp_ule, rexpr, lexpr);
-    }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) t->get_tree_type()));
-}
-
-ast_expr* __ast_builder_impl::make_gt_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto t      = this->maxtype(lhs->type, rhs->type);
-    auto rexpr  = this->widen(t, lhs);
-    auto lexpr  = this->widen(t, rhs);
-
-    switch(t->get_tree_type()) {
-    case tree_type_id::ast_real_type:
-        return new ast_binary_op(this->_the_boolean_type, ast_op::fcmp_ogt, rexpr, lexpr);
-    case tree_type_id::ast_integer_type:
-        if((bool) t->as<ast_integer_type>()->is_unsigned) {
-            return new ast_binary_op(this->_the_boolean_type, ast_op::icmp_ugt, rexpr, lexpr);
-        }
-        else {
-            return new ast_binary_op(this->_the_boolean_type, ast_op::icmp_sgt, rexpr, lexpr);
-        }
-    case tree_type_id::ast_pointer_type:
-        return new ast_binary_op(this->_the_boolean_type, ast_op::icmp_ugt, rexpr, lexpr);
-    }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) t->get_tree_type()));
-}
-
-ast_expr* __ast_builder_impl::make_ge_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto t      = this->maxtype(lhs->type, rhs->type);
-    auto rexpr  = this->widen(t, lhs);
-    auto lexpr  = this->widen(t, rhs);
-
-    switch(t->get_tree_type()) {
-    case tree_type_id::ast_real_type:
-        return new ast_binary_op(this->_the_boolean_type, ast_op::fcmp_oge, rexpr, lexpr);
-    case tree_type_id::ast_integer_type:
-        if((bool) t->as<ast_integer_type>()->is_unsigned) {
-            return new ast_binary_op(this->_the_boolean_type, ast_op::icmp_uge, rexpr, lexpr);
-        }
-        else {
-            return new ast_binary_op(this->_the_boolean_type, ast_op::icmp_sge, rexpr, lexpr);
-        }
-    case tree_type_id::ast_pointer_type:
-        return new ast_binary_op(this->_the_boolean_type, ast_op::icmp_uge, rexpr, lexpr);
-    }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) t->get_tree_type()));
-}
-
-ast_expr* __ast_builder_impl::make_land_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto type       = this->maxtype(lhs->type, rhs->type);
-    assert(type->is<ast_integer_type>());
-    auto lexpr      = this->widen(type, lhs);
-    auto rexpr      = this->widen(type, rhs);
-
-    return new ast_binary_op(this->_the_boolean_type, ast_op::land, lexpr, rexpr);
-}
-
-ast_expr* __ast_builder_impl::make_lor_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto type       = this->maxtype(lhs->type, rhs->type);
-    assert(type->is<ast_integer_type>());
-    auto lexpr      = this->widen(type, lhs);
-    auto rexpr      = this->widen(type, rhs);
-
-    return new ast_binary_op(this->_the_boolean_type, ast_op::lor, lexpr, rexpr);
-}
-
-ast_expr* __ast_builder_impl::make_lxor_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto type       = this->maxtype(lhs->type, rhs->type);
-    assert(type->is<ast_integer_type>());
-    auto lexpr      = this->widen(type, lhs);
-    auto rexpr      = this->widen(type, rhs);
-
-    return new ast_binary_op(this->_the_boolean_type, ast_op::lxor, lexpr, rexpr);
-}
-
-ast_expr* __ast_builder_impl::make_lnot_expr(ast_expr* expr) const {
-    assert(expr->type->is<ast_integer_type>());
-    return new ast_unary_op(this->_the_boolean_type, ast_op::lnot, expr);
-}
-
-ast_expr* __ast_builder_impl::make_band_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto type       = this->maxtype(lhs->type, rhs->type);
-    assert(type->is<ast_integer_type>());
-    auto lexpr      = this->widen(type, lhs);
-    auto rexpr      = this->widen(type, rhs);
-
-    return new ast_binary_op(type, ast_op::band, lexpr, rexpr);
-}
-
-ast_expr* __ast_builder_impl::make_bor_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto type       = this->maxtype(lhs->type, rhs->type);
-    assert(type->is<ast_integer_type>());
-    auto lexpr      = this->widen(type, lhs);
-    auto rexpr      = this->widen(type, rhs);
-
-    return new ast_binary_op(type, ast_op::bor, lexpr, rexpr);
-}
-
-ast_expr* __ast_builder_impl::make_bxor_expr(ast_expr* lhs, ast_expr* rhs) const {
-    auto type       = this->maxtype(lhs->type, rhs->type);
-    assert(type->is<ast_integer_type>());
-    auto lexpr      = this->widen(type, lhs);
-    auto rexpr      = this->widen(type, rhs);
-
-    return new ast_binary_op(type, ast_op::bxor, lexpr, rexpr);
-}
-
-ast_expr* __ast_builder_impl::make_bnot_expr(ast_expr* expr) const {
-    assert(expr->type->is<ast_integer_type>());
-    return new ast_unary_op(expr->type, ast_op::bnot, expr);
-}
-
 ast_expr* __ast_builder_impl::make_cast_expr(ast_type* desttype, ast_expr* expr) const {
     switch(desttype->get_tree_type()) {
     case tree_type_id::ast_integer_type:            return this->cast_to(desttype->as<ast_integer_type>(), expr);
@@ -468,6 +214,162 @@ ast_expr* __ast_builder_impl::make_cast_expr(ast_type* desttype, ast_expr* expr)
     case tree_type_id::ast_pointer_type:            return this->cast_to(desttype->as<ast_pointer_type>(), expr);
     }
     throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) desttype->get_tree_type()));
+}
+
+static ast_expr* make_arithmetic_op_expr(__ast_builder_impl* builder, ast_op op, ast_expr* lhs, ast_expr* rhs) {
+    auto    t       = builder->maxtype(lhs->type, rhs->type);
+    auto    wlhs    = builder->widen(t, lhs);
+    auto    wrhs    = builder->widen(t, rhs);
+
+    ast_op  new_op  = ast_op::none;
+
+    if(t->is<ast_integer_type>()) {
+        if(t->as<ast_integer_type>()->is_unsigned) {
+            switch(op) {
+            case ast_op::add:   new_op  = ast_op::iadd; break;
+            case ast_op::sub:   new_op  = ast_op::isub; break;
+            case ast_op::mul:   new_op  = ast_op::imul; break;
+            case ast_op::div:   new_op  = ast_op::udiv; break;
+            case ast_op::mod:   new_op  = ast_op::umod; break;
+            }
+        }
+        else {
+            switch(op) {
+            case ast_op::add:   new_op  = ast_op::iadd; break;
+            case ast_op::sub:   new_op  = ast_op::isub; break;
+            case ast_op::mul:   new_op  = ast_op::imul; break;
+            case ast_op::div:   new_op  = ast_op::idiv; break;
+            case ast_op::mod:   new_op  = ast_op::imod; break;
+            }
+        }
+    }
+    else if(t->is<ast_real_type>()) {
+        switch(op) {
+        case ast_op::add:       new_op  = ast_op::fadd; break;
+        case ast_op::sub:       new_op  = ast_op::fsub; break;
+        case ast_op::mul:       new_op  = ast_op::fmul; break;
+        case ast_op::div:       new_op  = ast_op::fdiv; break;
+        case ast_op::mod:       new_op  = ast_op::fmod; break;
+        }
+    }
+    else if(t->is<ast_pointer_type>()) {
+        switch(op) {
+        case ast_op::add:       new_op  = ast_op::iadd; break;
+        case ast_op::sub:       new_op  = ast_op::isub; break;
+        }
+    }
+
+    assert(new_op != ast_op::none);
+    return new ast_binary_op(t, new_op, wlhs, wrhs);
+}
+
+static ast_expr* make_comparison_op_expr(__ast_builder_impl* builder, ast_op op, ast_expr* lhs, ast_expr* rhs) {
+    auto    t       = builder->maxtype(lhs->type, rhs->type);
+    auto    wlhs    = builder->widen(t, lhs);
+    auto    wrhs    = builder->widen(t, rhs);
+
+    ast_op  new_op  = ast_op::none;
+
+    if(t->is<ast_integer_type>()) {
+        if(t->as<ast_integer_type>()->is_unsigned) {
+            switch(op) {
+            case ast_op::eq:    new_op  = ast_op::cmp_eq;   break;
+            case ast_op::ne:    new_op  = ast_op::cmp_ne;   break;
+            case ast_op::lt:    new_op  = ast_op::icmp_ult; break;
+            case ast_op::le:    new_op  = ast_op::icmp_ule; break;
+            case ast_op::gt:    new_op  = ast_op::icmp_ugt; break;
+            case ast_op::ge:    new_op  = ast_op::icmp_ult; break;
+            }
+        }
+        else {
+            switch(op) {
+            case ast_op::eq:    new_op  = ast_op::cmp_eq;   break;
+            case ast_op::ne:    new_op  = ast_op::cmp_ne;   break;
+            case ast_op::lt:    new_op  = ast_op::icmp_ult; break;
+            case ast_op::le:    new_op  = ast_op::icmp_ule; break;
+            case ast_op::gt:    new_op  = ast_op::icmp_ugt; break;
+            case ast_op::ge:    new_op  = ast_op::icmp_uge; break;
+            }
+        }
+    }
+    else if(t->is<ast_real_type>()) {
+        switch(op) {
+        case ast_op::eq:        new_op  = ast_op::cmp_eq;   break;
+        case ast_op::ne:        new_op  = ast_op::cmp_ne;   break;
+        case ast_op::lt:        new_op  = ast_op::fcmp_olt; break;
+        case ast_op::le:        new_op  = ast_op::fcmp_ole; break;
+        case ast_op::gt:        new_op  = ast_op::fcmp_ogt; break;
+        case ast_op::ge:        new_op  = ast_op::fcmp_ole; break;
+        }
+    }
+    else if(t->is<ast_pointer_type>()) {
+        switch(op) {
+        case ast_op::eq:        new_op  = ast_op::cmp_eq;   break;
+        case ast_op::ne:        new_op  = ast_op::cmp_ne;   break;
+        }
+    }
+
+    assert(new_op != ast_op::none);
+    return new ast_binary_op(builder->get_bool_type(), new_op, wlhs, wrhs);
+}
+
+static ast_expr* make_logical_op_expr(__ast_builder_impl* builder, ast_op op, ast_expr* lhs, ast_expr* rhs) {
+    auto    blhs    = builder->make_cast_expr(builder->get_bool_type(), lhs);
+    auto    brhs    = builder->make_cast_expr(builder->get_bool_type(), rhs);
+
+    ast_op  new_op  = ast_op::none;
+
+    switch(op) {
+    case ast_op::logical_and:   new_op = ast_op::land; break;
+    case ast_op::logical_or:    new_op = ast_op::lor;  break;
+    }
+
+    assert(new_op != ast_op::none);
+    return new ast_binary_op(builder->get_bool_type(), new_op, blhs, brhs);
+}
+
+ast_expr* __ast_builder_impl::make_op_expr(ast_op op, ast_expr* lhs, ast_expr* rhs) {
+    assert(is_highlevel_op(op));
+
+    switch(op) {
+    // Basic arithmetic
+    case ast_op::add:
+    case ast_op::sub:
+    case ast_op::mul:
+    case ast_op::div:
+    case ast_op::mod:
+        return make_arithmetic_op_expr(this, op, lhs, rhs);
+
+    // Comparison
+    case ast_op::eq:
+    case ast_op::ne:
+    case ast_op::lt:
+    case ast_op::le:
+    case ast_op::gt:
+    case ast_op::ge:
+        return make_comparison_op_expr(this, op, lhs, rhs);
+
+    // Logical
+    case ast_op::logical_and:
+    case ast_op::logical_or:
+        return make_logical_op_expr(this, op, lhs, rhs);
+
+    // Bitwise
+    case ast_op::binary_and:
+    case ast_op::binary_or:
+    case ast_op::binary_xor:
+
+    // Shift
+    case ast_op::shl:
+    case ast_op::shr:
+
+    default:
+        throw std::runtime_error("unhandled operator in __ast_builder_impl::make_op_expr(binary)");
+    }
+}
+
+ast_expr* __ast_builder_impl::make_op_expr(ast_op op, ast_expr* expr) {
+    throw std::runtime_error("unhandled operator in __ast_builder_imppl::make_op_expr(unary)");
 }
 
 ast_expr* __ast_builder_impl::make_declref_expr(ast_decl* decl) {
@@ -525,6 +427,54 @@ ast_stmt* __ast_builder_impl::make_expr_stmt(ast_expr* e) const noexcept {
     return new ast_expr_stmt(e);
 }
 
+ast_stmt* __ast_builder_impl::make_assign_stmt(ast_expr* lhs, ast_expr* rhs) noexcept {
+    auto dest = this->make_addressof_expr(lhs);
+    auto src  = this->make_cast_expr(lhs->type, rhs);
+
+    return new ast_assign_stmt(dest, src);
+}
+
+ast_stmt* __ast_builder_impl::make_break_stmt() const noexcept {
+    return unbox(this->_the_break_stmt);
+}
+
+ast_stmt* __ast_builder_impl::make_continue_stmt() const noexcept {
+    return unbox(this->_the_continue_stmt);
+}
+
+ast_stmt* __ast_builder_impl::make_return_stmt(ast_type* t, ast_expr* expr) const noexcept {
+    if(!t->is<ast_void_type>()) {
+        //TODO: cast to return type
+        return new ast_return_stmt(this->make_cast_expr(t, expr));
+    }
+    else {
+        return new ast_return_stmt(nullptr);
+    }
+}
+
+ast_stmt* __ast_builder_impl::make_if_stmt(ast_expr* cond, ast_stmt* tstmt, ast_stmt* fstmt) const noexcept {
+    //TODO: constant condition check ???
+    return new ast_if_stmt(this->make_cast_expr(this->_the_boolean_type, cond), tstmt, fstmt);
+}
+
+ast_stmt* __ast_builder_impl::make_while_stmt(ast_expr* cond, ast_stmt* stmt) const noexcept {
+    //TODO: constant condition check ???
+    return new ast_while_stmt(this->make_cast_expr(this->_the_boolean_type, cond), stmt);
+}
+
+ast_stmt* __ast_builder_impl::make_for_stmt(ast_stmt* init_stmt, ast_expr* cond, ast_stmt* each, ast_stmt* body) const noexcept {
+    //TODO: constant condition check ???
+    if(init_stmt->is<ast_decl_stmt>()) {
+        ast_local_decl* decl = init_stmt->as<ast_decl_stmt>()->decl;
+        return new ast_block_stmt(
+                    new xcc::list<ast_local_decl>(decl),
+                    new xcc::list<ast_stmt>(this->make_for_stmt(this->_the_nop_stmt, cond, each, body)));
+    }
+    else {
+        return new ast_for_stmt(init_stmt, cond, each, body);
+    }
+}
+
 static inline bool __sametype(const __ast_builder_impl& builder, const ast_integer_type* lhs, const ast_integer_type* rhs) {
     return (uint32_t) lhs->bitwidth    == (uint32_t) rhs->bitwidth    &&
            (bool)     lhs->is_unsigned == (bool)     rhs->is_unsigned;
@@ -546,7 +496,7 @@ static inline bool __sametype(const __ast_builder_impl& builder, const ast_point
 static inline bool __sametype(const __ast_builder_impl& builder, const ast_function_type* lhs, const ast_function_type* rhs) {
     if(builder.sametype(lhs->return_type, rhs->return_type)) {
         if(lhs->parameter_types->size() == rhs->parameter_types->size()) {
-            for(int i = 0; i < lhs->parameter_types->size(); i++) {
+            for(uint32_t i = 0; i < lhs->parameter_types->size(); i++) {
                 if(!builder.sametype((*lhs->parameter_types)[i], (*rhs->parameter_types)[i])) {
                     return false;
                 }
@@ -743,7 +693,7 @@ ast_expr* __ast_builder_impl::cast_to(ast_pointer_type* ptype, ast_expr* expr) c
             return new ast_cast(ptype, ast_op::utop, expr);
         }
     }
-    throw std::runtime_error("unhandled type " + std::to_string((int) expr->type->get_tree_type()) + " in cast_to(ptr)\n");
+    throw std::runtime_error("unhandled type " + std::string(expr->type->get_tree_type_name()) + " in __ast_builder_impl::cast_to(ptr)\n");
 }
 
 ast_expr* __ast_builder_impl::widen(ast_type* typedest, ast_expr* expr) const {
@@ -752,7 +702,7 @@ ast_expr* __ast_builder_impl::widen(ast_type* typedest, ast_expr* expr) const {
     case tree_type_id::ast_real_type:           return this->cast_to(typedest->as<ast_real_type>(),    expr);
     case tree_type_id::ast_pointer_type:        return this->cast_to(typedest->as<ast_pointer_type>(), expr);
     }
-    throw std::runtime_error("unhandled type " + std::to_string((int) typedest->get_tree_type()) + " in widen\n");
+    throw std::runtime_error("unhandled " + std::string(typedest->get_tree_type_name()) + " in __ast_builder_impl::widen\n");
 }
 
 }
