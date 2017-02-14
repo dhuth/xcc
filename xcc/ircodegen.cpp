@@ -136,6 +136,7 @@ llvm::Value* ircode_expr_generator::generate_binary_op(ast_binary_op* expr) {
     case ast_op::bxor:          return context.ir_builder.CreateXor(lexpr, rexpr);
     case ast_op::bshl:          return context.ir_builder.CreateShl(lexpr, rexpr);
     case ast_op::bshr:          return context.ir_builder.CreateLShr(lexpr, rexpr);
+    case ast_op::ashr:          return context.ir_builder.CreateAShr(lexpr, rexpr);
 
     case ast_op::cmp_eq:        return context.ir_builder.CreateICmpEQ(lexpr, rexpr);
     case ast_op::cmp_ne:        return context.ir_builder.CreateICmpNE(lexpr, rexpr);

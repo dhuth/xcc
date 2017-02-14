@@ -328,6 +328,47 @@ static ast_expr* make_logical_op_expr(__ast_builder_impl* builder, ast_op op, as
     return new ast_binary_op(builder->get_bool_type(), new_op, blhs, brhs);
 }
 
+static ast_expr* make_bitwise_op_expr(__ast_builder_impl* builder, ast_op op, ast_expr* lhs, ast_expr* rhs) {
+    auto    t       = builder->maxtype(lhs->type, rhs->type);
+
+    assert(t->is<ast_integer_type>());
+
+    auto    wlhs    = builder->widen(t, lhs);
+    auto    wrhs    = builder->widen(t, rhs);
+
+    ast_op  new_op  = ast_op::none;
+
+    switch(op) {
+    case ast_op::binary_and:    new_op  = ast_op::band;     break;
+    case ast_op::binary_or:     new_op  = ast_op::bor;      break;
+    case ast_op::binary_xor:    new_op  = ast_op::bxor;     break;
+    }
+
+    assert(new_op != ast_op::none);
+    return new ast_binary_op(t, new_op, wlhs, wrhs);
+}
+
+static ast_expr* make_shift_op_expr(__ast_builder_impl* builder, ast_op op, ast_expr* lhs, ast_expr* rhs) {
+    assert(lhs->is<ast_integer_type>());
+    assert(rhs->is<ast_integer_type>());
+
+    ast_op  new_op  = ast_op::none;
+
+    switch(op) {
+    case ast_op::shl:   new_op = ast_op::bshl; break;
+    case ast_op::shr:
+        if(lhs->as<ast_integer_type>()->is_unsigned) {
+            new_op = ast_op::bshr;
+        }
+        else {
+            new_op = ast_op::ashr;
+        }
+    }
+
+    assert(new_op != ast_op::none);
+    return new ast_binary_op(lhs->type, new_op, lhs, rhs);
+}
+
 ast_expr* __ast_builder_impl::make_op_expr(ast_op op, ast_expr* lhs, ast_expr* rhs) {
     assert(is_highlevel_op(op));
 
@@ -358,10 +399,12 @@ ast_expr* __ast_builder_impl::make_op_expr(ast_op op, ast_expr* lhs, ast_expr* r
     case ast_op::binary_and:
     case ast_op::binary_or:
     case ast_op::binary_xor:
+        return make_bitwise_op_expr(this, op, lhs, rhs);
 
     // Shift
     case ast_op::shl:
     case ast_op::shr:
+        return make_shift_op_expr(this, op, lhs, rhs);
 
     default:
         throw std::runtime_error("unhandled operator in __ast_builder_impl::make_op_expr(binary)");
@@ -369,6 +412,11 @@ ast_expr* __ast_builder_impl::make_op_expr(ast_op op, ast_expr* lhs, ast_expr* r
 }
 
 ast_expr* __ast_builder_impl::make_op_expr(ast_op op, ast_expr* expr) {
+    assert(is_highlevel_op(op));
+
+    switch(op) {
+    //...
+    }
     throw std::runtime_error("unhandled operator in __ast_builder_imppl::make_op_expr(unary)");
 }
 
@@ -383,11 +431,19 @@ ast_expr* __ast_builder_impl::make_memberref_expr(ast_expr* obj, ast_record_memb
 ast_expr* __ast_builder_impl::make_deref_expr(ast_expr* e) const {
     assert(e->type->is<ast_pointer_type>());
 
+    if(e->is<ast_addressof>()) {
+        return e->as<ast_addressof>()->expr;
+    }
+
     ast_type* et = e->type->as<ast_pointer_type>()->element_type;
     return new ast_deref(et, e);
 }
 
 ast_expr* __ast_builder_impl::make_addressof_expr(ast_expr* e) {
+    if(e->is<ast_deref>()) {
+        return e->as<ast_deref>()->expr;
+    }
+
     ast_type* t = this->get_pointer_type((ast_type*) e->type);
     return new ast_addressof(t, e);
 }
@@ -408,7 +464,8 @@ ast_expr* __ast_builder_impl::make_call_expr(ast_expr* fexpr, list<ast_expr>* ar
     return new ast_invoke(t, fexpr, args);
 }
 
-uint32_t __ast_builder_impl::foldu32(ast_expr* e) const {
+uint32_t __ast_builder_impl::foldu32(ast_expr* e) {
+    e = this->fold(e);
     switch(e->get_tree_type()) {
     case tree_type_id::ast_integer:
         {
@@ -416,7 +473,28 @@ uint32_t __ast_builder_impl::foldu32(ast_expr* e) const {
             return std::atoi(value.toString(10).c_str());
         }
     }
-    throw std::runtime_error("unhandled expr " + std::to_string((int) e->get_tree_type()) + " in foldu32\n");
+    throw std::runtime_error("unhandled expr " + std::string(e->get_tree_type_name()) + " in foldu32\n");
+}
+
+uint64_t __ast_builder_impl::foldu64(ast_expr* e) {
+    e = this->fold(e);
+    switch(e->get_tree_type()) {
+    case tree_type_id::ast_integer:
+        {
+            llvm::APSInt value = e->as<ast_integer>()->value;
+            return std::atol(value.toString(10).c_str());
+        }
+    }
+    throw std::runtime_error("unhandled expr " + std::string(e->get_tree_type_name()) + " in foldu64\n");
+}
+
+ast_expr* __ast_builder_impl::fold(ast_expr* e) {
+    switch(e->get_tree_type()) {
+    case tree_type_id::ast_integer:
+    case tree_type_id::ast_real:
+        return e;
+    }
+    throw std::runtime_error("unhandled expr " + std::string(e->get_tree_type_name()) + " in fold\n");
 }
 
 ast_stmt* __ast_builder_impl::make_nop_stmt() const noexcept {

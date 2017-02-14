@@ -16,7 +16,12 @@
 #define     RETURN_OP(name, val)                    RETURN_VALUE(OP, name, op, xcc::xi_operator::val)
 #define     RETURN_TOKEN(n,v,t)                     RETURN_VALUE(TOK,n,v,t)
 #define     RETURN_TYPE(t)                          RETURN_VALUE(TOK,TYPE,type,t)
+#define     RETURN_DECL(t)                          RETURN_VALUE(TOK,DECL,decl,t)
 
+#define     RESET_IDENTIFIER_CHECK                  \
+                                                    {\
+                                                        xi_parse_raw_identifier = false;\
+                                                    }
 
 %}
 
@@ -36,8 +41,8 @@ FLOATING_POINT_LITERAL                              {DIGIT}+\.{DIGIT}*
 
 \{                                                  RETURN_OP(LBRACE,       none)
 \}                                                  RETURN_OP(RBRACE,       none)
-\[                                                  RETURN_OP(RBRACKET,     none)
-\]                                                  RETURN_OP(LBRACKET,     none)
+\[                                                  RETURN_OP(LBRACKET,     none)
+\]                                                  RETURN_OP(RBRACKET,     none)
 \(                                                  RETURN_OP(LPAREN,       none)
 \)                                                  RETURN_OP(RPAREN,       none)
 
@@ -84,6 +89,7 @@ f32                                                 RETURN_TYPE(builder.get_real
 f64                                                 RETURN_TYPE(builder.get_real_type(64))
 
 auto                                                RETURN_KW(AUTO)
+byref                                               RETURN_KW(BYREF)
 const                                               RETURN_KW(CONST)
 extern                                              RETURN_KW(EXTERN)
 for                                                 RETURN_KW(FOR)

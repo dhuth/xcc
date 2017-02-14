@@ -20,12 +20,14 @@ protected:
     __ptr_impl(const void* p, bool is_managed = false) noexcept;
     inline ~__ptr_impl() noexcept = default;
 
-    void pin() const noexcept;
-
     uint32_t incr_ref() const noexcept;
     uint32_t decr_ref() const noexcept;
 
     void*                                                       _internal_ptr;
+
+public:
+
+    void pin() const noexcept;
 
 };
 

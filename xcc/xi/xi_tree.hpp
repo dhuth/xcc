@@ -51,6 +51,52 @@ public:
 
 };
 
+struct xi_parameter_decl : public extend_tree<tree_type_id::xi_parameter_decl, ast_decl> {
+public:
+
+    enum class direction : uint32_t {
+        byval,
+        byref,
+        in,
+        out,
+    };
+
+    inline xi_parameter_decl(const char* name, ast_type* type, direction dir = direction::byval)
+            : base_type(name),
+              type(this, type),
+              parameter_direction(this, dir),
+              generated_parameter(this, nullptr) {
+        //...
+    }
+
+    property<ast_type>                              type;
+    property<direction>                             parameter_direction;
+    property<ast_parameter_decl>                    generated_parameter;
+
+};
+
+struct xi_function_decl : public extend_tree<tree_type_id::xi_function_decl, ast_decl> {
+public:
+
+    inline xi_function_decl(const char* name, ast_type* rtype, list<xi_parameter_decl>* parameters)
+            : base_type(name),
+              return_type(this, rtype),
+              parameters(this, parameters),
+              body(this, new ast_block_stmt(new list<ast_local_decl>(), new list<ast_stmt>())),
+              is_extern(this, false),
+              is_extern_visible(this, true),
+              generated_function(this, nullptr) {
+        //...
+    }
+
+    property<ast_type>                              return_type;
+    property<list<xi_parameter_decl>>               parameters;
+    property<ast_block_stmt>                        body;
+    property<bool>                                  is_extern;
+    property<bool>                                  is_extern_visible;
+    property<ast_function_decl>                     generated_function;
+};
+
 struct xi_op_expr : public extend_tree<tree_type_id::xi_op_expr, ast_expr> {
 public:
 

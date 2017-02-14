@@ -1,3 +1,8 @@
 tree_type(xi_const_type,                ast_type)
 
+tree_type(xi_parameter_decl,            ast_decl)
+tree_type(xi_function_decl,             ast_decl)
+
 tree_type(xi_op_expr,                   ast_expr)
+tree_type(xi_expr_stmt_expr,            ast_expr)
+

@@ -30,7 +30,7 @@ public:
     ast_integer_type                                            u32;
     ast_integer_type                                            u64;
     ast_real_type                                               f32;
-    ast_default_name_mangler                                             mangler;
+    ast_default_name_mangler                                    mangler;
 };
 
 TEST_F(TreeTest, TreeTypeAssertions) {

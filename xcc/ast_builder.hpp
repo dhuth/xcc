@@ -102,7 +102,9 @@ public:
     virtual ast_stmt*                           make_continue_stmt()                                                const noexcept;
 
     // Utility
-    virtual uint32_t                            foldu32(ast_expr* e)                                                const;
+    virtual uint32_t                            foldu32(ast_expr* e);
+    virtual uint64_t                            foldu64(ast_expr* e);
+    virtual ast_expr*                           fold(ast_expr* e);
 
     // Anylasis
             ast_name_mangler_t                  get_mangled_name;

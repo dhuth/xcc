@@ -31,7 +31,7 @@ __ptr_impl::__ptr_impl(void* p, bool is_managed) noexcept: _internal_ptr(p) {
 void __ptr_impl::pin() const noexcept {
     if(this->_internal_ptr != nullptr) {
         uintptr_t address = (uintptr_t) this->_internal_ptr;
-        __managed_pointers[address].is_managed = true;
+        __managed_pointers[address].is_managed = false;
     }
 }
 

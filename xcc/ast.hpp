@@ -67,11 +67,13 @@ public:
      */
     inline ast_decl(tree_type_id id, std::string name) noexcept
             : base_type(id),
-              name(this, name) {
+              name(this, name),
+              generated_name(this, "") {
         //...
     }
 
-    property<std::string>                                       name; //!< declaration name
+    property<std::string>                                       name;           //!< declaration name
+    property<std::string>                                       generated_name; //!< mangled declaration name
 
 };
 
@@ -122,6 +124,28 @@ public:
         //...
     }
 
+};
+
+
+/**
+ * A Namespace
+ */
+struct ast_namespace_decl final : public extend_tree<tree_type_id::ast_namespace_decl, ast_decl> {
+public:
+
+    inline ast_namespace_decl(std::string name)
+            : base_type(name),
+              declarations(this, new list<ast_decl>()) {
+        //...
+    }
+
+    inline ast_namespace_decl(std::string name, list<ast_decl>* declarations)
+            : base_type(name),
+              declarations(this, declarations) {
+        //...
+    }
+
+    property<list<ast_decl>>                                    declarations;
 };
 
 
@@ -178,12 +202,25 @@ public:
  */
 struct ast_local_decl final : public extend_tree<tree_type_id::ast_local_decl, ast_decl> {
 public:
+
     /**
      * \param name
      * \param type
+     * \param init_value
      */
     inline ast_local_decl(std::string name, ast_type* type, ast_expr* init_value) noexcept
             : base_type(name),
+              type(this, type),
+              init_value(this, init_value) {
+        //...
+    }
+
+    /**
+     * \param type
+     * \param init_value
+     */
+    inline ast_local_decl(ast_type* type, ast_expr* init_value) noexcept
+            : base_type(std::string("anonymous")),
               type(this, type),
               init_value(this, init_value) {
         //...
@@ -505,6 +542,7 @@ enum class ast_op : uint32_t {
     bnot,                                                               //!< Binary not
     bshl,                                                               //!< Binary shift left
     bshr,                                                               //!< Binary shift right
+    ashr,                                                               //!< Binary shift right (arithmetic)
     cmp_eq,                                                             //!< Integer equal
     cmp_ne,                                                             //!< Integer not equal
     icmp_ult,                                                           //!< Unsigned integer less than

@@ -168,6 +168,10 @@ public:
         }
     }
 
+    inline void pin() const noexcept {
+        box(this).pin();
+    }
+
 private:
 
     template<typename T>
@@ -329,9 +333,17 @@ public:
         this->_list.push_back(box(el));
     }
 
+    inline void append(element_t&& el) {
+        this->_list.push_back(box(el));
+    }
+
 
 };
 
+template<typename T> inline typename __tree_list_tree<T>::      iterator begin(__tree_list_tree<T>* lptr)       noexcept { return lptr->begin(); }
+template<typename T> inline typename __tree_list_tree<T>::      iterator end(__tree_list_tree<T>* lptr)         noexcept { return lptr->end();   }
+template<typename T> inline typename __tree_list_tree<T>::const_iterator begin(const __tree_list_tree<T>* lptr) noexcept { return lptr->begin(); }
+template<typename T> inline typename __tree_list_tree<T>::const_iterator end(const __tree_list_tree<T>* lptr)   noexcept { return lptr->end();   }
 
 
 
@@ -339,9 +351,6 @@ public:
 /* =============== *
  * Property Access *
  * =============== */
-
-template<typename T>
-struct dispatch_visitor;
 
 struct __tree_property_base {
 public:
@@ -396,9 +405,6 @@ public:
     }
 
 protected:
-
-    template<typename T>
-    friend struct dispatch_visitor;
 
     inline __tree_base* __get()                   const noexcept { return unbox(this->_parent->_child_nodes[this->_index]); }
     inline void         __set(__tree_base* value)       noexcept {        this->_parent->_child_nodes[this->_index] = box<__tree_base>(value); }
@@ -476,52 +482,14 @@ private:
  * Dynamic dispatch visitor *
  * ======================== */
 
-template<typename TReturnType>
-struct dispatch_visitor {
-public:
-
-    dispatch_visitor() = default;
-    virtual ~dispatch_visitor() = default;
-
-    inline TReturnType visit(__tree_base* t) {
-        if(t == nullptr) {
-            return this->handle_null_tree();
-        }
-        tree_type_id id = t->get_tree_type();
-        if(this->_function_map.find(id) == this->_function_map.end()) {
-            return this->handle_unregisterd_tree_type(id);
-        }
-        return this->_function_map[id](t);
-    }
-    template<typename T>
-    inline TReturnType visit(__tree_property_tree<T>& p) {
-        __tree_base* t = p.__get();
-        return this->visit(t);
-    }
-
+template<typename TReturnType, typename... TParamTypes>
+struct __dispatch_visitor_base {
 protected:
 
-    template<typename TFuncReturnType,
-             typename TClassType,
-             typename TTreeType,
-             typename std::enable_if<std::is_convertible<TFuncReturnType, TReturnType>::value, int>::type = 0,
-             typename std::enable_if<std::is_base_of<dispatch_visitor<TReturnType>, TClassType>::value, int>::type = 0,
-             __is_tree_type<TTreeType> = 0>
-    using dispatch_method_type = TFuncReturnType(TClassType::*)(TTreeType*);
-    template<typename TFuncReturnType,
-             typename TTreeType,
-             typename std::enable_if<std::is_convertible<TFuncReturnType, TReturnType>::value, int>::type = 0,
-             __is_tree_type<TTreeType> = 0>
-    using dispatch_function_type = TFuncReturnType(*)(TTreeType*);
+    __dispatch_visitor_base() = default;
+    virtual ~__dispatch_visitor_base() = default;
 
-    template<typename TFuncReturnType, typename TClassType, typename TTreeType>
-    void addmethod(dispatch_method_type<TFuncReturnType, TClassType, TTreeType> mtd) {
-        auto func = std::bind(mtd, dynamic_cast<TClassType*>(this), std::placeholders::_1);
-        auto wrapf = [=](__tree_base* t) -> TReturnType {
-            return (TReturnType) func(dynamic_cast<TTreeType*>(t));
-        };
-        this->_function_map[__get_tree_type_id<TTreeType>()] = wrapf;
-    }
+protected:
 
     virtual TReturnType handle_null_tree() {
         throw std::runtime_error("Null tree in dispatch handler");
@@ -530,28 +498,145 @@ protected:
         throw std::runtime_error(std::string("No registered function for type id ") + __all_tree_types[(uint64_t) id].name);
     }
 
-private:
+    typedef std::function<TReturnType(__tree_base*, TParamTypes...)>
+                                                                    dispatch_wrapper_t;
 
-    std::map<tree_type_id, std::function<TReturnType(__tree_base*)>>
-                                                                _function_map;
-
+    std::map<tree_type_id, dispatch_wrapper_t>                  _function_map;
 };
+
+template<typename    TReturnType,
+         typename... TParamTypes>
+struct __dispatch_visitor_base_notvoid : public __dispatch_visitor_base<TReturnType, TParamTypes...>{
+public:
+
+    __dispatch_visitor_base_notvoid() = default;
+    virtual ~__dispatch_visitor_base_notvoid() = default;
+
+    template<typename T>
+    inline TReturnType visit(T* t, TParamTypes... args) {
+        if(t == nullptr) {
+            return this->handle_null_tree();
+        }
+        else {
+            tree_type_id id = t->get_tree_type();
+            if(this->_function_map.find(id) == this->_function_map.end()) {
+                return this->handle_unregisterd_tree_type(id);
+            }
+            return this->_function_map[id](t, args...);
+        }
+    }
+
+    template<typename T>
+    inline TReturnType visit(__tree_property_tree<T>& p, TParamTypes... args) {
+        return this->visit((__tree_base*)p, args...);
+    }
+
+protected:
+
+    template<typename TFuncReturnType,
+             typename TTreeType>
+    using dispatch_function_type = TFuncReturnType(*)(TTreeType*, TParamTypes...);
+
+    template<typename TFuncReturnType,
+             typename TClassType,
+             typename TTreeType>
+    using dispatch_method_type  = TFuncReturnType(TClassType::*)(TTreeType*, TParamTypes...);
+
+    template<typename TFuncReturnType,
+             typename TTreeType>
+    void addfunction(dispatch_function_type<TFuncReturnType, TTreeType> func) {
+        auto wfunc = [=](__tree_base* t, TParamTypes... args) {
+            return func(t->as<TTreeType>(), args...);
+        };
+        this->_function_map[__get_tree_type_id<TTreeType>()] = wfunc;
+    }
+
+    template<typename TFuncReturnType,
+             typename TClassType,
+             typename TTreeType>
+    void addmethod(dispatch_method_type<TFuncReturnType, TClassType, TTreeType> func) {
+        auto wfunc = [=](__tree_base* t, TParamTypes... args) -> TReturnType {
+            return (TReturnType) (dynamic_cast<TClassType*>(this)->*func)(t->as<TTreeType>(), args...);
+        };
+        this->_function_map[__get_tree_type_id<TTreeType>()] = wfunc;
+    }
+};
+
+template<typename... TParamTypes>
+struct __dispatch_visitor_base_void : public __dispatch_visitor_base<void, TParamTypes...>{
+public:
+
+    __dispatch_visitor_base_void() = default;
+    virtual ~__dispatch_visitor_base_void() = default;
+
+    inline void visit(__tree_base* t, TParamTypes... args) {
+        if(t == nullptr) {
+            this->handle_null_tree();
+        }
+        else {
+            tree_type_id id = t->get_tree_type();
+            if(this->_function_map.find(id) == this->_function_map.end()) {
+                this->handle_unregisterd_tree_type(id);
+            }
+            this->_function_map[id](t, args...);
+        }
+    }
+    template<typename T>
+    inline void visit(__tree_property_tree<T>& p, TParamTypes... args) {
+        return this->visit((__tree_base*)p, args...);
+    }
+
+protected:
+
+    template<typename TTreeType>
+    using dispatch_function_type = void(*)(TTreeType*, TParamTypes...);
+
+    template<typename TClassType,
+             typename TTreeType>
+    using dispatch_method_type  = void(TClassType::*)(TTreeType*, TParamTypes...);
+
+    template<typename TTreeType>
+    void addfunction(dispatch_function_type<TTreeType> func) {
+        auto wfunc = [=](__tree_base* t, TParamTypes... args) {
+            return func(t->as<TTreeType>(), args...);
+        };
+        this->_function_map[__get_tree_type_id<TTreeType>()] = wfunc;
+    }
+
+    template<typename TClassType,
+             typename TTreeType>
+    void addmethod(dispatch_method_type<TClassType, TTreeType> func) {
+        auto wfunc = [=](__tree_base* t, TParamTypes... args) {
+            return (dynamic_cast<TClassType*>(this)->*func)(t->as<TTreeType>(), args...);
+        };
+        this->_function_map[__get_tree_type_id<TTreeType>()] = wfunc;
+    }
+};
+
+
+template<typename T, typename... TArgs>
+struct __dispatch_visitor_selector {
+    typedef __dispatch_visitor_base_notvoid<T, TArgs...> type;
+};
+
+template<typename... TArgs>
+struct __dispatch_visitor_selector<void, TArgs...> {
+    typedef __dispatch_visitor_base_void<TArgs...>         type;
+};
+
 
 
 template<tree_type_id tp, typename base = __tree_base>
 using extend_tree = __extend_tree<tp, base>;
+
+template<typename T, typename... TArgs>
+using dispatch_visitor = typename __dispatch_visitor_selector<T, TArgs...>::type;
 
 template<typename T>
 using property = typename __property_type_selector<T>::type;
 
 template<typename T>
 using list = typename __list_type_selector<T>::type;
-
-
-template<typename T> inline typename __tree_list_tree<T>::      iterator begin(__tree_list_tree<T>* lptr)       noexcept { return lptr->begin(); }
-template<typename T> inline typename __tree_list_tree<T>::      iterator end(__tree_list_tree<T>* lptr)         noexcept { return lptr->end();   }
-template<typename T> inline typename __tree_list_tree<T>::const_iterator begin(const __tree_list_tree<T>* lptr) noexcept { return lptr->begin(); }
-template<typename T> inline typename __tree_list_tree<T>::const_iterator end(const __tree_list_tree<T>* lptr)   noexcept { return lptr->end();   }
 
 }
 
