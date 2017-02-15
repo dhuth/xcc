@@ -345,7 +345,16 @@ template<typename T> inline typename __tree_list_tree<T>::      iterator end(__t
 template<typename T> inline typename __tree_list_tree<T>::const_iterator begin(const __tree_list_tree<T>* lptr) noexcept { return lptr->begin(); }
 template<typename T> inline typename __tree_list_tree<T>::const_iterator end(const __tree_list_tree<T>* lptr)   noexcept { return lptr->end();   }
 
-
+template<typename TToType,
+         typename TFromType>
+inline __tree_list_tree<TToType>* map(__tree_list_tree<TFromType>* lptr, std::function<TToType*(TFromType*)> f) {
+    auto dest_list = new __tree_list_tree<TToType>();
+    for(auto itr = begin(lptr); itr != end(lptr); itr++) {
+        auto el = *itr;
+        dest_list->append(f(el));
+    }
+    return dest_list;
+}
 
 
 /* =============== *
@@ -442,6 +451,17 @@ public:
     inline typename list_t::const_iterator end()   const noexcept { return dynamic_cast<list_t*>(this->__get())->end();   }
 
 };
+
+template<typename TToType,
+         typename TFromType>
+inline typename __list_type_selector<TToType>::type* map(__tree_property_list<TFromType>& prop, std::function<TToType*(TFromType*)> f) {
+    auto dest_list = new __tree_list_tree<TToType>();
+    for(auto itr = prop.begin(); itr != prop.end(); ++itr) {
+        auto el = *itr;
+        dest_list->append(f(el));
+    }
+    return dest_list;
+}
 
 template<typename TValue>
 struct __tree_property_value {

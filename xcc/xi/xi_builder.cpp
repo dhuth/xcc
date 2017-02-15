@@ -27,26 +27,33 @@ ast_expr* xi_builder::make_op(xi_operator op, ast_expr* lhs, ast_expr* rhs) {
     return new xi_op_expr(nullptr, op, new list<ast_expr>({lhs, rhs}));
 }
 
-ast_type* xi_builder::flatten(ast_type* tp) {
-    switch(tp->get_tree_type()) {
-    case tree_type_id::xi_const_type:
-        return this->flatten(tp->as<xi_const_type>()->type);
-    }
+ast_type* xi_builder::lower(ast_type* tp) {
+    //TODO...
     return tp;
 }
 
-ast_expr* xi_builder::flatten(ast_expr* e) {
+ast_expr* xi_builder::lower(ast_expr* e) {
     //TODO:...
     return e;
 }
 
+ast_decl* xi_builder::lower(ast_decl* decl) {
+    //TODO:...
+    return decl;
+}
+
+ast_stmt* xi_builder::lower(ast_stmt* stmt) {
+    //TODO:...
+    return stmt;
+}
+
 void xi_builder::generate() {
-    for(auto f : unbox(this->all_functions)) {
-        f->generated_function = this->flatten_function(f);
+    for(auto f : this->all_functions) {
+        f->generated_function = this->lower_function(f);
     }
 
-    for(auto f: unbox(this->all_functions)) {
-        this->flatten_body(f);
+    for(auto f: this->all_functions) {
+        this->lower_body(f);
         this->tu.append(f->generated_function);
     }
 }

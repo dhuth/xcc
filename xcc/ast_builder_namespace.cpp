@@ -16,6 +16,8 @@ void ast_namespace_context::insert(const char* name, ast_decl* decl) {
     this->_ns->declarations->append(decl);
 }
 
+ast_type* ast_namespace_context::get_return_type() { return nullptr; }
+
 ptr<ast_decl> ast_namespace_context::find_first_impl(const char* name) {
     for(auto d: this->_ns->declarations) {
         if(((std::string) d->name) == std::string(name)) {

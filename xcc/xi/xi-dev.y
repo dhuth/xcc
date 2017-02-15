@@ -66,10 +66,13 @@
         KW_ABSTRACT                         "abstract"
         KW_AUTO                             "auto"
         KW_BYREF                            "byref"
+        KW_BREAK                            "break"
         KW_CLASS                            "class"
         KW_CONST                            "const"
+        KW_CONTINUE                         "continue"
         KW_EXTERN                           "extern"
         KW_FOR                              "for"
+        KW_FUNC                             "func"
         KW_GENERIC                          "generic"
         KW_IF                               "if"
         KW_IN                               "in"
@@ -171,9 +174,12 @@
 
 %type   <stmt>                              stmt
 %type   <stmt>                              block-stmt
+%type   <stmt>                              break-stmt
 %type   <stmt>                              return-stmt
 %type   <stmt>                              continue-stmt
 %type   <stmt>                              assign-stmt
+
+%type   <stmt>                              begin-block-stmt
 
 
 %code {
@@ -227,7 +233,7 @@ global-function-decl
         ;
 
 global-function-proto-decl
-        : type TOK_IDENTIFIER OP_LPAREN function-parameter-list-opt OP_RPAREN                       { $$ = builder.define_global_function($1, $2, $4); }
+        : KW_FUNC type TOK_IDENTIFIER OP_LPAREN function-parameter-list-opt OP_RPAREN               { $$ = builder.define_global_function($2, $3, $5); }
         ;
 
 function-parameter-list-opt
@@ -244,12 +250,8 @@ function-parameter
         ;
         
 stmt-list-opt
-        : stmt-list
+        : stmt { builder.emit($1); } stmt-list-opt
         | %empty
-        ;
-stmt-list
-        : stmt { builder.emit($1); } stmt-list
-        | stmt { builder.emit($1); }
         ;
 stmt
         : block-stmt                                                                                { $$ = $1; }
@@ -258,13 +260,16 @@ stmt
         | OP_SEMICOLON                                                                              { $$ = builder.make_nop_stmt(); }
         ;
 block-stmt
-        : OP_LBRACE { builder.push_block(builder.make_block_stmt()); }
+        : OP_LBRACE begin-block-stmt { builder.push_block($2->as<xcc::ast_block_stmt>()); }
             stmt-list-opt
-          OP_RBRACE { $$ = builder.pop_block(); }
+          OP_RBRACE { $$ = $2; builder.pop(); }
+        ;
+begin-block-stmt
+        : %empty { $$ = builder.make_block_stmt(); }
         ;
 return-stmt
-        : KW_RETURN OP_SEMICOLON                                                                    { $$ = builder.make_return_stmt();   }
-        | KW_RETURN expr OP_SEMICOLON                                                               { $$ = builder.make_return_stmt($2); }
+        : KW_RETURN OP_SEMICOLON                                                                    { $$ = builder.make_return_stmt(nullptr, nullptr);   }
+        | KW_RETURN expr OP_SEMICOLON                                                               { $$ = builder.make_return_stmt(builder.get_return_type(), $2); }
         ;
 continue-stmt
         : KW_CONTINUE OP_SEMICOLON                                                                  { $$ = builder.make_continue_stmt(); }
@@ -323,6 +328,7 @@ postfix-expr        : term-expr                                 { $$ = $1; }
                     ;
 term-expr           : LITERAL_INTEGER                           { $$ = $1; }
                     | LITERAL_FLOAT                             { $$ = $1; }
+                    | TOK_IDENTIFIER                            { $$ = builder.make_declref_expr(builder.find_declaration($1)); }
                     ;
 
 

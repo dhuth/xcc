@@ -15,6 +15,10 @@ void xi_function_context::insert(const char*, ast_decl*) {
     throw std::runtime_error("Not reachable");
 }
 
+ast_type* xi_function_context::get_return_type() {
+    return this->_func->return_type;
+}
+
 ptr<ast_decl> xi_function_context::find_first_impl(const char* name) {
     for(auto p: this->_func->parameters) {
         std::string pname = p->name;
@@ -45,8 +49,10 @@ xi_parameter_decl* xi_builder::define_parameter(ast_type* type) {
 xi_function_decl* xi_builder::define_global_function(ast_type* rtype, const char* name, list<xi_parameter_decl>* parameters) {
     auto func = new xi_function_decl(name, rtype, parameters);
 
+    //TODO: Does it already exist ???
+
     this->context->insert(name, func);
-    this->all_functions->append(func);
+    this->all_functions.push_back(func);
     return func;
 
 }
@@ -61,21 +67,21 @@ void xi_builder::pop_function() {
     this->pop();    // pop function
 }
 
-ast_function_decl* xi_builder::flatten_function(xi_function_decl* func) {
+ast_function_decl* xi_builder::lower_function(xi_function_decl* func) {
     ptr<list<ast_parameter_decl>> flat_parameters = new list<ast_parameter_decl>();
 
     //TODO: flatten types
     for(auto param: func->parameters) {
-        auto fparam = new ast_parameter_decl(param->name, this->flatten(param->type));
+        auto fparam = new ast_parameter_decl(param->name, this->lower(param->type));
         param->generated_parameter = fparam;
         flat_parameters->append(fparam);
     }
 
-    return new ast_function_decl(func->name, this->flatten(func->return_type), flat_parameters, nullptr);
+    return new ast_function_decl(func->name, this->lower(func->return_type), flat_parameters, nullptr);
 }
 
-void xi_builder::flatten_body(xi_function_decl* func) {
-    //TODO: flatten stmts...
+void xi_builder::lower_body(xi_function_decl* func) {
+    func->generated_function->body = this->lower(func->body->as<ast_stmt>());
 }
 
 }

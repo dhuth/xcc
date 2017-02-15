@@ -23,6 +23,7 @@ public:
     virtual ~xi_function_context() = default;
 
     void insert(const char*, ast_decl*) final override; //TODO: just throw error
+    ast_type* get_return_type() final override;
 
 protected:
 
@@ -34,7 +35,6 @@ private:
     ptr<xi_function_decl>                                               _func;
 
 };
-
 
 struct xi_builder final : public ast_builder<> {
 public:
@@ -59,15 +59,16 @@ public:
 
 protected:
 
-    ast_expr*                                       flatten(ast_expr*);
-    ast_type*                                       flatten(ast_type*);
-    ast_decl*                                       flatten(ast_decl*);
-    ast_function_decl*                              flatten_function(xi_function_decl*);
-    void                                            flatten_body(xi_function_decl*);
+    ast_expr*                                       lower(ast_expr*);
+    ast_type*                                       lower(ast_type*);
+    ast_decl*                                       lower(ast_decl*);
+    ast_stmt*                                       lower(ast_stmt*);
+    ast_function_decl*                              lower_function(xi_function_decl*);
+    void                                            lower_body(xi_function_decl*);
 
 private:
 
-    ptr<list<xi_function_decl>>                                         all_functions;
+    std::vector<ptr<xi_function_decl>>                                  all_functions;
 
 };
 

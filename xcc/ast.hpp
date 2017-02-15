@@ -890,6 +890,16 @@ public:
         //...
     }
 
+    /**
+     *
+     */
+    inline ast_block_stmt() noexcept
+            : base_type(),
+              decls(this, new list<ast_local_decl>()),
+              stmts(this, new list<ast_stmt>()) {
+        //...
+    }
+
     property<list<ast_local_decl>>                              decls;  //!<
     property<list<ast_stmt>>                                    stmts;  //!<
 
@@ -984,7 +994,7 @@ public:
      */
     inline ast_return_stmt(ast_expr* expr) noexcept
             : base_type(),
-              expr(expr) {
+              expr(this, expr) {
         //...
     }
 

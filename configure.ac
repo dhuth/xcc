@@ -10,6 +10,7 @@ AC_PROG_CXX
 AC_PROG_RANLIB
 
 AC_SUBST([llvm_version],    [5.0])
+AC_SUBST([CXXFLAGS],        ['-g2 -O0'])
 
 AC_SUBST([llvm_libs],       [`llvm-config-$llvm_version --libs core`])
 AC_SUBST([llvm_cppflags],   [`llvm-config-$llvm_version --cppflags`])

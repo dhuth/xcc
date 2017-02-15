@@ -337,7 +337,7 @@ void ircode_context::generate_function_body(ast_function_decl* decl) {
     }
     this->_header_bb        = llvm::BasicBlock::Create(this->llvm_context, "header", fvalue);
 
-    llvm::BasicBlock*   bb  = llvm::BasicBlock::Create(this->llvm_context, "body");
+    llvm::BasicBlock*   bb  = llvm::BasicBlock::Create(this->llvm_context, "body", fvalue);
 
     this->ir_builder.SetInsertPoint(bb);
 
@@ -453,7 +453,7 @@ void ircode_context::generate_if_stmt(ast_if_stmt* stmt, llvm::BasicBlock* ct, l
 }
 
 void ircode_context::generate_return_stmt(ast_return_stmt* ret) {
-    if(ret->expr) {
+    if(ret->expr != nullptr) {
         this->ir_builder.CreateRet(this->generate_expr(ret->expr));
     }
     else {

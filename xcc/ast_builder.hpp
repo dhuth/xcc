@@ -21,19 +21,20 @@ struct translation_unit;
 struct ast_context {
 public:
 
-    inline ast_context()                 : _parent(nullptr) { };
-    inline ast_context(ast_context* prev) : _parent(prev)    { };
+    inline ast_context()                  : parent(nullptr) { };
+    inline ast_context(ast_context* prev) : parent(prev)    { };
     virtual ~ast_context() = default;
 
-    virtual void insert(const char*, ast_decl*) = 0;
+    virtual void      insert(const char*, ast_decl*) = 0;
+    virtual ast_type* get_return_type() = 0;
 
     inline ptr<ast_decl> find(const char* name, bool search_parent = true) {
         auto ff = this->find_first_impl(name);
         if(unbox(ff) != nullptr) {
             return ff;
         }
-        else if(search_parent && (this->_parent != nullptr)) {
-            return this->_parent->find(name, true);
+        else if(search_parent && (this->parent != nullptr)) {
+            return this->parent->find(name, true);
         }
         return box<ast_decl>(nullptr);
     }
@@ -48,19 +49,17 @@ protected:
 
     inline void findall(ptr<list<ast_decl>> olist, const char* name, bool search_parent) {
         this->find_all_impl(olist, name);
-        if(search_parent && (this->_parent != nullptr)) {
-            this->_parent->findall(olist, name, search_parent);
+        if(search_parent && (this->parent != nullptr)) {
+            this->parent->findall(olist, name, search_parent);
         }
     }
 
     virtual ptr<ast_decl> find_first_impl(const char* name) = 0;
     virtual void find_all_impl(ptr<list<ast_decl>>, const char*) = 0;
 
-private:
-
     friend struct __ast_builder_impl;
 
-    ast_context*                                                         _parent;
+    ast_context*                                                         parent;
 
 };
 
@@ -72,6 +71,7 @@ public:
     virtual ~ast_namespace_context() = default;
 
     void insert(const char*, ast_decl*) final override;
+    ast_type* get_return_type() final override;
 
 protected:
 
@@ -92,6 +92,7 @@ public:
     virtual ~ast_block_context() = default;
 
     void insert(const char*, ast_decl*) final override;
+    ast_type* get_return_type() final override;
     void emit(ast_stmt*);
 
 protected:
@@ -190,6 +191,7 @@ public:
     virtual ast_stmt*                           make_nop_stmt()                                                     const noexcept;
     virtual ast_stmt*                           make_expr_stmt(ast_expr*)                                           const noexcept;
     virtual ast_stmt*                           make_assign_stmt(ast_expr* lhs, ast_expr* rhs)                            noexcept;
+    virtual ast_stmt*                           make_block_stmt()                                                   const noexcept;
     virtual ast_stmt*                           make_if_stmt(ast_expr*,ast_stmt*,ast_stmt*)                         const noexcept;
     virtual ast_stmt*                           make_while_stmt(ast_expr*,ast_stmt*)                                const noexcept;
     virtual ast_stmt*                           make_for_stmt(ast_stmt*,ast_expr*,ast_stmt*,ast_stmt*)              const noexcept;
@@ -222,7 +224,7 @@ protected:
     }
 
     inline void pop_context() noexcept {
-        this->context = this->context->_parent;
+        this->context = this->context->parent;
     }
 
     translation_unit&                                                   tu;
@@ -231,6 +233,9 @@ public:
 
     virtual void                                push_block(ast_block_stmt*)                                               noexcept;
     virtual void                                push_namespace(ast_namespace_decl*)                                       noexcept;
+    virtual ast_type*                           get_return_type()                                                         noexcept;
+
+    virtual ast_decl*                           find_declaration(const char*)                                             noexcept;
 
     virtual void                                pop()                                                                     noexcept;
 

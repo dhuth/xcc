@@ -22,6 +22,8 @@ void ast_block_context::insert(const char* name, ast_decl* decl) {
     this->_block->decls->append(decl->as<ast_local_decl>());
 }
 
+ast_type* ast_block_context::get_return_type() { return this->parent->get_return_type(); }
+
 ptr<ast_decl> ast_block_context::find_first_impl(const char* name) {
     for(auto decl: this->_block->decls) {
         std::string dname = decl->name;
@@ -48,6 +50,7 @@ void ast_block_context::emit(ast_stmt* stmt) {
 __ast_builder_impl::__ast_builder_impl(translation_unit& tu, ast_name_mangler_t mangler) noexcept
             : get_mangled_name(mangler),
               tu(tu),
+              context(new ast_namespace_context()),
               _pointer_types(0, std::hash<ast_type*>(), sametype_predicate(*this)),
               _function_types(0, functype_hasher(*this), samefunctype_predicate(*this)),
               _the_nop_stmt(new ast_nop_stmt()),
@@ -487,6 +490,10 @@ ast_stmt* __ast_builder_impl::make_assign_stmt(ast_expr* lhs, ast_expr* rhs) noe
     return new ast_assign_stmt(dest, src);
 }
 
+ast_stmt* __ast_builder_impl::make_block_stmt() const noexcept {
+    return new ast_block_stmt();
+}
+
 ast_stmt* __ast_builder_impl::make_break_stmt() const noexcept {
     return unbox(this->_the_break_stmt);
 }
@@ -777,6 +784,12 @@ ast_variable_decl* __ast_builder_impl::define_global_variable(ast_type* type, co
     this->context->insert(name, var);
     this->tu.append(var);
     return var;
+}
+
+ast_type* __ast_builder_impl::get_return_type() noexcept { return this->context->get_return_type(); }
+
+ast_decl* __ast_builder_impl::find_declaration(const char* name) noexcept {
+    return this->context->find(name);
 }
 
 ast_variable_decl* __ast_builder_impl::define_global_variable(ast_type* type, const char* name, ast_expr* ivalue) noexcept {
