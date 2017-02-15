@@ -8,13 +8,102 @@
 #ifndef AST_BUILDER_HPP_
 #define AST_BUILDER_HPP_
 
+#include "ast.hpp"
+
 #include <map>
 #include <unordered_map>
 #include <functional>
 
-#include "ast.hpp"
-
 namespace xcc {
+
+struct translation_unit;
+
+struct ast_context {
+public:
+
+    inline ast_context()                 : _parent(nullptr) { };
+    inline ast_context(ast_context* prev) : _parent(prev)    { };
+    virtual ~ast_context() = default;
+
+    virtual void insert(const char*, ast_decl*) = 0;
+
+    inline ptr<ast_decl> find(const char* name, bool search_parent = true) {
+        auto ff = this->find_first_impl(name);
+        if(unbox(ff) != nullptr) {
+            return ff;
+        }
+        else if(search_parent && (this->_parent != nullptr)) {
+            return this->_parent->find(name, true);
+        }
+        return box<ast_decl>(nullptr);
+    }
+
+    inline ptr<list<ast_decl>> findall(const char* name, bool search_parent = true) {
+        ptr<list<ast_decl>> olist = box(new list<ast_decl>());
+        this->findall(olist, name, search_parent);
+        return olist;
+    }
+
+protected:
+
+    inline void findall(ptr<list<ast_decl>> olist, const char* name, bool search_parent) {
+        this->find_all_impl(olist, name);
+        if(search_parent && (this->_parent != nullptr)) {
+            this->_parent->findall(olist, name, search_parent);
+        }
+    }
+
+    virtual ptr<ast_decl> find_first_impl(const char* name) = 0;
+    virtual void find_all_impl(ptr<list<ast_decl>>, const char*) = 0;
+
+private:
+
+    friend struct __ast_builder_impl;
+
+    ast_context*                                                         _parent;
+
+};
+
+struct ast_namespace_context : public ast_context {
+public:
+
+    ast_namespace_context();
+    ast_namespace_context(ast_context* p, ast_namespace_decl* ns);
+    virtual ~ast_namespace_context() = default;
+
+    void insert(const char*, ast_decl*) final override;
+
+protected:
+
+    ptr<ast_decl> find_first_impl(const char*) final override;
+    void find_all_impl(ptr<list<ast_decl>>, const char*) final override;
+
+private:
+
+    ptr<ast_namespace_decl>                                             _ns;
+    bool                                                                _is_global;
+
+};
+
+struct ast_block_context : public ast_context {
+public:
+
+    ast_block_context(ast_context* p, ast_block_stmt* block);
+    virtual ~ast_block_context() = default;
+
+    void insert(const char*, ast_decl*) final override;
+    void emit(ast_stmt*);
+
+protected:
+
+    ptr<ast_decl> find_first_impl(const char*) final override;
+    void find_all_impl(ptr<list<ast_decl>>, const char*) final override;
+
+private:
+
+    ptr<ast_block_stmt>                                                 _block;
+
+};
 
 typedef dispatch_visitor<std::string>                                   ast_name_mangler_t;
 typedef dispatch_visitor<ast_expr>                                      ast_folder_t;
@@ -60,7 +149,7 @@ private:
 struct __ast_builder_impl {
 public:
 
-    __ast_builder_impl(ast_name_mangler_t mangler) noexcept;
+    __ast_builder_impl(translation_unit& tu, ast_name_mangler_t mangler) noexcept;
     virtual ~__ast_builder_impl() noexcept = default;
 
             ast_void_type*                      get_void_type()                                                     const noexcept;
@@ -72,14 +161,21 @@ public:
             ast_function_type*                  get_function_type(ast_type*, ptr<list<ast_type>>)                         noexcept;
             ast_record_type*                    get_record_type(ast_record_decl*)                                         noexcept;
 
-            ast_type*                           get_declaration_type(ast_decl*)                                           noexcept;
+    virtual ast_type*                           get_declaration_type(ast_decl*)                                           noexcept;
 
+    // Declarations
+    virtual ast_namespace_decl*                 define_namespace(const char*)                                             noexcept;
+    virtual ast_variable_decl*                  define_global_variable(ast_type*, const char*)                            noexcept;
+    virtual ast_variable_decl*                  define_global_variable(ast_type*, const char*, ast_expr*)                 noexcept;
+    virtual ast_local_decl*                     define_local_variable(ast_type*, const char*)                             noexcept;
+    virtual ast_local_decl*                     define_local_variable(ast_type*)                                          noexcept;
 
+    // Constant values
     virtual ast_expr*                           make_integer(const char* txt, uint8_t radix)                        const noexcept;
     virtual ast_expr*                           make_real(const char* txt)                                          const noexcept;
+    virtual ast_expr*                           make_zero(ast_type* tp)                                             const noexcept;
 
     // Expressions
-    virtual ast_expr*                           make_zero(ast_type* tp)                                             const noexcept;
     virtual ast_expr*                           make_op_expr(ast_op, ast_expr*);
     virtual ast_expr*                           make_op_expr(ast_op, ast_expr*, ast_expr*);
     virtual ast_expr*                           make_cast_expr(ast_type*, ast_expr*)                                const;
@@ -100,6 +196,7 @@ public:
     virtual ast_stmt*                           make_return_stmt(ast_type*, ast_expr*)                              const noexcept;
     virtual ast_stmt*                           make_break_stmt()                                                   const noexcept;
     virtual ast_stmt*                           make_continue_stmt()                                                const noexcept;
+            void                                emit(ast_stmt*)                                                           noexcept;
 
     // Utility
     virtual uint32_t                            foldu32(ast_expr* e);
@@ -108,14 +205,34 @@ public:
 
     // Anylasis
             ast_name_mangler_t                  get_mangled_name;
-            //ast_folder_t                        fold;
     virtual bool                                sametype(ast_type*, ast_type*)                                      const;
+    virtual ast_type*                           maxtype(ast_type*, ast_type*)                                       const;
+    virtual ast_expr*                           widen(ast_type*, ast_expr*)                                         const;
 
-//protected:
+protected:
 
     virtual void                                create_default_types()                                                    noexcept;
-            ast_type*                           maxtype(ast_type*, ast_type*)                                       const;
-            ast_expr*                           widen(ast_type*, ast_expr*)                                         const;
+
+
+    // Building context
+    ptr<ast_context>                                                    context;
+    template<typename TContext, typename... TArgs>
+    inline void push_context(TArgs... args) noexcept {
+        this->context = new TContext(this->context, args...);
+    }
+
+    inline void pop_context() noexcept {
+        this->context = this->context->_parent;
+    }
+
+    translation_unit&                                                   tu;
+
+public:
+
+    virtual void                                push_block(ast_block_stmt*)                                               noexcept;
+    virtual void                                push_namespace(ast_namespace_decl*)                                       noexcept;
+
+    virtual void                                pop()                                                                     noexcept;
 
 private:
 
@@ -185,9 +302,6 @@ private:
     std::map<std::tuple<ast_type*, uint32_t>, ptr<ast_array_type>>      _array_types;
     std::map<ast_record_decl*, ptr<ast_record_type>>                    _record_types;
 
-    ptr<ast_decl>                                                       _decl_context;
-    ptr<ast_block_stmt>                                                 _block_context;
-
 };
 
 template<typename TMangler = ast_default_name_mangler,
@@ -195,7 +309,7 @@ template<typename TMangler = ast_default_name_mangler,
 struct ast_builder : public __ast_builder_impl {
 public:
 
-    ast_builder() noexcept : __ast_builder_impl(TMangler()) { }
+    ast_builder(translation_unit& tu) noexcept : __ast_builder_impl(tu, TMangler()) { }
     virtual ~ast_builder() noexcept = default;
 
 };

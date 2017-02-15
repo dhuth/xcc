@@ -11,68 +11,43 @@
 
 #include <exception>
 #include "ast_builder.hpp"
+#include "frontend.hpp"
 
 namespace xcc {
 
-std::string ast_default_name_mangler::operator()(ast_tree* t)                     { return this->visit(t); }
-std::string ast_default_name_mangler::operator()(std::string prefix, ast_tree* t) { return prefix + this->visit(t); }
+ast_block_context::ast_block_context(ast_context* p, ast_block_stmt* block) : ast_context(p), _block(block) { }
 
-std::string ast_default_name_mangler::mangle_variable(ast_variable_decl* decl) {
-    return decl->name;
+void ast_block_context::insert(const char* name, ast_decl* decl) {
+    assert(decl->is<ast_local_decl>());
+    this->_block->decls->append(decl->as<ast_local_decl>());
 }
-std::string ast_default_name_mangler::mangle_function(ast_function_decl* decl) {
-    std::stringstream s;
-    s << (std::string) decl->name << "F$";
-    for(auto param : decl->parameters) {
-        s << (std::string) this->visit(param->type) << ".";
+
+ptr<ast_decl> ast_block_context::find_first_impl(const char* name) {
+    for(auto decl: this->_block->decls) {
+        std::string dname = decl->name;
+        if(dname == std::string(name)) {
+            return box<ast_decl>(decl);
+        }
     }
-    s << "$";
-    return s.str();
+    return box<ast_decl>(nullptr);
 }
-std::string ast_default_name_mangler::mangle_record(ast_record_decl* decl) {
-    return decl->name;
-}
-std::string ast_default_name_mangler::mangle_record_member(ast_record_member_decl* decl) {
-    return (std::string) decl->parent->as<ast_record_decl>()->name + "." + (std::string) decl->name;
-}
-std::string ast_default_name_mangler::mangle_void_type(ast_void_type*) {
-    return "void";
-}
-std::string ast_default_name_mangler::mangle_integer_type(ast_integer_type* tp) {
-    if(tp->is_unsigned) {
-        return "u" + std::to_string((uint32_t) tp->bitwidth);
-    }
-    else {
-        return "i" + std::to_string((uint32_t) tp->bitwidth);
+
+void ast_block_context::find_all_impl(ptr<list<ast_decl>> olist, const char* name) {
+    for(auto decl: this->_block->decls) {
+        std::string dname = decl->name;
+        if(dname == std::string(name)) {
+            olist->append(decl);
+        }
     }
 }
-std::string ast_default_name_mangler::mangle_real_type(ast_real_type* tp) {
-    return "f" + std::to_string((uint32_t) tp->bitwidth);
-}
-std::string ast_default_name_mangler::mangle_array_type(ast_array_type* tp) {
-    return this->visit(tp->element_type) + "a$" + std::to_string((uint32_t) tp->size) + ".$";
-}
-std::string ast_default_name_mangler::mangle_pointer_type(ast_pointer_type* tp) {
-    return this->visit(tp->element_type) + "p";
-}
-std::string ast_default_name_mangler::mangle_function_type(ast_function_type* tp) {
-    std::stringstream s;
-    s << this->visit(tp->return_type) << "f$";
-    for(auto param_tp : tp->parameter_types) {
-        s << this->visit(param_tp) << ".";
-    }
-    s << "$";
-    return s.str();
-}
-std::string ast_default_name_mangler::mangle_record_type(ast_record_type* tp) {
-    return (std::string) tp->declaration->name + "r$";
+
+void ast_block_context::emit(ast_stmt* stmt) {
+    this->_block->stmts->append(stmt);
 }
 
-
-
-
-__ast_builder_impl::__ast_builder_impl(ast_name_mangler_t mangler) noexcept
+__ast_builder_impl::__ast_builder_impl(translation_unit& tu, ast_name_mangler_t mangler) noexcept
             : get_mangled_name(mangler),
+              tu(tu),
               _pointer_types(0, std::hash<ast_type*>(), sametype_predicate(*this)),
               _function_types(0, functype_hasher(*this), samefunctype_predicate(*this)),
               _the_nop_stmt(new ast_nop_stmt()),
@@ -553,6 +528,11 @@ ast_stmt* __ast_builder_impl::make_for_stmt(ast_stmt* init_stmt, ast_expr* cond,
     }
 }
 
+void __ast_builder_impl::emit(ast_stmt* stmt) noexcept {
+    auto ctxt = dynamic_cast<ast_block_context*>(unbox(this->context));
+    ctxt->emit(stmt);
+}
+
 static inline bool __sametype(const __ast_builder_impl& builder, const ast_integer_type* lhs, const ast_integer_type* rhs) {
     return (uint32_t) lhs->bitwidth    == (uint32_t) rhs->bitwidth    &&
            (bool)     lhs->is_unsigned == (bool)     rhs->is_unsigned;
@@ -781,6 +761,44 @@ ast_expr* __ast_builder_impl::widen(ast_type* typedest, ast_expr* expr) const {
     case tree_type_id::ast_pointer_type:        return this->cast_to(typedest->as<ast_pointer_type>(), expr);
     }
     throw std::runtime_error("unhandled " + std::string(typedest->get_tree_type_name()) + " in __ast_builder_impl::widen\n");
+}
+
+void __ast_builder_impl::push_block(ast_block_stmt* block) noexcept {
+    this->push_context<ast_block_context>(block);
+}
+
+void __ast_builder_impl::pop() noexcept { this->pop_context(); }
+
+ast_variable_decl* __ast_builder_impl::define_global_variable(ast_type* type, const char* name) noexcept {
+    auto var = new ast_variable_decl(name, type, this->make_zero(type));
+    var->is_extern = false;
+    var->is_extern_visible = true;
+
+    this->context->insert(name, var);
+    this->tu.append(var);
+    return var;
+}
+
+ast_variable_decl* __ast_builder_impl::define_global_variable(ast_type* type, const char* name, ast_expr* ivalue) noexcept {
+    auto var = new ast_variable_decl(name, type, ivalue);
+
+    this->context->insert(name, var);
+    this->tu.append(var);
+    return var;
+}
+
+ast_local_decl* __ast_builder_impl::define_local_variable(ast_type* type, const char* name) noexcept {
+    auto var = new ast_local_decl(name, type, nullptr);
+
+    this->context->insert(name, var);
+    return var;
+}
+
+ast_local_decl* __ast_builder_impl::define_local_variable(ast_type* type) noexcept {
+    auto var = new ast_local_decl("$annon", type, nullptr);
+
+    this->context->insert(var->name->c_str(), var);
+    return var;
 }
 
 }

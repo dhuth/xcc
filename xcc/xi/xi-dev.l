@@ -6,10 +6,10 @@
 #include "xi-parser.hpp"
 
 #define     SHIFTLOC                                 /* ignore */
-#define     IGNORE                                  SHIFTLOC;
+#define     IGNORE                                  SHIFTLOC
 #define     NEWLINE                                 /* ignore */
-#define     RETURN_VALUE(tp,name,valname,val)       { SHIFTLOC; yylval->valname = val; return tp##_##name; }
-#define     RETURN_VOID(tp,name)                    { SHIFTLOC; return tp##_##name; }
+#define     RETURN_VALUE(tp,name,valname,val)       { SHIFTLOC yylval->valname = val; return tp##_##name; }
+#define     RETURN_VOID(tp,name)                    { SHIFTLOC return tp##_##name; }
 
 #define     RETURN_LITERAL(tp,val)                  RETURN_VALUE(LITERAL,tp,expr,val)
 #define     RETURN_KW(name)                         RETURN_VOID(KW,name)

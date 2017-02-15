@@ -169,6 +169,12 @@
 %type   <parameter_list>                    function-parameter-list
 %type   <parameter>                         function-parameter
 
+%type   <stmt>                              stmt
+%type   <stmt>                              block-stmt
+%type   <stmt>                              return-stmt
+%type   <stmt>                              continue-stmt
+%type   <stmt>                              assign-stmt
+
 
 %code {
 extern YY_DECL;
@@ -216,8 +222,8 @@ global-function-decl
         |           global-function-proto-decl OP_SEMICOLON                                         { /* do nothing */ }
         |           global-function-proto-decl
                       OP_LBRACE             { builder.push_function($1); }
-                        //stmt-list-opt
-                      OP_RBRACE             { builder.pop(); }
+                        stmt-list-opt
+                      OP_RBRACE             { builder.pop_function(); }
         ;
 
 global-function-proto-decl
@@ -235,6 +241,36 @@ function-parameter-list
 function-parameter
         : type TOK_IDENTIFIER                                                                       { $$ = builder.define_parameter($1, $2); }
         | type                                                                                      { $$ = builder.define_parameter($1);     }
+        ;
+        
+stmt-list-opt
+        : stmt-list
+        | %empty
+        ;
+stmt-list
+        : stmt { builder.emit($1); } stmt-list
+        | stmt { builder.emit($1); }
+        ;
+stmt
+        : block-stmt                                                                                { $$ = $1; }
+        | return-stmt                                                                               { $$ = $1; }
+        | continue-stmt                                                                             { $$ = $1; }
+        | OP_SEMICOLON                                                                              { $$ = builder.make_nop_stmt(); }
+        ;
+block-stmt
+        : OP_LBRACE { builder.push_block(builder.make_block_stmt()); }
+            stmt-list-opt
+          OP_RBRACE { $$ = builder.pop_block(); }
+        ;
+return-stmt
+        : KW_RETURN OP_SEMICOLON                                                                    { $$ = builder.make_return_stmt();   }
+        | KW_RETURN expr OP_SEMICOLON                                                               { $$ = builder.make_return_stmt($2); }
+        ;
+continue-stmt
+        : KW_CONTINUE OP_SEMICOLON                                                                  { $$ = builder.make_continue_stmt(); }
+        ;
+break-stmt
+        : KW_BREAK OP_SEMICOLON                                                                     { $$ = builder.make_break_stmt(); }
         ;
 
 type
