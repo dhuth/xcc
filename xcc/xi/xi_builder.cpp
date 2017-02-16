@@ -28,13 +28,8 @@ ast_expr* xi_builder::make_op(xi_operator op, ast_expr* lhs, ast_expr* rhs) {
 }
 
 ast_type* xi_builder::lower(ast_type* tp) {
-    //TODO...
-    return tp;
-}
-
-ast_expr* xi_builder::lower(ast_expr* e) {
     //TODO:...
-    return e;
+    return tp;
 }
 
 ast_decl* xi_builder::lower(ast_decl* decl) {
@@ -42,12 +37,15 @@ ast_decl* xi_builder::lower(ast_decl* decl) {
     return decl;
 }
 
-ast_stmt* xi_builder::lower(ast_stmt* stmt) {
+void xi_builder::resolvenames_pass() {
     //TODO:...
-    return stmt;
 }
 
-void xi_builder::generate() {
+void xi_builder::typecheck_pass() {
+    //TODO:...
+}
+
+void xi_builder::lower_pass() {
     for(auto f : this->all_functions) {
         f->generated_function = this->lower_function(f);
     }
@@ -56,6 +54,12 @@ void xi_builder::generate() {
         this->lower_body(f);
         this->tu.append(f->generated_function);
     }
+}
+
+void xi_builder::generate() {
+    this->resolvenames_pass();
+    this->typecheck_pass();
+    this->lower_pass();
 }
 
 }

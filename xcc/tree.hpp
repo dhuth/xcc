@@ -454,13 +454,19 @@ public:
 
 template<typename TToType,
          typename TFromType>
-inline typename __list_type_selector<TToType>::type* map(__tree_property_list<TFromType>& prop, std::function<TToType*(TFromType*)> f) {
+inline ptr<typename __list_type_selector<TToType>::type> map(__tree_property_list<TFromType>& prop, std::function<TToType*(TFromType*)> f) {
     auto dest_list = new __tree_list_tree<TToType>();
-    for(auto itr = prop.begin(); itr != prop.end(); ++itr) {
-        auto el = *itr;
-        dest_list->append(f(el));
+    try {
+        for(auto itr = prop.begin(); itr != prop.end(); ++itr) {
+            auto el = *itr;
+            dest_list->append(f(el));
+        }
     }
-    return dest_list;
+    catch (std::exception& e) {
+        delete dest_list;
+        throw e;
+    }
+    return box(dest_list);
 }
 
 template<typename TValue>

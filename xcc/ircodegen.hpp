@@ -96,6 +96,7 @@ public:
         : llvm_context(),
           ir_builder(this->llvm_context),
           _local_scope(new local_scope(nullptr)),
+          _header_bb(nullptr),
           generate_expr(*this),
           generate_type(*this) {
         this->module = llvm::make_unique<llvm::Module>(module_name, this->llvm_context);

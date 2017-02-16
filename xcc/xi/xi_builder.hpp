@@ -59,6 +59,12 @@ public:
 
 protected:
 
+    void                                            resolvenames_pass();
+    void                                            typecheck_pass();
+    void                                            lower_pass();
+
+    ast_type*                                       sythtype(ast_expr*);
+
     ast_expr*                                       lower(ast_expr*);
     ast_type*                                       lower(ast_type*);
     ast_decl*                                       lower(ast_decl*);

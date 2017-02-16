@@ -68,16 +68,15 @@ void xi_builder::pop_function() {
 }
 
 ast_function_decl* xi_builder::lower_function(xi_function_decl* func) {
-    ptr<list<ast_parameter_decl>> flat_parameters = new list<ast_parameter_decl>();
-
-    //TODO: flatten types
-    for(auto param: func->parameters) {
-        auto fparam = new ast_parameter_decl(param->name, this->lower(param->type));
-        param->generated_parameter = fparam;
-        flat_parameters->append(fparam);
-    }
-
-    return new ast_function_decl(func->name, this->lower(func->return_type), flat_parameters, nullptr);
+    auto lower_parameters = map<ast_parameter_decl, xi_parameter_decl>(func->parameters, [&](xi_parameter_decl* pdecl) -> ast_parameter_decl* {
+        auto gparam = this->lower(pdecl);
+        pdecl->generated_parameter = gparam;
+        gparam->generated_name = this->get_mangled_name(gparam);
+        return gparam;
+    });
+    auto gfunc = new ast_function_decl(func->name, this->lower(func->return_type), lower_parameters, nullptr);
+    gfunc->generated_name = this->get_mangled_name(gfunc);
+    return gfunc;
 }
 
 void xi_builder::lower_body(xi_function_decl* func) {
