@@ -1,3 +1,5 @@
+tree_type(tree_list,                    tree)
+
 tree_type(ast_tree,                     tree)
 tree_type(ast_type,                     ast_tree)
 tree_type(ast_decl,                     ast_tree)

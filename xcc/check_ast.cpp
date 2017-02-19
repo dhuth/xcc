@@ -8,6 +8,7 @@
 #include "tree.hpp"
 #include "ast.hpp"
 #include "ast_builder.hpp"
+#include "frontend.hpp"
 #include "gtest/gtest.h"
 
 namespace xcc {
@@ -15,7 +16,7 @@ namespace xcc {
 class AstTest : public ::testing::Test {
 public:
 
-    AstTest(): builder() {
+    AstTest(): builder(unit) {
         this->void_tp                       = builder.get_void_type();
         this->i32                           = builder.get_integer_type(32, false);
         this->u32                           = builder.get_integer_type(32, true);
@@ -57,6 +58,8 @@ public:
         this->func_i32_i32                  = builder.get_function_type(i32, new list<ast_type>({i32}));
         this->func_i32_i32f64               = builder.get_function_type(i32, new list<ast_type>({i32, f64}));
     }
+
+    translation_unit                                            unit;
 
     ast_builder<>                                               builder;
     ast_void_type*                                              void_tp;

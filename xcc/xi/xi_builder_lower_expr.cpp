@@ -83,6 +83,9 @@ ast_expr* xi_builder::lower(ast_expr* e) {
             auto cexpr = e->as<ast_cast>();
             cexpr->expr = this->lower(cexpr->expr);
             cexpr->type = this->lower(cexpr->type);
+            if(cexpr->op == ast_op::none) {
+                return ast_builder::make_cast_expr(cexpr->type, cexpr->expr);
+            }
             return cexpr;
         }
     case tree_type_id::ast_binary_op:

@@ -329,13 +329,16 @@ void ircode_context::generate_function_body(ast_function_decl* decl) {
     auto fvalue = static_cast<llvm::Function*>(this->find(decl));
 
     this->begin_scope();
+    this->_header_bb        = llvm::BasicBlock::Create(this->llvm_context, "header", fvalue);
+    this->ir_builder.SetInsertPoint(this->_header_bb);
 
     uint32_t i = 0;
     for(auto& arg: fvalue->args()) {
-        this->add_declaration(decl->parameters[i], &arg);
+        this->add_declaration(
+                decl->parameters[i],
+                this->ir_builder.CreateAlloca(this->generate_type(decl->parameters[i]->type), &arg, arg.getName()));
         i++;
     }
-    this->_header_bb        = llvm::BasicBlock::Create(this->llvm_context, "header", fvalue);
 
     llvm::BasicBlock*   bb  = llvm::BasicBlock::Create(this->llvm_context, "body", fvalue);
 

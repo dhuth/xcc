@@ -47,8 +47,9 @@ void ast_block_context::emit(ast_stmt* stmt) {
     this->_block->stmts->append(stmt);
 }
 
-__ast_builder_impl::__ast_builder_impl(translation_unit& tu, ast_name_mangler_t mangler) noexcept
-            : get_mangled_name(mangler),
+__ast_builder_impl::__ast_builder_impl(translation_unit& tu, ast_name_mangler_t* mangler) noexcept
+            : _mangler_ptr(mangler),
+              get_mangled_name(*mangler),
               tu(tu),
               context(new ast_namespace_context()),
               _pointer_types(0, std::hash<ast_type*>(), sametype_predicate(*this)),

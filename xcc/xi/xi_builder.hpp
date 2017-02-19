@@ -52,6 +52,8 @@ public:
     ast_expr*                                       make_op(xi_operator op, ast_expr*);
     ast_expr*                                       make_op(xi_operator op, ast_expr*, ast_expr*);
 
+    ast_stmt*                                       make_return_stmt(ast_type*, ast_expr*) const noexcept override final;
+
     void                                            push_function(xi_function_decl*);
     void                                            pop_function();
 
@@ -69,6 +71,7 @@ protected:
     ast_type*                                       lower(ast_type*);
     ast_decl*                                       lower(ast_decl*);
     ast_stmt*                                       lower(ast_stmt*);
+    ast_parameter_decl*                             lower_parameter(xi_parameter_decl*);
     ast_function_decl*                              lower_function(xi_function_decl*);
     void                                            lower_body(xi_function_decl*);
 

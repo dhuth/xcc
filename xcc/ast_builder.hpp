@@ -114,6 +114,7 @@ public:
 
     inline ast_default_name_mangler() noexcept {
         this->addmethod(&ast_default_name_mangler::mangle_variable);
+        this->addmethod(&ast_default_name_mangler::mangle_parameter);
         this->addmethod(&ast_default_name_mangler::mangle_function);
         this->addmethod(&ast_default_name_mangler::mangle_record);
         this->addmethod(&ast_default_name_mangler::mangle_record_member);
@@ -141,6 +142,7 @@ private:
     std::string                 mangle_record_type(ast_record_type*);
 
     std::string                 mangle_variable(ast_variable_decl*);
+    std::string                 mangle_parameter(ast_parameter_decl*);
     std::string                 mangle_function(ast_function_decl*);
     std::string                 mangle_record(ast_record_decl*);
     std::string                 mangle_record_member(ast_record_member_decl*);
@@ -150,7 +152,7 @@ private:
 struct __ast_builder_impl {
 public:
 
-    __ast_builder_impl(translation_unit& tu, ast_name_mangler_t mangler) noexcept;
+    __ast_builder_impl(translation_unit& tu, ast_name_mangler_t* mangler) noexcept;
     virtual ~__ast_builder_impl() noexcept = default;
 
             ast_void_type*                      get_void_type()                                                     const noexcept;
@@ -206,7 +208,7 @@ public:
     virtual ast_expr*                           fold(ast_expr* e);
 
     // Anylasis
-            ast_name_mangler_t                  get_mangled_name;
+            ast_name_mangler_t&                 get_mangled_name;
     virtual bool                                sametype(ast_type*, ast_type*)                                      const;
     virtual ast_type*                           maxtype(ast_type*, ast_type*)                                       const;
     virtual ast_expr*                           widen(ast_type*, ast_expr*)                                         const;
@@ -307,6 +309,8 @@ private:
     std::map<std::tuple<ast_type*, uint32_t>, ptr<ast_array_type>>      _array_types;
     std::map<ast_record_decl*, ptr<ast_record_type>>                    _record_types;
 
+    ast_name_mangler_t*                                                 _mangler_ptr;
+
 };
 
 template<typename TMangler = ast_default_name_mangler,
@@ -314,7 +318,7 @@ template<typename TMangler = ast_default_name_mangler,
 struct ast_builder : public __ast_builder_impl {
 public:
 
-    ast_builder(translation_unit& tu) noexcept : __ast_builder_impl(tu, TMangler()) { }
+    ast_builder(translation_unit& tu) noexcept : __ast_builder_impl(tu, new TMangler()) { }
     virtual ~ast_builder() noexcept = default;
 
 };

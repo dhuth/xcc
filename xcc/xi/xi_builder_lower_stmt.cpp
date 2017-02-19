@@ -32,6 +32,7 @@ ast_stmt* xi_builder::lower(ast_stmt* stmt) {
     case tree_type_id::ast_block_stmt:
         {
             auto bstmt = stmt->as<ast_block_stmt>();
+            this->push_block(bstmt);
             bstmt->decls = map<ast_local_decl, ast_local_decl>(bstmt->decls,
                             [&](ast_local_decl* ldecl)->ast_local_decl* {
                                 return this->lower(ldecl)->as<ast_local_decl>();
@@ -40,6 +41,7 @@ ast_stmt* xi_builder::lower(ast_stmt* stmt) {
                             [&](ast_stmt* s)->ast_stmt* {
                                 return this->lower(s);
                             });
+            this->pop();
             return bstmt;
         }
     case tree_type_id::ast_if_stmt:

@@ -27,6 +27,10 @@ ast_expr* xi_builder::make_op(xi_operator op, ast_expr* lhs, ast_expr* rhs) {
     return new xi_op_expr(nullptr, op, new list<ast_expr>({lhs, rhs}));
 }
 
+ast_stmt* xi_builder::make_return_stmt(ast_type* rt, ast_expr* expr) const noexcept {
+    return new ast_return_stmt(new ast_cast(rt, ast_op::none, expr));
+}
+
 ast_type* xi_builder::lower(ast_type* tp) {
     //TODO:...
     return tp;
@@ -34,6 +38,9 @@ ast_type* xi_builder::lower(ast_type* tp) {
 
 ast_decl* xi_builder::lower(ast_decl* decl) {
     //TODO:...
+    switch(decl->get_tree_type()) {
+    case tree_type_id::xi_parameter_decl:       return this->lower_parameter(decl->as<xi_parameter_decl>());
+    }
     return decl;
 }
 

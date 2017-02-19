@@ -13,7 +13,10 @@ std::string ast_default_name_mangler::operator()(ast_tree* t)                   
 std::string ast_default_name_mangler::operator()(std::string prefix, ast_tree* t) { return prefix + this->visit(t); }
 
 std::string ast_default_name_mangler::mangle_variable(ast_variable_decl* decl) {
-    return decl->name;
+    return (std::string) decl->name;
+}
+std::string ast_default_name_mangler::mangle_parameter(ast_parameter_decl* decl) {
+    return (std::string) decl->name;
 }
 std::string ast_default_name_mangler::mangle_function(ast_function_decl* decl) {
     std::stringstream s;
