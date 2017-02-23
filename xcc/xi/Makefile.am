@@ -5,20 +5,26 @@ libxi_a_SOURCES    += xi-parser.cpp
 libxi_a_SOURCES    += xi-lex.cpp
 libxi_a_SOURCES    += xi_builder.cpp
 libxi_a_SOURCES    += xi_builder_function.cpp
-libxi_a_SOURCES    += xi_builder_lower_expr.cpp
-libxi_a_SOURCES    += xi_builder_lower_stmt.cpp
+libxi_a_SOURCES    += xi_lower.cpp
+libxi_a_SOURCES    += xi_lower_expr.cpp
+libxi_a_SOURCES    += xi_lower_stmt.cpp
 libxi_a_CPPFLAGS    = @llvm_cppflags@
 libxi_a_CXXFLAGS    = -std=c++11 -pthread
 
-BUILT_SOURCES       = $(srcdir)/xi-parser.hpp
-BUILT_SOURCES      += $(srcdir)/xi-lex.hpp
+BUILT_SOURCES       = xi-parser.hpp
+BUILT_SOURCES      += xi-lex.hpp
 
-$(srcdir)/xi-parser.hpp: xi-parser.cpp
-$(srcdir)/xi-lex.hpp:    xi-lex.cpp
+EXTRA_CLEAN         = xi-parser.hpp
+EXTRA_CLEAN        += xi-parser.cpp
+EXTRA_CLEAN        += xi-lex.hpp
+EXTRA_CLEAN        += xi-lex.cpp
 
-xi-parser.cpp: xi-dev.y
-	bison -o xi-parser.cpp xi-dev.y
+xi-parser.hpp: xi-parser.cpp
+xi-lex.hpp:    xi-lex.cpp
 
-xi-lex.cpp: xi-dev.l
-	flex -o xi-lex.cpp xi-dev.l
+xi-parser.cpp: $(srcdir)/xi-dev.y
+	bison -o xi-parser.cpp --report-file=xi-dev.y.log --report=all $(srcdir)/xi-dev.y
+
+xi-lex.cpp: $(srcdir)/xi-dev.l
+	flex -o xi-lex.cpp $(srcdir)/xi-dev.l
 

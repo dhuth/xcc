@@ -2,10 +2,28 @@
 %define     api.prefix                              {xi}
 %define     api.pure
 
+%locations
+
 %code requires {
 #include    "xi_internal.hpp"
+#include    "source.hpp"
 #define     YYSTYPE                         XISTYPE
-#define     YY_DECL                         int yylex(YYSTYPE* yylval_param, xi_builder_t& builder)
+#define     XILTYPE                         xcc::source_span
+#define     YY_DECL                         int yylex(YYSTYPE* yylval_param, XILTYPE* yyloc, xi_builder_t& builder)
+
+#define     YYLTYPE_IS_DECLARED             1
+#define     YYLLOC_DEFAULT(current, rhs, n)             \
+    do                                                  \
+        if(n) {                                         \
+            (current).first = YYRHSLOC(rhs, 1).first;   \
+            (current).last  = YYRHSLOC(rhs, n).last;    \
+        }                                               \
+        else {                                          \
+            (current).first = YYRHSLOC(rhs, 0).first;   \
+            (current).last  = YYRHSLOC(rhs, 0).last;    \
+        }                                               \
+   while(0)
+
 }
 
 %token
@@ -62,14 +80,23 @@
         OP_ASSIGN_MUL                       "*="
         OP_ASSIGN_DIV                       "/="
         OP_ASSIGN_MOD                       "%="
+        OP_ASSIGN_SHL                       "<<="
+        OP_ASSIGN_SHR                       ">>="
+        OP_ASSIGN_LAND                      "&&="
+        OP_ASSIGN_LOR                       "||="
+        OP_ASSIGN_BAND                      "&="
+        OP_ASSIGN_BOR                       "|="
         
         KW_ABSTRACT                         "abstract"
         KW_AUTO                             "auto"
         KW_BYREF                            "byref"
+        KW_BYVAL                            "byval"
         KW_BREAK                            "break"
         KW_CLASS                            "class"
         KW_CONST                            "const"
         KW_CONTINUE                         "continue"
+        KW_ELSE                             "else"
+        KW_ELIF                             "elif"
         KW_EXTERN                           "extern"
         KW_FOR                              "for"
         KW_FUNC                             "func"
@@ -120,6 +147,8 @@
 %type   <type>                              prefix-type
 %type   <type>                              term-type
 
+%type   <expr_list>                         dim-expr-list
+
 %type   <expr>                              expr
 %type   <expr>                              land-expr
 %type   <expr>                              lor-expr
@@ -133,6 +162,9 @@
 %type   <expr>                              tight-prefix-expr
 %type   <expr>                              postfix-expr
 %type   <expr>                              term-expr
+
+%type   <expr_list>                         expr-list-opt
+%type   <expr_list>                         expr-list
 
 %type   <op>                                OP_ADD
 %type   <op>                                OP_SUB
@@ -154,7 +186,20 @@
 %type   <op>                                OP_LE
 %type   <op>                                OP_GT
 %type   <op>                                OP_GE
+%type   <op>                                OP_ASSIGN
+%type   <op>                                OP_ASSIGN_ADD
+%type   <op>                                OP_ASSIGN_SUB
+%type   <op>                                OP_ASSIGN_MUL
+%type   <op>                                OP_ASSIGN_DIV
+%type   <op>                                OP_ASSIGN_MOD
+%type   <op>                                OP_ASSIGN_SHL
+%type   <op>                                OP_ASSIGN_SHR
+%type   <op>                                OP_ASSIGN_LAND
+%type   <op>                                OP_ASSIGN_LOR
+%type   <op>                                OP_ASSIGN_BAND
+%type   <op>                                OP_ASSIGN_BOR
 
+%type   <op>                                assign-op
 %type   <op>                                land-op
 %type   <op>                                lor-op
 %type   <op>                                loose-prefix-op
@@ -178,14 +223,19 @@
 %type   <stmt>                              return-stmt
 %type   <stmt>                              continue-stmt
 %type   <stmt>                              assign-stmt
+%type   <stmt>                              if-stmt
+%type   <stmt>                              for-stmt
+%type   <stmt>                              while-stmt
+%type   <stmt>                              local-stmt
+%type   <stmt>                              else-stmt
+%type   <stmt>                              elif-stmt
 
 %type   <stmt>                              begin-block-stmt
 
 
 %code {
 extern YY_DECL;
-void yyerror(xi_builder_t& builder, const char* msg);
-
+void yyerror(XILTYPE* loc, xi_builder_t& builder, const char* msg);
 }
 %param                              {xi_builder_t&          builder}
 
@@ -210,6 +260,7 @@ global-decl
         : global-namespace-decl
         | global-variable-decl
         | global-function-decl
+        | global-typedef-decl
         ;
 
 global-namespace-decl
@@ -217,6 +268,9 @@ global-namespace-decl
             OP_LBRACE                       { builder.push_namespace(builder.define_namespace($2)); }
             global-decl-list
             OP_RBRACE                       { builder.pop(); }
+        ;
+global-typedef-decl
+        : KW_TYPEDEF type TOK_IDENTIFIER OP_SEMICOLON                                               { builder.define_named_type($3, $2); }
         ;
 global-variable-decl
         : KW_EXTERN type TOK_IDENTIFIER OP_SEMICOLON                                                { auto var = builder.define_global_variable($2, $3); var->is_extern = true; }
@@ -250,13 +304,18 @@ function-parameter
         ;
         
 stmt-list-opt
-        : stmt { builder.emit($1); } stmt-list-opt
+        : stmt        { builder.emit($1); } stmt-list-opt
+        | local-stmt  { builder.emit($1); }
         | %empty
         ;
 stmt
         : block-stmt                                                                                { $$ = $1; }
         | return-stmt                                                                               { $$ = $1; }
         | continue-stmt                                                                             { $$ = $1; }
+        | break-stmt                                                                                { $$ = $1; }
+        | assign-stmt                                                                               { $$ = $1; }
+        | if-stmt                                                                                   { $$ = $1; }
+        | while-stmt                                                                                { $$ = $1; }
         | OP_SEMICOLON                                                                              { $$ = builder.make_nop_stmt(); }
         ;
 block-stmt
@@ -277,12 +336,62 @@ continue-stmt
 break-stmt
         : KW_BREAK OP_SEMICOLON                                                                     { $$ = builder.make_break_stmt(); }
         ;
+assign-stmt
+        : expr assign-op expr OP_SEMICOLON                                                          { $$ = builder.make_assign_stmt($2, $1, $3); }
+        ;
+        
+if-stmt
+        : KW_IF OP_LPAREN expr OP_RPAREN stmt                                                       { $$ = builder.make_if_stmt($3, $5, nullptr); }
+        | KW_IF OP_LPAREN expr OP_RPAREN stmt else-stmt                                             { $$ = builder.make_if_stmt($3, $5, $6);      }
+        | KW_IF OP_LPAREN expr OP_RPAREN stmt elif-stmt                                             { $$ = builder.make_if_stmt($3, $5, $6);      }
+        ;
+else-stmt
+        : KW_ELSE stmt                                                                              { $$ = $2; }
+        ;
+elif-stmt
+        : KW_ELIF OP_LPAREN expr OP_RPAREN stmt                                                     { $$ = builder.make_if_stmt($3, $5, nullptr); }
+        | KW_ELIF OP_LPAREN expr OP_RPAREN stmt elif-stmt                                           { $$ = builder.make_if_stmt($3, $5, $6);      }
+        | KW_ELIF OP_LPAREN expr OP_RPAREN stmt else-stmt                                           { $$ = builder.make_if_stmt($3, $5, $6);      }
+        ;
+while-stmt
+        : KW_WHILE OP_LPAREN expr OP_RPAREN stmt                                                    { $$ = builder.make_while_stmt($3, $5); }
+        ;
+local-stmt
+        : type TOK_IDENTIFIER OP_SEMICOLON begin-block-stmt
+                {
+                    builder.push_block($4->as<xcc::ast_block_stmt>());
+                    auto vardecl = builder.define_local_variable($1, $2);
+                    builder.emit(
+                            builder.make_assign_stmt(
+                                xcc::xi_operator::assign,
+                                builder.make_declref_expr(vardecl),
+                                builder.make_zero($1)));
+                }
+            stmt-list-opt
+                { $$ = $4; builder.pop(); }
+        | type TOK_IDENTIFIER OP_ASSIGN expr OP_SEMICOLON begin-block-stmt
+                {
+                    builder.push_block($6->as<xcc::ast_block_stmt>());
+                    auto vardecl = builder.define_local_variable($1, $2);
+                    builder.emit(
+                            builder.make_assign_stmt(
+                                xcc::xi_operator::assign,
+                                builder.make_declref_expr(vardecl),
+                                $4));
+                }
+            stmt-list-opt
+                { $$ = $6; builder.pop(); }
+        ;
+
+
+
 
 type
         : postfix-type                                                                              { $$ = $1; }
         ;
 postfix-type
-        : prefix-type                                                                               { $$ = $1; }
+        : postfix-type OP_LBRACKET dim-expr-list OP_RBRACKET                                        { $$ = builder.get_array_type($1, $3); }
+        | prefix-type                                                                               { $$ = $1; }
         ;
 prefix-type
         : term-type                                                                                 { $$ = $1; }
@@ -291,6 +400,18 @@ term-type
         : TOK_TYPE                                                                                  { $$ = $1; }
         | OP_LPAREN type OP_RPAREN                                                                  { $$ = $2; }
         ;
+
+
+
+
+dim-expr-list
+        : dim-expr-list OP_COMA                                                                     { $1->append(nullptr); $$=$1;            }
+        | dim-expr-list OP_COMA expr                                                                { $1->append($3);      $$=$1;            }
+        | expr                                                                                      { $$ = new xcc::list<xcc::ast_expr>($1); }
+        | %empty                                                                                    { $$ = new xcc::list<xcc::ast_expr>();   }
+        ;
+
+
 
 expr                : land-expr                                 { $$ = $1; }
                     ;
@@ -324,7 +445,11 @@ mul-expr            : mul-expr      mul-op  tight-prefix-expr   { $$ = builder.m
 tight-prefix-expr   : tight-prefix-op tight-prefix-expr         { $$ = builder.make_op($1, $2); }
                     | postfix-expr                              { $$ = $1; }
                     ;
-postfix-expr        : term-expr                                 { $$ = $1; }
+postfix-expr        : postfix-expr OP_LPAREN expr-list-opt OP_RPAREN
+                                                                { $$ = builder.make_call_expr($1, $3); }
+                    | postfix-expr OP_LBRACKET expr-list-opt OP_RBRACKET
+                                                                { $$ = builder.make_index_expr($1, $3); }
+                    | term-expr                                 { $$ = $1; }
                     ;
 term-expr           : LITERAL_INTEGER                           { $$ = $1; }
                     | LITERAL_FLOAT                             { $$ = $1; }
@@ -332,6 +457,32 @@ term-expr           : LITERAL_INTEGER                           { $$ = $1; }
                     ;
 
 
+expr-list-opt
+                    : expr-list                                 { $$ = $1; }
+                    | %empty                                    { $$ = new xcc::list<xcc::ast_expr>(); }
+                    ;
+expr-list
+                    : expr-list OP_COMA expr                    { $1->append($3); $$ = $1; }
+                    | expr                                      { $$ = new xcc::list<xcc::ast_expr>($1); }
+                    ;
+
+
+
+
+assign-op
+        : OP_ASSIGN                                                                                 { $$ = $1; }
+        | OP_ASSIGN_ADD                                                                             { $$ = $1; }
+        | OP_ASSIGN_SUB                                                                             { $$ = $1; }
+        | OP_ASSIGN_MUL                                                                             { $$ = $1; }
+        | OP_ASSIGN_DIV                                                                             { $$ = $1; }
+        | OP_ASSIGN_MOD                                                                             { $$ = $1; }
+        | OP_ASSIGN_SHL                                                                             { $$ = $1; }
+        | OP_ASSIGN_SHR                                                                             { $$ = $1; }
+        | OP_ASSIGN_LAND                                                                            { $$ = $1; }
+        | OP_ASSIGN_LOR                                                                             { $$ = $1; }
+        | OP_ASSIGN_BAND                                                                            { $$ = $1; }
+        | OP_ASSIGN_BOR                                                                             { $$ = $1; }
+        ;
 land-op
         : OP_LAND                                                                                   { $$ = $1; }
         ;
@@ -379,8 +530,8 @@ tight-prefix-op
 
 %%
 
-void yyerror(xi_builder_t& builder, const char* msg) {
-    printf("%s\n", msg);
+void yyerror(XILTYPE* loc, xi_builder_t& builder, const char* msg) {
+    printf("at %d:%d: %s\n", loc->first.line_number, loc->first.column_number, msg);
 }
 
 

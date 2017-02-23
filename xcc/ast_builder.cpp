@@ -13,6 +13,7 @@
 #include "ast_builder.hpp"
 #include "frontend.hpp"
 
+
 namespace xcc {
 
 ast_block_context::ast_block_context(ast_context* p, ast_block_stmt* block) : ast_context(p), _block(block) { }
@@ -145,8 +146,8 @@ ast_type* __ast_builder_impl::get_declaration_type(ast_decl* decl) noexcept {
             for(auto p: fdecl->parameters) {
                 pvec.push_back(p->type);
             }
-            list<ast_type>          plist(pvec);
-            return this->get_function_type(rtype, &plist);
+            list<ast_type>*         plist = new list<ast_type>(pvec);
+            return this->get_function_type(rtype, box(plist));
         }
     case tree_type_id::ast_record_decl:
         return this->get_record_type(decl->as<ast_record_decl>());
@@ -154,6 +155,7 @@ ast_type* __ast_builder_impl::get_declaration_type(ast_decl* decl) noexcept {
         return decl->as<ast_record_member_decl>()->type;
     }
     //TODO: error unhandled
+    assert(false);
     return nullptr;
 }
 
@@ -187,6 +189,10 @@ ast_expr* __ast_builder_impl::make_zero(ast_type* tp) const noexcept {
 }
 
 ast_expr* __ast_builder_impl::make_cast_expr(ast_type* desttype, ast_expr* expr) const {
+    return this->make_lower_cast_expr(desttype, expr);
+}
+
+ast_expr* __ast_builder_impl::make_lower_cast_expr(ast_type* desttype, ast_expr* expr) const {
     switch(desttype->get_tree_type()) {
     case tree_type_id::ast_integer_type:            return this->cast_to(desttype->as<ast_integer_type>(), expr);
     case tree_type_id::ast_real_type:               return this->cast_to(desttype->as<ast_real_type>(),    expr);
@@ -257,17 +263,17 @@ static ast_expr* make_comparison_op_expr(__ast_builder_impl* builder, ast_op op,
             case ast_op::lt:    new_op  = ast_op::icmp_ult; break;
             case ast_op::le:    new_op  = ast_op::icmp_ule; break;
             case ast_op::gt:    new_op  = ast_op::icmp_ugt; break;
-            case ast_op::ge:    new_op  = ast_op::icmp_ult; break;
+            case ast_op::ge:    new_op  = ast_op::icmp_uge; break;
             }
         }
         else {
             switch(op) {
             case ast_op::eq:    new_op  = ast_op::cmp_eq;   break;
             case ast_op::ne:    new_op  = ast_op::cmp_ne;   break;
-            case ast_op::lt:    new_op  = ast_op::icmp_ult; break;
-            case ast_op::le:    new_op  = ast_op::icmp_ule; break;
-            case ast_op::gt:    new_op  = ast_op::icmp_ugt; break;
-            case ast_op::ge:    new_op  = ast_op::icmp_uge; break;
+            case ast_op::lt:    new_op  = ast_op::icmp_slt; break;
+            case ast_op::le:    new_op  = ast_op::icmp_sle; break;
+            case ast_op::gt:    new_op  = ast_op::icmp_sgt; break;
+            case ast_op::ge:    new_op  = ast_op::icmp_sge; break;
             }
         }
     }
@@ -394,7 +400,26 @@ ast_expr* __ast_builder_impl::make_op_expr(ast_op op, ast_expr* expr) {
     assert(is_highlevel_op(op));
 
     switch(op) {
-    //...
+    case ast_op::add:
+        return expr;
+    case ast_op::sub:
+        {
+            if(expr->type->is<ast_integer_type>()) {
+                return new ast_unary_op(expr->type, ast_op::ineg, expr);
+            }
+            else if(expr->type->is<ast_real_type>()) {
+                return new ast_unary_op(expr->type, ast_op::fneg, expr);
+            }
+            break;
+        }
+    case ast_op::logical_not:
+        {
+            return new ast_unary_op(this->get_bool_type(), ast_op::lnot, expr);
+        }
+    case ast_op::binary_not:
+        {
+            return new ast_unary_op(expr->type, ast_op::bnot, expr);
+        }
     }
     throw std::runtime_error("unhandled operator in __ast_builder_imppl::make_op_expr(unary)");
 }
@@ -437,10 +462,23 @@ ast_expr* __ast_builder_impl::make_index_expr(ast_expr* arrexpr, ast_expr* idxex
 }
 
 ast_expr* __ast_builder_impl::make_call_expr(ast_expr* fexpr, list<ast_expr>* args) const {
+    return this->make_lower_call_expr(fexpr, args);
+}
+
+ast_expr* __ast_builder_impl::make_lower_call_expr(ast_expr* fexpr, list<ast_expr>* args) const {
     assert(fexpr->type->is<ast_function_type>());
 
+    auto ftype = fexpr->type->as<ast_function_type>();
+    list<ast_expr>* new_args = new list<ast_expr>();
+    for(uint32_t i = 0; i < args->size(); i++) {
+        auto ptp    = (*ftype->parameter_types)[i];
+        auto narg   = (*args)[i];
+
+        new_args->append(this->make_lower_cast_expr(ptp, narg));
+    }
+
     ast_type* t = fexpr->type->as<ast_function_type>()->return_type;
-    return new ast_invoke(t, fexpr, args);
+    return new ast_invoke(t, fexpr, new_args);
 }
 
 uint32_t __ast_builder_impl::foldu32(ast_expr* e) {
@@ -485,8 +523,12 @@ ast_stmt* __ast_builder_impl::make_expr_stmt(ast_expr* e) const noexcept {
 }
 
 ast_stmt* __ast_builder_impl::make_assign_stmt(ast_expr* lhs, ast_expr* rhs) noexcept {
+    return this->make_lower_assign_stmt(lhs, rhs);
+}
+
+ast_stmt* __ast_builder_impl::make_lower_assign_stmt(ast_expr* lhs, ast_expr* rhs) noexcept {
     auto dest = this->make_addressof_expr(lhs);
-    auto src  = this->make_cast_expr(lhs->type, rhs);
+    auto src  = this->make_lower_cast_expr(lhs->type, rhs);
 
     return new ast_assign_stmt(dest, src);
 }
@@ -776,6 +818,10 @@ void __ast_builder_impl::push_block(ast_block_stmt* block) noexcept {
 }
 
 void __ast_builder_impl::pop() noexcept { this->pop_context(); }
+
+ast_typedef_decl* __ast_builder_impl::define_named_type(const char* name, ast_type* tp) noexcept {
+    return new ast_typedef_decl(name, tp);
+}
 
 ast_variable_decl* __ast_builder_impl::define_global_variable(ast_type* type, const char* name) noexcept {
     auto var = new ast_variable_decl(name, type, this->make_zero(type));

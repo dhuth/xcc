@@ -314,6 +314,27 @@ public:
 
 
 /**
+ * Named type declaration
+ */
+struct ast_typedef_decl final : public extend_tree<tree_type_id::ast_typedef_decl, ast_decl> {
+public:
+
+    /**
+     * \param name
+     * \param type
+     */
+    inline ast_typedef_decl(std::string name, ast_type* type)
+            : base_type(name),
+              type(this, type) {
+        //...
+    }
+
+    property<ast_type>                                          type;
+
+};
+
+
+/**
  * The void type
  */
 struct ast_void_type final : public extend_tree<tree_type_id::ast_void_type, ast_type> {
@@ -574,6 +595,7 @@ enum class ast_op : uint32_t {
     mul,
     div,
     mod,
+    neg,
     shl,
     shr,
     eq,
@@ -1024,6 +1046,110 @@ struct ast_continue_stmt final : public extend_tree<tree_type_id::ast_continue_s
 public:
 
     inline ast_continue_stmt() noexcept { }
+
+};
+
+const char* to_string(xcc::ast_op op);
+
+}
+
+namespace std {
+inline const char* to_string(xcc::ast_op op) { return xcc::to_string(op); }
+}
+
+namespace xcc {
+struct ast_printer final : public dispatch_visitor<void, std::ostream&> {
+public:
+
+    static ast_printer instance;
+
+    template<typename T>
+    static inline void add(ast_printer::dispatch_function_type<T> func) {
+        instance.addfunction(func);
+    }
+
+    ast_printer();
+
+    void handle_null_tree(std::ostream&) override final;
+
+protected:
+
+    typedef std::function<void(const char*, std::ostream&)>             pwfunc_t;
+
+    template<typename T>
+    inline pwfunc_t pwrap(__tree_property_tree<T>& p) {
+        return [&](const char*, std::ostream& s) -> void { this->visit(p, s); };
+    }
+
+    template<typename T>
+    inline pwfunc_t pwrap(__tree_property_list<T>& p) {
+        return [&](const char* fmt, std::ostream& s) -> void {
+            for(uint32_t i = 0; i < p->size(); i++) {
+                this->visit((*p)[i], s);
+                if(i < (p->size()-1)) {
+                    this->print(s, fmt);
+                }
+            }
+        };
+    }
+
+    inline pwfunc_t pwrap(__tree_property_value<std::string>& p) {
+        return [&](const char*, std::ostream& s) -> void { s << (std::string) p; };
+    }
+
+    template<typename T>
+    inline pwfunc_t pwrap(__tree_property_value<T>& p) {
+        return [&](const char*, std::ostream& s) -> void { s << std::to_string((T)p); };
+    }
+
+    inline pwfunc_t pwrap(__tree_property_value<llvm::APSInt>& p) {
+        return [&](const char*, std::ostream& s) -> void { s << p->toString(10); };
+    }
+
+    inline pwfunc_t pwrap(__tree_property_value<llvm::APFloat>& p) {
+        return [&](const char*, std::ostream& s) -> void { s << std::to_string(p->convertToDouble()); };
+    }
+
+    inline pwfunc_t pwrap(__tree_property_value<bool>& p) {
+        return [&](const char*, std::ostream& s) -> void {
+            if((bool) p) s << "false";
+            else         s << "true";
+        };
+    }
+
+    inline pwfunc_t pwrap(const char* svalue) {
+        return [&](const char*, std::ostream& s) -> void {
+            s << svalue;
+        };
+    }
+
+public:
+
+    template<typename... TTreeTypes>
+    static inline void print(std::ostream& s, const char* fmt, TTreeTypes&... props) {
+        std::vector<pwfunc_t> vec = { instance.pwrap(props)... };
+        instance.formatted_print(fmt, s, vec);
+    }
+
+    template<typename TTreeType>
+    static inline void print(ptr<TTreeType> t, std::ostream& s) {
+        instance.print_internal(dynamic_cast<__tree_base*>(unbox(t)), s);
+    }
+
+protected:
+
+    inline void print_internal(__tree_base* t, std::ostream& s) {
+        this->_current_indent = 0;
+        this->visit(t, s);
+    }
+
+    static std::string print_to_string(ast_tree* t);
+
+private:
+
+    uint32_t                                                            _current_indent;
+
+    void formatted_print(const char* fmt, std::ostream& s, std::vector<pwfunc_t>& pfunc);
 
 };
 

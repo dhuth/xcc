@@ -4,10 +4,12 @@
 
 %{
 #include "xi-parser.hpp"
+#include "source.hpp"
 
-#define     SHIFTLOC                                 /* ignore */
+#define     SHIFTLOC                                xcc::advance_column(yyloc->last, strlen(yytext));
 #define     IGNORE                                  SHIFTLOC
-#define     NEWLINE                                 /* ignore */
+#define     NEWLINE                                 xcc::advance_line(yyloc->last);
+#define     BEGIN_LOC                               xcc::init_source_span(*yyloc, yyloc->last);
 #define     RETURN_VALUE(tp,name,valname,val)       { SHIFTLOC yylval->valname = val; return tp##_##name; }
 #define     RETURN_VOID(tp,name)                    { SHIFTLOC return tp##_##name; }
 
@@ -36,6 +38,9 @@ INTEGER_16_LITERAL                                  0x{HEX}
 FLOATING_POINT_LITERAL                              {DIGIT}+\.{DIGIT}*
 
 %%
+%{
+    BEGIN_LOC
+%}
 \n                                                  NEWLINE
 [ \t]+                                              IGNORE
 
@@ -73,6 +78,12 @@ FLOATING_POINT_LITERAL                              {DIGIT}+\.{DIGIT}*
 \*\=                                                RETURN_OP(ASSIGN_MUL,   assign_mul)
 \/\=                                                RETURN_OP(ASSIGN_DIV,   assign_div)
 \%\=                                                RETURN_OP(ASSIGN_MOD,   assign_mod)
+\>\>\=                                              RETURN_OP(ASSIGN_SHR,   assign_shr)
+\<\<\=                                              RETURN_OP(ASSIGN_SHL,   assign_shl)
+\&\=                                                RETURN_OP(ASSIGN_BAND,  assign_band)
+\|\=                                                RETURN_OP(ASSIGN_BOR,   assign_bor)
+\&\&\=                                              RETURN_OP(ASSIGN_LAND,  assign_land)
+\|\|\=                                              RETURN_OP(ASSIGN_LOR,   assign_lor)
 
 void                                                RETURN_TYPE(builder.get_void_type())
 bool                                                RETURN_TYPE(builder.get_bool_type())
@@ -90,7 +101,10 @@ f64                                                 RETURN_TYPE(builder.get_real
 
 auto                                                RETURN_KW(AUTO)
 byref                                               RETURN_KW(BYREF)
+byval                                               RETURN_KW(BYVAL)
 const                                               RETURN_KW(CONST)
+elif                                                RETURN_KW(ELIF)
+else                                                RETURN_KW(ELSE)
 extern                                              RETURN_KW(EXTERN)
 for                                                 RETURN_KW(FOR)
 func                                                RETURN_KW(FUNC)

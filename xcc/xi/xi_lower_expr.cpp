@@ -7,6 +7,7 @@
 
 
 #include "xi_builder.hpp"
+#include "xi_lower.hpp"
 
 namespace xcc {
 
@@ -49,51 +50,29 @@ static ast_expr* lower_binary(xi_builder* builder, xi_operator op, ast_expr* lhs
     return nullptr;
 }
 
+ast_expr* xi_lower_walker::lower_op_expr(xi_op_expr* e) {
+    xi_operator     op                      = e->op;
+    list<ast_expr>* operands                = e->operands;
 
-ast_expr* xi_builder::lower(ast_expr* e) {
-    switch(e->get_tree_type()) {
-    case tree_type_id::xi_expr_stmt_expr:
-        //TODO:...
-        break;
-    case tree_type_id::xi_op_expr:
-        {
-            auto op         = e->as<xi_op_expr>()->op;
-            auto operands   = map<ast_expr,ast_expr>(e->as<xi_op_expr>()->operands, [&](ast_expr* expr) -> ast_expr* { return this->lower(expr); });
+    //TODO: look for overloads ( resolved already ?? )
 
-            //TODO: look for overloads (Maybe already calling overload function by now?)
-
-            if(operands->size() == 1) {
-                return lower_unary(this, op, (*operands)[0]);
-            }
-            else if(operands->size() == 2) {
-                return lower_binary(this, op, (*operands)[0], (*operands)[1]);
-            }
-            assert(false);
-            break;
-        }
-    case tree_type_id::ast_declref:
-        {
-            auto dexpr = e->as<ast_declref>();
-            dexpr->declaration  = this->lower(dexpr->declaration);
-            dexpr->type         = this->get_declaration_type(dexpr->declaration);
-            return dexpr;
-        }
-    case tree_type_id::ast_cast:
-        {
-            auto cexpr = e->as<ast_cast>();
-            cexpr->expr = this->lower(cexpr->expr);
-            cexpr->type = this->lower(cexpr->type);
-            if(cexpr->op == ast_op::none) {
-                return ast_builder::make_cast_expr(cexpr->type, cexpr->expr);
-            }
-            return cexpr;
-        }
-    case tree_type_id::ast_binary_op:
-    case tree_type_id::ast_unary_op:
-        assert(false);
-        break;
+    if(operands->size() == 1) {
+        return lower_unary(&this->_xi_builder, op, (*operands)[0]);
     }
-    return e;
+    else if(operands->size() == 2) {
+        return lower_binary(&this->_xi_builder, op, (*operands)[0], (*operands)[1]);
+    }
+
+    assert(false);
+    return nullptr;
+}
+
+ast_expr* xi_lower_walker::lower_cast_expr(ast_cast* e) {
+    return this->_ast_builder.make_lower_cast_expr(e->type, e->expr);
+}
+
+ast_expr* xi_lower_walker::lower_invoke_expr(ast_invoke* e) {
+    return this->_ast_builder.make_lower_call_expr(e->funcexpr, e->arguments);
 }
 
 }

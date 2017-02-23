@@ -167,6 +167,7 @@ public:
     virtual ast_type*                           get_declaration_type(ast_decl*)                                           noexcept;
 
     // Declarations
+    virtual ast_typedef_decl*                   define_named_type(const char*, ast_type*)                                 noexcept;
     virtual ast_namespace_decl*                 define_namespace(const char*)                                             noexcept;
     virtual ast_variable_decl*                  define_global_variable(ast_type*, const char*)                            noexcept;
     virtual ast_variable_decl*                  define_global_variable(ast_type*, const char*, ast_expr*)                 noexcept;
@@ -182,17 +183,20 @@ public:
     virtual ast_expr*                           make_op_expr(ast_op, ast_expr*);
     virtual ast_expr*                           make_op_expr(ast_op, ast_expr*, ast_expr*);
     virtual ast_expr*                           make_cast_expr(ast_type*, ast_expr*)                                const;
+            ast_expr*                           make_lower_cast_expr(ast_type*, ast_expr*)                          const;
     virtual ast_expr*                           make_declref_expr(ast_decl*);
     virtual ast_expr*                           make_memberref_expr(ast_expr*, ast_record_member_decl*);
     virtual ast_expr*                           make_deref_expr(ast_expr*)                                          const;
     virtual ast_expr*                           make_addressof_expr(ast_expr*);
     virtual ast_expr*                           make_index_expr(ast_expr*, ast_expr*)                               const;
     virtual ast_expr*                           make_call_expr(ast_expr*, list<ast_expr>*)                          const;
+            ast_expr*                           make_lower_call_expr(ast_expr*, list<ast_expr>*)                    const;
 
     // Statments
     virtual ast_stmt*                           make_nop_stmt()                                                     const noexcept;
     virtual ast_stmt*                           make_expr_stmt(ast_expr*)                                           const noexcept;
     virtual ast_stmt*                           make_assign_stmt(ast_expr* lhs, ast_expr* rhs)                            noexcept;
+            ast_stmt*                           make_lower_assign_stmt(ast_expr*, ast_expr*)                              noexcept;
     virtual ast_stmt*                           make_block_stmt()                                                   const noexcept;
     virtual ast_stmt*                           make_if_stmt(ast_expr*,ast_stmt*,ast_stmt*)                         const noexcept;
     virtual ast_stmt*                           make_while_stmt(ast_expr*,ast_stmt*)                                const noexcept;

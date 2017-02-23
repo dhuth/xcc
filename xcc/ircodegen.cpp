@@ -10,6 +10,7 @@
 
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/IR/Verifier.h>
 
 namespace xcc {
 
@@ -77,31 +78,22 @@ llvm::Value* ircode_expr_generator::generate_real(ast_real* fexpr) {
 }
 
 llvm::Value* ircode_expr_generator::generate_cast(ast_cast* cexpr) {
+    auto expr = this->visit(cexpr->expr);
+    auto type = context.generate_type(cexpr->type);
+
     switch((ast_op) cexpr->op) {
-    case ast_op::bitcast:
-        return context.ir_builder.CreateBitCast(this->visit(cexpr->expr), context.generate_type(cexpr->type));
-    case ast_op::trunc:
-        return context.ir_builder.CreateTrunc(this->visit(cexpr->expr), context.generate_type(cexpr->type));
-    case ast_op::zext:
-        return context.ir_builder.CreateZExt(this->visit(cexpr->expr), context.generate_type(cexpr->type));
-    case ast_op::sext:
-        return context.ir_builder.CreateSExt(this->visit(cexpr->expr), context.generate_type(cexpr->type));
-    case ast_op::ftrunc:
-        return context.ir_builder.CreateFPTrunc(this->visit(cexpr->expr), context.generate_type(cexpr->type));
-    case ast_op::fext:
-        return context.ir_builder.CreateFPExt(this->visit(cexpr->expr), context.generate_type(cexpr->type));
-    case ast_op::ftoi:
-        return context.ir_builder.CreateFPToSI(this->visit(cexpr->expr), context.generate_type(cexpr->type));
-    case ast_op::ftou:
-        return context.ir_builder.CreateFPToUI(this->visit(cexpr->expr), context.generate_type(cexpr->type));
-    case ast_op::utof:
-        return context.ir_builder.CreateUIToFP(this->visit(cexpr->expr), context.generate_type(cexpr->type));
-    case ast_op::itof:
-        return context.ir_builder.CreateSIToFP(this->visit(cexpr->expr), context.generate_type(cexpr->type));
-    case ast_op::utop:
-        return context.ir_builder.CreateIntToPtr(this->visit(cexpr->expr), context.generate_type(cexpr->type));
-    case ast_op::ptou:
-        return context.ir_builder.CreatePtrToInt(this->visit(cexpr->expr), context.generate_type(cexpr->type));
+    case ast_op::bitcast:                           return context.ir_builder.CreateZExtOrTrunc(expr, type);
+    case ast_op::trunc:                             return context.ir_builder.CreateTrunc(expr, type);
+    case ast_op::zext:                              return context.ir_builder.CreateZExt(expr, type);
+    case ast_op::sext:                              return context.ir_builder.CreateSExt(expr, type);
+    case ast_op::ftrunc:                            return context.ir_builder.CreateFPTrunc(expr, type);
+    case ast_op::fext:                              return context.ir_builder.CreateFPExt(expr, type);
+    case ast_op::ftoi:                              return context.ir_builder.CreateFPToSI(expr, type);
+    case ast_op::ftou:                              return context.ir_builder.CreateFPToUI(expr, type);
+    case ast_op::utof:                              return context.ir_builder.CreateUIToFP(expr, type);
+    case ast_op::itof:                              return context.ir_builder.CreateSIToFP(expr, type);
+    case ast_op::utop:                              return context.ir_builder.CreateIntToPtr(expr, type);
+    case ast_op::ptou:                              return context.ir_builder.CreatePtrToInt(expr, type);
     default:
         //TODO: unhandled error
         break;
@@ -114,6 +106,7 @@ llvm::Value* ircode_expr_generator::generate_binary_op(ast_binary_op* expr) {
     auto type = context.generate_type(expr->type);
     auto lexpr = this->visit(expr->lhs);
     auto rexpr = this->visit(expr->rhs);
+
     switch((ast_op) expr->op) {
 
     case ast_op::iadd:          return context.ir_builder.CreateAdd(lexpr, rexpr);
@@ -194,6 +187,7 @@ llvm::Value* ircode_expr_generator::generate_index(ast_index* e) {
 }
 
 llvm::Value* ircode_expr_generator::generate_declref(ast_declref* e) {
+    ast_decl* decl = e->declaration;
     return context.ir_builder.CreateLoad(context.find(e->declaration));
 }
 
@@ -219,7 +213,20 @@ llvm::Value* ircode_expr_generator::generate_addressof(ast_addressof* e) {
 }
 
 llvm::Value* ircode_expr_generator::generate_invoke(ast_invoke* e) {
-    auto func = this->visit(e->funcexpr);
+    llvm::Value* func = nullptr;
+    if(e->as<ast_invoke>()->funcexpr->is<ast_declref>()) {
+        auto declref = e->as<ast_invoke>()->funcexpr->as<ast_declref>();
+        if(declref->type->is<ast_function_type>()) {
+            func = context.find(declref->declaration);
+        }
+        else {
+            func = this->visit(e->funcexpr);
+        }
+    }
+    else {
+        func = this->visit(e->funcexpr);
+    }
+
     std::vector<llvm::Value*> args;
     for(auto a: e->arguments) {
         args.push_back(this->visit(a));
@@ -284,10 +291,10 @@ void ircode_context::generate_variable_decl(ast_variable_decl* var) {
 void ircode_context::generate_function_decl(ast_function_decl* func) {
     auto rtype = this->generate_type(func->return_type);
     std::vector<llvm::Type*>        param_types;
-    std::vector<llvm::Twine>        param_names;
+    std::vector<std::string>        param_names;
     for(auto p: func->parameters) {
         param_types.push_back(this->generate_type(p->type));
-        param_names.push_back(llvm::Twine((std::string) p->name));
+        param_names.push_back((std::string) p->name);
     }
 
     llvm::Function* fvalue;
@@ -296,14 +303,14 @@ void ircode_context::generate_function_decl(ast_function_decl* func) {
         fvalue = llvm::Function::Create(
                 ftype,
                 llvm::Function::ExternalLinkage,
-                llvm::Twine((std::string) func->name),
+                llvm::Twine((std::string) func->generated_name),
                 this->module.get());
     }
     else {
        fvalue = llvm::Function::Create(
                ftype,
                llvm::GlobalValue::LinkageTypes::InternalLinkage,
-               llvm::Twine((std::string) func->name),
+               llvm::Twine((std::string) func->generated_name),
                this->module.get());
     }
     uint32_t i = 0;
@@ -336,7 +343,8 @@ void ircode_context::generate_function_body(ast_function_decl* decl) {
     for(auto& arg: fvalue->args()) {
         this->add_declaration(
                 decl->parameters[i],
-                this->ir_builder.CreateAlloca(this->generate_type(decl->parameters[i]->type), &arg, arg.getName()));
+                this->ir_builder.CreateAlloca(this->generate_type(decl->parameters[i]->type), nullptr, arg.getName()));
+        this->ir_builder.CreateStore(&arg, this->find(decl->parameters[i]));
         i++;
     }
 
@@ -353,6 +361,9 @@ void ircode_context::generate_function_body(ast_function_decl* decl) {
     this->end_scope();
 
     //TODO: post function generation
+    if(llvm::verifyFunction(*fvalue, &llvm::outs())) {
+        std::exit(1);
+    }
 }
 
 void ircode_context::generate_stmt(ast_stmt* stmt, llvm::BasicBlock* continue_target, llvm::BasicBlock* break_target) {
@@ -409,50 +420,70 @@ void ircode_context::generate_expr_stmt(ast_expr_stmt* stmt) {
 void ircode_context::generate_for_stmt(ast_for_stmt* stmt, llvm::BasicBlock* ct, llvm::BasicBlock* bt) {
     //TODO: llvm loop vectorization stuff
 
+    llvm::Function*   func              = this->ir_builder.GetInsertBlock()->getParent();
+
     llvm::BasicBlock* prelogue          = llvm::BasicBlock::Create(this->llvm_context);
     llvm::BasicBlock* body              = llvm::BasicBlock::Create(this->llvm_context);
-    llvm::BasicBlock* prologue          = llvm::BasicBlock::Create(this->llvm_context);
+    llvm::BasicBlock* epilogue          = llvm::BasicBlock::Create(this->llvm_context);
     llvm::BasicBlock* continue_block    = llvm::BasicBlock::Create(this->llvm_context);
 
     this->generate_stmt(stmt->init_stmt, ct, bt);
     this->ir_builder.CreateBr(prelogue);
 
+    prelogue->insertInto(func);
     this->ir_builder.SetInsertPoint(prelogue);
     this->ir_builder.CreateCondBr(this->generate_expr(stmt->condition), body, continue_block);
 
+    body->insertInto(func);
     this->ir_builder.SetInsertPoint(body);
-    this->generate_stmt(stmt->body, prologue, continue_block);
+    this->generate_stmt(stmt->body, epilogue, continue_block);
     if(!this->ir_builder.GetInsertBlock()->getTerminator()) {
-        this->ir_builder.CreateBr(prologue);
+        this->ir_builder.CreateBr(epilogue);
     }
 
-    this->ir_builder.SetInsertPoint(prologue);
+    epilogue->insertInto(func);
+    this->ir_builder.SetInsertPoint(epilogue);
     this->generate_stmt(stmt->each_stmt, ct, bt);
     this->ir_builder.CreateBr(prelogue);
 
+    continue_block->insertInto(func);
     this->ir_builder.SetInsertPoint(continue_block);
 }
 
 void ircode_context::generate_if_stmt(ast_if_stmt* stmt, llvm::BasicBlock* ct, llvm::BasicBlock* bt) {
+    llvm::Function*   func              = this->ir_builder.GetInsertBlock()->getParent();
+
     llvm::BasicBlock* true_block        = llvm::BasicBlock::Create(this->llvm_context);
     llvm::BasicBlock* false_block       = llvm::BasicBlock::Create(this->llvm_context);
     llvm::BasicBlock* continue_block    = llvm::BasicBlock::Create(this->llvm_context);
 
     this->ir_builder.CreateCondBr(this->generate_expr(stmt->condition), true_block, false_block);
 
+    bool false_block_continues = false;
+    bool true_block_continues  = false;
+
+    true_block->insertInto(func);
     this->ir_builder.SetInsertPoint(true_block);
     this->generate_stmt(stmt->true_stmt, ct, bt);
     if(!this->ir_builder.GetInsertBlock()->getTerminator()) {
         this->ir_builder.CreateBr(continue_block);
+        true_block_continues = true;
     }
 
+    false_block->insertInto(func);
     this->ir_builder.SetInsertPoint(false_block);
-    this->generate_stmt(stmt->false_stmt, ct, bt);
-    if(!this->ir_builder.GetInsertBlock()->getTerminator()) {
-        this->ir_builder.CreateBr(continue_block);
+    if(stmt->false_stmt) {
+        this->generate_stmt(stmt->false_stmt, ct, bt);
+        if(!this->ir_builder.GetInsertBlock()->getTerminator()) {
+            this->ir_builder.CreateBr(continue_block);
+            false_block_continues = true;
+        }
     }
 
-    this->ir_builder.SetInsertPoint(continue_block);
+    if(true_block_continues || false_block_continues) {
+        continue_block->insertInto(func);
+        this->ir_builder.SetInsertPoint(continue_block);
+    }
 }
 
 void ircode_context::generate_return_stmt(ast_return_stmt* ret) {
@@ -465,20 +496,25 @@ void ircode_context::generate_return_stmt(ast_return_stmt* ret) {
 }
 
 void ircode_context::generate_while_stmt(ast_while_stmt* stmt, llvm::BasicBlock* ct, llvm::BasicBlock* bt) {
+    llvm::Function*         func            = this->ir_builder.GetInsertBlock()->getParent();
+
     llvm::BasicBlock*       prologue        = llvm::BasicBlock::Create(this->llvm_context);
     llvm::BasicBlock*       body            = llvm::BasicBlock::Create(this->llvm_context);
     llvm::BasicBlock*       continue_block  = llvm::BasicBlock::Create(this->llvm_context);
 
     this->ir_builder.CreateBr(prologue);
+    prologue->insertInto(func);
     this->ir_builder.SetInsertPoint(prologue);
     this->ir_builder.CreateCondBr(this->generate_expr(stmt->condition), body, continue_block);
 
+    body->insertInto(func);
     this->ir_builder.SetInsertPoint(body);
     this->generate_stmt(stmt->stmt, prologue, continue_block);
     if(!this->ir_builder.GetInsertBlock()->getTerminator()) {
         this->ir_builder.CreateBr(prologue);
     }
 
+    continue_block->insertInto(func);
     this->ir_builder.SetInsertPoint(continue_block);
 }
 

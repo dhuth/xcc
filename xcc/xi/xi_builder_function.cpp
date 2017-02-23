@@ -6,6 +6,7 @@
  */
 
 #include "xi_builder.hpp"
+#include "xi_lower.hpp"
 
 namespace xcc {
 
@@ -99,20 +100,26 @@ void xi_builder::pop_function() {
 
 ast_parameter_decl* xi_builder::lower_parameter(xi_parameter_decl* pdecl) {
     if(!pdecl->generated_parameter) {
-        auto gparam = new ast_parameter_decl(pdecl->name, pdecl->type);
+        auto gparam = new ast_parameter_decl(pdecl->name, this->lower(pdecl->type));
         pdecl->generated_parameter = gparam;
+        gparam->generated_name = this->get_mangled_name.visit(gparam);
+        this->_lower_walker->set(pdecl, gparam);
     }
     return pdecl->generated_parameter;
 }
 
 ast_function_decl* xi_builder::lower_function(xi_function_decl* func) {
+    if(func->generated_function) {
+        return func->generated_function;
+    }
+
     auto lower_parameters = map<ast_parameter_decl, xi_parameter_decl>(func->parameters, [&](xi_parameter_decl* pdecl) -> ast_parameter_decl* {
-        auto gparam = this->lower(pdecl)->as<ast_parameter_decl>();
-        gparam->generated_name = this->get_mangled_name.visit(gparam);
+        auto gparam = this->lower_parameter(pdecl);
         return gparam;
     });
     auto gfunc = new ast_function_decl(func->name, this->lower(func->return_type), lower_parameters, nullptr);
     gfunc->generated_name = this->get_mangled_name.visit(gfunc);
+    this->_lower_walker->set(func, gfunc);
     return gfunc;
 }
 

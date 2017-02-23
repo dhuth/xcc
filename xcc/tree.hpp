@@ -100,6 +100,7 @@ extern const tree_type __all_tree_types[];
 
 enum class tree_type_id : uint64_t {
     tree,
+    dummy,
 #ifdef TREE_TYPE
 #error "TREE_TYPE Already defined"
 #endif
@@ -172,10 +173,16 @@ public:
         box(this).pin();
     }
 
-private:
+protected:
 
     template<typename T>
     friend struct __tree_property_tree;
+
+    template<typename TElement>
+    struct __tree_list_tree;
+
+    template<typename... T>
+    friend struct __dispatch_tree_walker;
 
     inline size_t append_child(__tree_base* v) noexcept {
         size_t idx = this->_child_nodes.size();
@@ -211,47 +218,25 @@ template<typename TElement>
 struct __tree_list_base : public __extend_tree<tree_type_id::tree_list, __tree_base> {
 protected:
 
-    typedef          __tree_list_base<TElement>                 list_t;
-    typedef          list_t*                                    list_ptr_t;
-
     inline __tree_list_base()                                          noexcept : base_type() { }
-    inline __tree_list_base(TElement f)                                noexcept : base_type() { this->_list.push_back(f); }
-    inline __tree_list_base(TElement f, const list_ptr_t r)            noexcept : base_type() { this->_list.push_back(f); this->append_list(r); }
-    inline __tree_list_base(const list_ptr_t f, TElement l)            noexcept : base_type() { this->append_list(f); this->_list.push_back(l); }
-    inline __tree_list_base(const list_ptr_t f)                        noexcept : base_type() { this->append_list(f); }
-
-    void append_list(const list_ptr_t other) noexcept {
-        for(auto el: other->_list) {
-            this->_list.push_back(el);
-        }
-    }
-
-public:
-
-    inline typename std::vector<TElement>::size_type size() const noexcept {
-        return this->_list.size();
-    }
-
-protected:
-
-    std::vector<TElement>                                       _list;
 
 };
 
 template<typename TElement>
 struct __tree_list_value final : public __tree_list_base<TElement> {
-protected:
+private:
 
-    typedef          __tree_list_base<TElement>                 list_t;
+    typedef          __tree_list_base<TElement>                 base_list_t;
+    typedef          __tree_list_value<TElement>                list_t;
     typedef          list_t*                                    list_ptr_t;
 
 public:
 
-    inline __tree_list_value()                                          noexcept : list_t()     { }
-    inline __tree_list_value(TElement f)                                noexcept : list_t(f)    { }
-    inline __tree_list_value(TElement f, const list_ptr_t r)            noexcept : list_t(f, r) { }
-    inline __tree_list_value(const list_ptr_t f, TElement l)            noexcept : list_t(f, l) { }
-    inline __tree_list_value(std::vector<TElement> vec)                 noexcept : list_t() {
+    inline __tree_list_value()                                          noexcept : base_list_t()                  { }
+    inline __tree_list_value(TElement f)                                noexcept : base_list_t()                  { this->_list.push_back(f); }
+    inline __tree_list_value(TElement f, const list_ptr_t r)            noexcept : base_list_t(), _list(f->_list) { this->_list.insert(this->list.begin(), f); }
+    inline __tree_list_value(const list_ptr_t f, TElement l)            noexcept : base_list_t(), _list(f->_list) { this->_list.push_back(l); }
+    inline __tree_list_value(std::vector<TElement>& vec)                noexcept : base_list_t() {
         for(auto el: vec) {
             this->_list.push_back(el);
         }
@@ -269,13 +254,23 @@ public:
     inline void append(TElement& el) noexcept {
         this->_list.push_back(el);
     }
+
+    inline typename std::vector<TElement>::size_type size() const noexcept {
+        return this->_list.size();
+    }
+
+protected:
+
+    std::vector<TElement>                                               _list;
+
 };
 
 template<typename TElement>
 struct __tree_list_tree final : public __tree_list_base<ptr<TElement>> {
 protected:
 
-    typedef __tree_list_base<ptr<TElement>>             list_t;
+    typedef __tree_list_base<ptr<TElement>>             base_list_t;
+    typedef __tree_list_tree<TElement>                  list_t;
     typedef list_t*                                     list_ptr_t;
     //typedef ptr<TElement>                               box_t;
 
@@ -286,13 +281,13 @@ public:
 
     struct iterator {
         size_t                                  index;
-        std::vector<ptr<TElement>>&             vector;
+        std::vector<ptr<__tree_base>>&          vector;
 
         inline iterator operator++()          noexcept { ++index; return *this; }
         inline iterator operator++(int)       noexcept { ++index; return {index-1, vector}; }
 
-        inline element_t operator*()          noexcept { return unbox(vector[index]); }
-        inline element_t operator*()    const noexcept { return unbox(vector[index]); }
+        inline element_t operator*()          noexcept { return (element_t) unbox(vector[index]); }
+        inline element_t operator*()    const noexcept { return (element_t) unbox(vector[index]); }
 
         inline bool operator==(const iterator& other) {
             return (other.index == this->index) && (other.vector == this->vector);
@@ -304,37 +299,46 @@ public:
     };
     typedef const iterator                              const_iterator;
 
-    inline __tree_list_tree()                                           noexcept : list_t()            { }
-    inline __tree_list_tree(element_t f)                                noexcept : list_t(box(f))      { }
-    inline __tree_list_tree(element_t f, const list_ptr_t r)            noexcept : list_t(box(f), r)   { }
-    inline __tree_list_tree(const list_ptr_t f, element_t l)            noexcept : list_t(f, box(l))   { }
-    inline __tree_list_tree(std::vector<element_t> vec)                 noexcept : list_t() {
+    inline __tree_list_tree()                                           noexcept : base_list_t()           { }
+    inline __tree_list_tree(element_t f)                                noexcept : base_list_t()           { this->_child_nodes.push_back(box((__tree_base*) f)); }
+    inline __tree_list_tree(element_t f, const list_ptr_t r)            noexcept : list_t(r->_child_nodes) { this->_child_nodes.insert(this->_child_nodes.begin(), box((__tree_base*)f)); }
+    inline __tree_list_tree(const list_ptr_t f, element_t l)            noexcept : list_t(f->_child_nodes) { this->_child_nodes.push_back(box((__tree_base*) l)); }
+    inline __tree_list_tree(std::vector<element_t>& vec)                noexcept : base_list_t() {
         for(auto el : vec) {
-            this->_list.push_back(box(el));
+            this->_child_nodes.push_back(box((__tree_base*) el));
+        }
+    }
+    inline __tree_list_tree(std::vector<ptr<__tree_base>>& vec) {
+        for(auto el: vec) {
+            this->_child_nodes.push_back(el);
         }
     }
     inline __tree_list_tree(std::initializer_list<element_t> init_list) noexcept : list_t() {
         for(auto el : init_list) {
-            this->_list.push_back(box(el));
+            this->_child_nodes.push_back(box((__tree_base*) el));
         }
     }
 
 
-    inline       iterator begin()       noexcept { return {0,                  this->_list}; }
-    inline       iterator end()         noexcept { return {this->_list.size(), this->_list}; }
-    inline const_iterator begin() const noexcept { return {0,                  this->_list}; }
-    inline const_iterator end()   const noexcept { return {this->_list.size(), this->_list}; }
+    inline       iterator begin()       noexcept { return {0,                         this->_child_nodes}; }
+    inline       iterator end()         noexcept { return {this->_child_nodes.size(), this->_child_nodes}; }
+    inline const_iterator begin() const noexcept { return {0,                         this->_child_nodes}; }
+    inline const_iterator end()   const noexcept { return {this->_child_nodes.size(), this->_child_nodes}; }
 
     inline element_t operator[](size_t index) {
-        return unbox(this->_list[index]);
+        return (element_t) unbox(this->_child_nodes[index]);
     }
 
     inline void append(element_t& el) {
-        this->_list.push_back(box(el));
+        this->_child_nodes.push_back(box((__tree_base*) el));
     }
 
     inline void append(element_t&& el) {
-        this->_list.push_back(box(el));
+        this->_child_nodes.push_back(box((__tree_base*) el));
+    }
+
+    inline typename std::vector<ptr<__tree_base>>::size_type size() const noexcept {
+        return this->_child_nodes.size();
     }
 
 
@@ -474,7 +478,7 @@ public:
         return (**this)[index];
     }
 
-    inline list_t* operator=(list_t* v) {
+    inline list_t* operator=(list_t* v) noexcept {
         this->__set(v);
         return v;
     }
@@ -551,10 +555,10 @@ protected:
 
 protected:
 
-    virtual TReturnType handle_null_tree() {
+    virtual TReturnType handle_null_tree(TParamTypes... args) {
         throw std::runtime_error("Null tree in dispatch handler");
     }
-    virtual TReturnType handle_unregisterd_tree_type(tree_type_id id) {
+    virtual TReturnType handle_unregisterd_tree_type(tree_type_id id, TParamTypes... args) {
         throw std::runtime_error(std::string("No registered function for type id ") + __all_tree_types[(uint64_t) id].name);
     }
 
@@ -631,12 +635,12 @@ public:
 
     inline void visit(__tree_base* t, TParamTypes... args) {
         if(t == nullptr) {
-            this->handle_null_tree();
+            this->handle_null_tree(args...);
         }
         else {
             tree_type_id id = t->get_tree_type();
             if(this->_function_map.find(id) == this->_function_map.end()) {
-                this->handle_unregisterd_tree_type(id);
+                this->handle_unregisterd_tree_type(id, args...);
             }
             this->_function_map[id](t, args...);
         }
@@ -684,6 +688,133 @@ struct __dispatch_visitor_selector<void, TArgs...> {
     typedef __dispatch_visitor_base_void<TArgs...>         type;
 };
 
+
+
+
+/* ==================================== *
+ * Dynamic Dispatch Translator / Walker *
+ * ==================================== */
+
+template<typename... TParamTypes>
+struct __dispatch_tree_walker {
+public:
+
+    virtual ~__dispatch_tree_walker() = default;
+
+    template<typename TTreeType,
+             __is_tree_type<TTreeType> = 0>
+    using visit_func_t = void(*)(TTreeType*, TParamTypes...);
+
+    template<typename TTreeType>
+    inline void add(visit_func_t<TTreeType> func) {
+        auto wfunc = [=](__tree_base**, __tree_base* node, TParamTypes... args) {
+            func(node->as<TTreeType>(), args...);
+        };
+        this->_functions[__get_tree_type_id<TTreeType>()] = wfunc;
+    }
+
+    template<typename TReturnType,
+             typename TTreeType,
+             typename std::enable_if<std::is_base_of<TReturnType, TTreeType>::value, int>::type = 0,
+             __is_tree_type<TTreeType> = 0>
+    using translate_func_t = TReturnType*(*)(TTreeType*, TParamTypes...);
+
+    template<typename TReturnType,
+             typename TTreeType>
+    inline void add(translate_func_t<TReturnType, TTreeType> func) {
+        auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
+            *retv = dynamic_cast<__tree_base*>(
+                    func(node->as<TTreeType>(), args...));
+        };
+        this->_functions[__get_tree_type_id<TTreeType>()] = wfunc;
+    }
+
+    template<typename TReturnType,
+             typename TTreeType,
+             typename TClassType,
+             typename std::enable_if<std::is_base_of<TReturnType, TTreeType>::value, int>::type = 0,
+             typename std::enable_if<std::is_base_of<__dispatch_tree_walker<TParamTypes...>, TClassType>::value, int>::type = 0,
+             __is_tree_type<TTreeType> = 0>
+    using translate_method_t = TReturnType*(TClassType::*)(TTreeType*, TParamTypes...);
+
+    template<typename TReturnType,
+             typename TTreeType,
+             typename TClassType>
+    inline void add(translate_method_t<TReturnType, TTreeType, TClassType> mtd) {
+        auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
+            *retv = dynamic_cast<__tree_base*>(
+                    (dynamic_cast<TClassType*>(this)->*mtd)(node->as<TTreeType>(), args...));
+        };
+        this->_functions[__get_tree_type_id<TTreeType>()] = wfunc;
+    }
+
+protected:
+
+    virtual __tree_base* visit_impl(__tree_base*, TParamTypes...) = 0;
+    inline void walk_children(__tree_base* t, TParamTypes... args) {
+        for(size_t i = 0; i < t->_child_nodes.size(); i++) {
+            auto child = unbox(t->_child_nodes[i]);
+            if(child != nullptr) {
+                t->_child_nodes[i] = box(this->visit_impl(child, args...));
+            }
+        }
+    }
+
+    typedef std::function<void(__tree_base**,__tree_base*,TParamTypes...)>
+                                                                        fwalk_t;
+    std::map<tree_type_id, fwalk_t>                                     _functions;
+
+};
+
+template<typename TBaseType, typename... TParameterTypes>
+struct dispatch_tree_preorder_walker : public __dispatch_tree_walker<TParameterTypes...> {
+public:
+
+    typedef TBaseType                                                   base_tree_type;
+
+    virtual ~dispatch_tree_preorder_walker() = default;
+
+    inline TBaseType* visit(TBaseType* t, TParameterTypes... args) {
+        return dynamic_cast<TBaseType*>(this->visit_impl(t, args...));
+    }
+
+    virtual void begin(tree_type_id type_id, base_tree_type*, TParameterTypes...) { }
+    virtual void end(tree_type_id type_id,   base_tree_type*, TParameterTypes...) { }
+
+    inline void set(TBaseType* t, TBaseType* v) {
+        this->_visited[t] = box((__tree_base*) v);
+    }
+
+protected:
+
+    __tree_base* visit_impl(__tree_base* t, TParameterTypes... args) {
+        if(t != nullptr) {
+            if(this->_visited.find(t) == this->_visited.end()) {
+                this->begin(t->get_tree_type(), (TBaseType*) t, args...);
+                this->walk_children(t, args...);
+                this->end(t->get_tree_type(), (TBaseType*) t, args...);
+
+                auto tpid = t->get_tree_type();
+                if(this->_functions.find(tpid) != this->_functions.end()) {
+                    __tree_base* retv = t;
+                    this->_functions[tpid](&retv, t, args...);
+                    this->_visited[t] = retv;
+                    return retv;
+                }
+                else {
+                    this->_visited[t] = box(t);
+                    return t;
+                }
+            }
+            else {
+                return this->_visited[t];
+            }
+        }
+        return nullptr;
+    }
+
+    std::map<__tree_base*,ptr<__tree_base>>                             _visited;
+};
 
 
 template<tree_type_id tp, typename base = __tree_base>

@@ -12,6 +12,7 @@ namespace xcc {
 
 const tree_type __all_tree_types[] = {
         {tree_type_id::tree,            tree_type_id::tree,     "tree"},
+        {tree_type_id::dummy,           tree_type_id::tree,     "dummy"},
 #ifdef   TREE_TYPE
 #error   "TREE_TYPE Already defined"
 #endif

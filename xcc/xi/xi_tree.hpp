@@ -42,7 +42,11 @@ enum class xi_operator : uint32_t {
     assign_div,
     assign_mod,
     assign_shl,
-    assign_shr
+    assign_shr,
+    assign_land,
+    assign_lor,
+    assign_band,
+    assign_bor,
 };
 
 struct xi_const_type : public extend_tree<tree_type_id::xi_const_type, ast_type> {
@@ -55,6 +59,21 @@ public:
     }
 
     property<ast_type>                              type;
+
+};
+
+struct xi_array_type : public extend_tree<tree_type_id::xi_array_type, ast_type> {
+public:
+
+    inline xi_array_type(ast_type* eltype, list<ast_expr>* dims)
+            : base_type(),
+              element_type(this, eltype),
+              dimensions(this, dims) {
+        //...
+    }
+
+    property<ast_type>                              element_type;
+    property<list<ast_expr>>                        dimensions;
 
 };
 
@@ -110,7 +129,7 @@ public:
     inline xi_op_expr(ast_type* type, xi_operator op, list<ast_expr>* operands)
             : base_type(type),
               op(this, op),
-              operands(this, operands){
+              operands(this, operands) {
         //...
     }
 
@@ -118,6 +137,36 @@ public:
     property<list<ast_expr>>                        operands;
 };
 
+struct xi_index_expr : public extend_tree<tree_type_id::xi_index_expr, ast_expr> {
+public:
+
+    inline xi_index_expr(ast_type* type, ast_expr* arrexpr, list<ast_expr>* idxexpr)
+            : base_type(type),
+              array_expr(this, arrexpr),
+              index_expr_list(this, idxexpr) {
+        //...
+    }
+
+    property<ast_expr>                              array_expr;
+    property<list<ast_expr>>                        index_expr_list;
+};
+
+struct xi_assign_stmt : public extend_tree<tree_type_id::xi_assign_stmt, ast_stmt> {
+public:
+
+    inline xi_assign_stmt(xi_operator op, ast_expr* lhs, ast_expr* rhs)
+            : base_type(),
+              op(this, op),
+              lhs(this, lhs),
+              rhs(this, rhs) {
+        //...
+    }
+
+    property<xi_operator>                           op;
+    property<ast_expr>                              lhs;
+    property<ast_expr>                              rhs;
+
+};
 
 
 }

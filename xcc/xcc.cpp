@@ -50,6 +50,7 @@ static const argp_option argp_options[] = {
         {"define",      'D',        "define symbol",        OPTION_ARG_OPTIONAL,    NULL,   arg_catagories::preproc},
         {"include",     'I',        "inlcude path",         OPTION_ARG_OPTIONAL,    NULL,   arg_catagories::preproc},
         {NULL,          'x',        "compiler args",        OPTION_ARG_OPTIONAL,    NULL,   arg_catagories::compiler},
+        {NULL,          'f',        "compiler flags",       OPTION_ARG_OPTIONAL,    NULL,   arg_catagories::compiler},
         {"std",         LANG_STD,   NULL,                   OPTION_ARG_OPTIONAL,    NULL,   arg_catagories::compiler},
         //{NULL,          'A',        NULL,                   OPTION_ARG_OPTIONAL,    NULL,   arg_catagories::linker},
         {NULL,          'L',        "library path",         OPTION_ARG_OPTIONAL,    NULL,   arg_catagories::linker},
@@ -77,6 +78,12 @@ static error_t arg_parse_func(int key, char* arg, argp_state* state) {
             else {
                 program_args->compiler_args.push_back(strarg);
             }
+        }
+        break;
+    case 'f':
+        {
+            auto strarg = std::string(arg);
+            program_args->compiler_args.push_back(strarg);
         }
         break;
     case ARGP_KEY_ARG:

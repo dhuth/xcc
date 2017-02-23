@@ -7,19 +7,64 @@
 
 
 #include "xi_builder.hpp"
+#include "xi_lower.hpp"
 
 namespace xcc {
 
+void xi_lower_walker::begin_block(ast_block_stmt* stmt) {
+    this->_xi_builder.push_block(stmt);
+}
 
+ast_stmt* xi_lower_walker::lower_block_stmt(ast_block_stmt* stmt) {
+    return stmt;
+}
 
+ast_stmt* xi_lower_walker::lower_assign_stmt(xi_assign_stmt* stmt) {
+    if(stmt->op == xi_operator::assign) {
+        return this->_ast_builder.make_lower_assign_stmt(stmt->lhs, stmt->rhs);
+    }
 
-ast_stmt* xi_builder::lower(ast_stmt* stmt) {
+    ast_op newop = ast_op::none;
+    switch((xi_operator) stmt->op) {
+    case xi_operator::assign_add:   newop = ast_op::add;            break;
+    case xi_operator::assign_sub:   newop = ast_op::sub;            break;
+    case xi_operator::assign_mul:   newop = ast_op::mul;            break;
+    case xi_operator::assign_div:   newop = ast_op::div;            break;
+    case xi_operator::assign_mod:   newop = ast_op::mod;            break;
+    case xi_operator::assign_shl:   newop = ast_op::shl;            break;
+    case xi_operator::assign_shr:   newop = ast_op::shr;            break;
+    case xi_operator::assign_land:  newop = ast_op::logical_and;    break;
+    case xi_operator::assign_lor:   newop = ast_op::logical_or;     break;
+    case xi_operator::assign_band:  newop = ast_op::binary_and;     break;
+    case xi_operator::assign_bor:   newop = ast_op::binary_or;      break;
+    }
+
+    return this->_ast_builder.make_lower_assign_stmt(stmt->lhs,
+            this->_ast_builder.make_op_expr(newop, stmt->lhs, stmt->rhs));
+}
+
+void xi_lower_walker::end_block(ast_block_stmt* stmt) {
+    this->_xi_builder.pop();
+}
+
+/*ast_stmt* xi_builder::lower(ast_stmt* stmt) {
     switch(stmt->get_tree_type()) {
     case tree_type_id::ast_expr_stmt:
         {
             stmt->as<ast_expr_stmt>()->expr =
                     this->lower(stmt->as<ast_expr_stmt>()->expr);
             return stmt;
+        }
+    case tree_type_id::xi_assign_stmt:
+        {
+            auto astmt = stmt->as<xi_assign_stmt>();
+            if(astmt->op == xi_operator::assign) {
+                return this->lower(new ast_assign_stmt(astmt->lhs, astmt->rhs));
+            }
+            else {
+                return lower_assign_stmt(this, astmt);
+            }
+            break;
         }
     case tree_type_id::ast_assign_stmt:
         {
@@ -84,7 +129,7 @@ ast_stmt* xi_builder::lower(ast_stmt* stmt) {
 
     assert(false);
     return nullptr;
-}
+}*/
 
 }
 
