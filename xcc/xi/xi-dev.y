@@ -94,15 +94,10 @@
         KW_BREAK                            "break"
         KW_CLASS                            "class"
         KW_CONST                            "const"
-        KW_CONTINUE                         "continue"
-        KW_ELSE                             "else"
-        KW_ELIF                             "elif"
         KW_EXTERN                           "extern"
-        KW_FOR                              "for"
         KW_FUNC                             "func"
         KW_GENERIC                          "generic"
-        KW_IF                               "if"
-        KW_IN                               "in"
+        KW_INLINE                           "inline"
         KW_INTERFACE                        "interface"
         KW_INTERNAL                         "internal"
         KW_NAMESPACE                        "namespace"
@@ -110,11 +105,30 @@
         KW_PRIVATE                          "private"
         KW_PROTECTED                        "protected"
         KW_PUBLIC                           "public"
-        KW_RETURN                           "return"
         KW_STRUCT                           "struct"
         KW_TYPEDEF                          "typedef"
-        KW_WHILE                            "while"
         KW_VIRTUAL                          "virtual"
+
+        // Statement context keywords
+        
+        KW_CONTINUE                         "continue"
+        KW_ELSE                             "else"
+        KW_ELIF                             "elif"
+        KW_FOR                              "for"
+        KW_IF                               "if"
+        KW_IN                               "in"
+        KW_RETURN                           "return"
+        KW_WHILE                            "while"
+        KW_YIELD                            "yield"
+        
+        // Expression context keywords
+        
+        KW_ITER                             "iter"
+        KW_MAP                              "map"
+        KW_RANGE                            "range"
+        KW_SIZEOF                           "sizeof"
+        KW_TYPEOF                           "typeof"
+        KW_ZIP                              "zip"
 ;
 
 %union {
@@ -129,6 +143,7 @@
         
         xcc::xi_function_decl*              function;
         xcc::xi_parameter_decl*             parameter;
+        xcc::ast_local_decl*                local;
         xcc::list<xcc::xi_parameter_decl>*  parameter_list;
         
         xcc::xi_operator                    op;
@@ -229,13 +244,20 @@
 %type   <stmt>                              local-stmt
 %type   <stmt>                              else-stmt
 %type   <stmt>                              elif-stmt
+%type   <stmt>                              expr-stmt
 
 %type   <stmt>                              begin-block-stmt
+
+%type   <local>                             for-init-decl
 
 
 %code {
 extern YY_DECL;
 void yyerror(XILTYPE* loc, xi_builder_t& builder, const char* msg);
+
+extern void xi_push_expr_state();
+extern void xi_pop_expr_state();
+
 }
 %param                              {xi_builder_t&          builder}
 
@@ -274,8 +296,8 @@ global-typedef-decl
         ;
 global-variable-decl
         : KW_EXTERN type TOK_IDENTIFIER OP_SEMICOLON                                                { auto var = builder.define_global_variable($2, $3); var->is_extern = true; }
-        |           type TOK_IDENTIFIER OP_SEMICOLON                                                { auto var = builder.define_global_variable($1, $2); }
-        |           type TOK_IDENTIFIER OP_EQ expr OP_SEMICOLON                                     { auto var = builder.define_global_variable($1, $2, $4); }
+        |           type TOK_IDENTIFIER OP_SEMICOLON                                                {            builder.define_global_variable($1, $2); }
+        |           type TOK_IDENTIFIER OP_EQ expr OP_SEMICOLON                                     {            builder.define_global_variable($1, $2, $4); }
         ;
 global-function-decl
         : KW_EXTERN global-function-proto-decl OP_SEMICOLON                                         { $2->is_extern = true; }
@@ -310,12 +332,14 @@ stmt-list-opt
         ;
 stmt
         : block-stmt                                                                                { $$ = $1; }
-        | return-stmt                                                                               { $$ = $1; }
-        | continue-stmt                                                                             { $$ = $1; }
-        | break-stmt                                                                                { $$ = $1; }
-        | assign-stmt                                                                               { $$ = $1; }
+        | return-stmt OP_SEMICOLON                                                                  { $$ = $1; }
+        | continue-stmt OP_SEMICOLON                                                                { $$ = $1; }
+        | break-stmt OP_SEMICOLON                                                                   { $$ = $1; }
+        | assign-stmt OP_SEMICOLON                                                                  { $$ = $1; }
+        | expr-stmt OP_SEMICOLON                                                                    { $$ = $1; }
         | if-stmt                                                                                   { $$ = $1; }
         | while-stmt                                                                                { $$ = $1; }
+        | for-stmt                                                                                  { $$ = $1; }
         | OP_SEMICOLON                                                                              { $$ = builder.make_nop_stmt(); }
         ;
 block-stmt
@@ -327,17 +351,20 @@ begin-block-stmt
         : %empty { $$ = builder.make_block_stmt(); }
         ;
 return-stmt
-        : KW_RETURN OP_SEMICOLON                                                                    { $$ = builder.make_return_stmt(nullptr, nullptr);   }
-        | KW_RETURN expr OP_SEMICOLON                                                               { $$ = builder.make_return_stmt(builder.get_return_type(), $2); }
+        : KW_RETURN                                                                                 { $$ = builder.make_return_stmt(nullptr, nullptr);   }
+        | KW_RETURN expr                                                                            { $$ = builder.make_return_stmt(builder.get_return_type(), $2); }
         ;
 continue-stmt
-        : KW_CONTINUE OP_SEMICOLON                                                                  { $$ = builder.make_continue_stmt(); }
+        : KW_CONTINUE                                                                               { $$ = builder.make_continue_stmt(); }
         ;
 break-stmt
-        : KW_BREAK OP_SEMICOLON                                                                     { $$ = builder.make_break_stmt(); }
+        : KW_BREAK                                                                                  { $$ = builder.make_break_stmt(); }
         ;
 assign-stmt
-        : expr assign-op expr OP_SEMICOLON                                                          { $$ = builder.make_assign_stmt($2, $1, $3); }
+        : expr assign-op expr                                                                       { $$ = builder.make_assign_stmt($2, $1, $3); }
+        ;
+expr-stmt
+        : expr                                                                                      { $$ = builder.make_expr_stmt($1); }
         ;
         
 if-stmt
@@ -382,7 +409,20 @@ local-stmt
             stmt-list-opt
                 { $$ = $6; builder.pop(); }
         ;
-
+for-stmt
+        : KW_FOR begin-block-stmt
+                { builder.push_block($2->as<xcc::ast_block_stmt>()); }
+            OP_LPAREN for-init-decl KW_IN expr OP_RPAREN
+            stmt
+                {
+                    builder.emit(builder.make_for_stmt($5, $7, $9));
+                    builder.pop();
+                    $$ = $2;
+                }
+        ;
+for-init-decl
+        : type TOK_IDENTIFIER { $$ = builder.define_local_variable($1, $2); }
+        ;
 
 
 
@@ -413,7 +453,15 @@ dim-expr-list
 
 
 
-expr                : land-expr                                 { $$ = $1; }
+push-expr-state
+        : %empty                                                { xi_push_expr_state(); }
+        ;
+pop-expr-state
+        : %empty                                                { xi_pop_expr_state(); }
+        ;
+expr                : push-expr-state
+                      land-expr
+                      pop-expr-state                            { $$ = $2; }
                     ;
 land-expr           : land-expr     land-op lor-expr            { $$ = builder.make_op($2, $1, $3); }
                     | lor-expr                                  { $$ = $1; }

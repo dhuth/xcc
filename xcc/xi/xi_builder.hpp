@@ -62,6 +62,7 @@ public:
 
     ast_stmt*                                       make_return_stmt(ast_type*, ast_expr*) const noexcept override final;
     ast_stmt*                                       make_assign_stmt(xi_operator, ast_expr*, ast_expr*) const noexcept;
+    ast_stmt*                                       make_for_stmt(ast_local_decl*, ast_expr*, ast_stmt*) const noexcept;
 
     ast_expr*                                       widen(ast_type*, ast_expr*) const override final;
 

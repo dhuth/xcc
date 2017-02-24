@@ -177,11 +177,14 @@ public:
     // Constant values
     virtual ast_expr*                           make_integer(const char* txt, uint8_t radix)                        const noexcept;
     virtual ast_expr*                           make_real(const char* txt)                                          const noexcept;
+    virtual ast_expr*                           make_true()                                                         const noexcept;
+    virtual ast_expr*                           make_false()                                                        const noexcept;
     virtual ast_expr*                           make_zero(ast_type* tp)                                             const noexcept;
 
     // Expressions
     virtual ast_expr*                           make_op_expr(ast_op, ast_expr*);
     virtual ast_expr*                           make_op_expr(ast_op, ast_expr*, ast_expr*);
+            ast_expr*                           make_lower_op_expr(ast_op, ast_expr*, ast_expr*);
     virtual ast_expr*                           make_cast_expr(ast_type*, ast_expr*)                                const;
             ast_expr*                           make_lower_cast_expr(ast_type*, ast_expr*)                          const;
     virtual ast_expr*                           make_declref_expr(ast_decl*);
@@ -302,6 +305,9 @@ private:
     ptr<ast_stmt>                                                       _the_nop_stmt;
     ptr<ast_stmt>                                                       _the_break_stmt;
     ptr<ast_stmt>                                                       _the_continue_stmt;
+
+    ptr<ast_expr>                                                       _true_value;
+    ptr<ast_expr>                                                       _false_value;
 
     std::map<uint32_t, ptr<ast_integer_type>>                           _unsigned_integer_types;
     std::map<uint32_t, ptr<ast_integer_type>>                           _signed_integer_types;

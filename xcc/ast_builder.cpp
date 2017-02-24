@@ -75,6 +75,9 @@ void __ast_builder_impl::create_default_types() noexcept {
     this->_real_types[32] = new ast_real_type(32);
     this->_real_types[64] = new ast_real_type(64);
     this->_the_boolean_type = this->get_integer_type(1, true);
+
+    this->_false_value  = new ast_integer(this->_the_boolean_type, llvm::APSInt::get(0));
+    this->_true_value   = new ast_integer(this->_the_boolean_type, llvm::APSInt::get(1));
 }
 
 ast_void_type* __ast_builder_impl::get_void_type() const noexcept {
@@ -178,6 +181,14 @@ ast_expr* __ast_builder_impl::make_real(const char* txt) const noexcept {
     llvm::APFloat value(std::atof(txt));
 
     return new ast_real(this->get_real_type(64), value);
+}
+
+ast_expr* __ast_builder_impl::make_true() const noexcept {
+    return this->_true_value;
+}
+
+ast_expr* __ast_builder_impl::make_false() const noexcept {
+    return this->_false_value;
 }
 
 ast_expr* __ast_builder_impl::make_zero(ast_type* tp) const noexcept {
@@ -355,6 +366,10 @@ static ast_expr* make_shift_op_expr(__ast_builder_impl* builder, ast_op op, ast_
 }
 
 ast_expr* __ast_builder_impl::make_op_expr(ast_op op, ast_expr* lhs, ast_expr* rhs) {
+    return this->make_lower_op_expr(op, lhs, rhs);
+}
+
+ast_expr* __ast_builder_impl::make_lower_op_expr(ast_op op, ast_expr* lhs, ast_expr* rhs) {
     assert(is_highlevel_op(op));
 
     switch(op) {

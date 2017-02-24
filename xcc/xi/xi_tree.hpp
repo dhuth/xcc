@@ -168,6 +168,23 @@ public:
 
 };
 
+struct xi_foriter_stmt : public extend_tree<tree_type_id::xi_foriter_stmt, ast_stmt> {
+public:
+
+    inline xi_foriter_stmt(ast_local_decl* iterdecl, ast_expr* iterexpr, ast_stmt* body)
+            : base_type(),
+              iterdecl(this, iterdecl),
+              iterexpr(this, iterexpr),
+              body(this, body) {
+        //...
+    }
+
+    property<ast_local_decl>                        iterdecl;
+    property<ast_expr>                              iterexpr;
+    property<ast_stmt>                              body;
+
+};
+
 
 }
 

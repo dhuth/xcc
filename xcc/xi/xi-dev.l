@@ -2,6 +2,8 @@
 %option prefix="xi"
 %option header-file="xi-lex.hpp"
 
+%option stack
+
 %{
 #include "xi-parser.hpp"
 #include "source.hpp"
@@ -24,6 +26,8 @@
                                                     {\
                                                         xi_parse_raw_identifier = false;\
                                                     }
+void xi_push_expr_state();
+void xi_pop_expr_state();
 
 %}
 
@@ -33,16 +37,31 @@ DIGIT_HEX_LOWER                                     [0-9a-f]
 DIGIT_HEX_UPPER                                     [0-9A-F]
 HEX                                                 ({DIGIT_HEX_UPPER}+|{DIGIT_HEX_LOWER}+)
 
+FP_FRONT                                            {DIGIT}+\.{DIGIT}*
+FP_BACK                                             [Ee][+-]?{DIGIT}+
+
 INTEGER_10_LITERAL                                  {DIGIT}+
 INTEGER_16_LITERAL                                  0x{HEX}
-FLOATING_POINT_LITERAL                              {DIGIT}+\.{DIGIT}*
+FLOATING_POINT_LITERAL                              ({FP_FRONT}({FP_BACK})?)|({DIGIT}+{FP_BACK})
 
+
+
+%x                                                  XI_STATE_BLOCK_COMMENT
+%s                                                  XI_STATE_EXPR
+%s                                                  XI_STATE_STMT
 %%
 %{
     BEGIN_LOC
 %}
 \n                                                  NEWLINE
 [ \t]+                                              IGNORE
+
+"\*"                                                { SHIFTLOC; yy_push_state(XI_STATE_BLOCK_COMMENT); }
+<XI_STATE_BLOCK_COMMENT>"*/"                        { SHIFTLOC; yy_pop_state(); }
+<XI_STATE_BLOCK_COMMENT>\n                          NEWLINE
+<XI_STATE_BLOCK_COMMENT>.                           IGNORE
+
+"//"[^\n]*\n                                        NEWLINE
 
 \{                                                  RETURN_OP(LBRACE,       none)
 \}                                                  RETURN_OP(RBRACE,       none)
@@ -99,37 +118,63 @@ f16                                                 RETURN_TYPE(builder.get_real
 f32                                                 RETURN_TYPE(builder.get_real_type(32))
 f64                                                 RETURN_TYPE(builder.get_real_type(64))
 
+abstract                                            RETURN_KW(ABSTRACT)
 auto                                                RETURN_KW(AUTO)
 byref                                               RETURN_KW(BYREF)
 byval                                               RETURN_KW(BYVAL)
+class                                               RETURN_KW(CLASS)
 const                                               RETURN_KW(CONST)
-elif                                                RETURN_KW(ELIF)
-else                                                RETURN_KW(ELSE)
 extern                                              RETURN_KW(EXTERN)
-for                                                 RETURN_KW(FOR)
 func                                                RETURN_KW(FUNC)
 generic                                             RETURN_KW(GENERIC)
-if                                                  RETURN_KW(IF)
-in                                                  RETURN_KW(IN)
+inline                                              RETURN_KW(INLINE)
 interface                                           RETURN_KW(INTERFACE)
 namespace                                           RETURN_KW(NAMESPACE)
 out                                                 RETURN_KW(OUT)
 private                                             RETURN_KW(PRIVATE)
 protected                                           RETURN_KW(PROTECTED)
 public                                              RETURN_KW(PUBLIC)
-return                                              RETURN_KW(RETURN)
 struct                                              RETURN_KW(STRUCT)
 typedef                                             RETURN_KW(TYPEDEF)
-while                                               RETURN_KW(WHILE)
+virtual                                             RETURN_KW(VIRTUAL)
 
-{INTEGER_10_LITERAL}                                RETURN_LITERAL(INTEGER, builder.make_integer(yytext, 10))
-{INTEGER_16_LITERAL}                                RETURN_LITERAL(INTEGER, builder.make_integer(&yytext[2], 16))
-{FLOATING_POINT_LITERAL}                            RETURN_LITERAL(FLOAT,   builder.make_real(yytext))
+elif                                                RETURN_KW(ELIF)
+else                                                RETURN_KW(ELSE)
+for                                                 RETURN_KW(FOR)
+if                                                  RETURN_KW(IF)
+in                                                  RETURN_KW(IN)
+return                                              RETURN_KW(RETURN)
+while                                               RETURN_KW(WHILE)
+yield                                               RETURN_KW(YIELD)
+
+<XI_STATE_EXPR>iter                                 RETURN_KW(ITER)
+<XI_STATE_EXPR>map                                  RETURN_KW(MAP)
+<XI_STATE_EXPR>range                                RETURN_KW(RANGE)
+<XI_STATE_EXPR>sizeof                               RETURN_KW(SIZEOF)
+<XI_STATE_EXPR>typeof                               RETURN_KW(TYPEOF)
+<XI_STATE_EXPR>zip                                  RETURN_KW(ZIP)
+
+<XI_STATE_EXPR>true                                 RETURN_LITERAL(INTEGER, builder.make_true())
+<XI_STATE_EXPR>false                                RETURN_LITERAL(INTEGER, builder.make_false())
+
+<XI_STATE_EXPR>{INTEGER_10_LITERAL}                 RETURN_LITERAL(INTEGER, builder.make_integer(yytext, 10))
+<XI_STATE_EXPR>{INTEGER_16_LITERAL}                 RETURN_LITERAL(INTEGER, builder.make_integer(&yytext[2], 16))
+<XI_STATE_EXPR>{FLOATING_POINT_LITERAL}             RETURN_LITERAL(FLOAT,   builder.make_real(yytext))
 
 {IDENTIFIER}                                        RETURN_TOKEN(IDENTIFIER, text, strdup(yytext))
 
 <<EOF>>                                             return TOK_EOF;
 %%
+
+void xi_push_expr_state() {
+    yy_push_state(XI_STATE_EXPR);
+}
+
+void xi_pop_expr_state() {
+    yy_pop_state();
+}
+
+
 
 
 

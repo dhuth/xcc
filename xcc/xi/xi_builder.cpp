@@ -75,6 +75,10 @@ ast_stmt* xi_builder::make_assign_stmt(xi_operator op, ast_expr* lhs, ast_expr* 
     return new xi_assign_stmt(op, lhs, rhs);
 }
 
+ast_stmt* xi_builder::make_for_stmt(ast_local_decl* decl, ast_expr* iterexpr, ast_stmt* body) const noexcept {
+    return new xi_foriter_stmt(decl, iterexpr, body);
+}
+
 ast_expr* xi_builder::widen(ast_type* desttype, ast_expr* expr) const {
     return ast_builder<>::widen(desttype, expr);
 }
@@ -94,15 +98,6 @@ ast_expr* xi_builder::lower(ast_expr* expr) {
 ast_type* xi_builder::lower(ast_type* type) {
     return this->_lower_walker->lower_type(type);
 }
-
-//ast_decl* xi_builder::lower(ast_decl* decl) {
-//    //TODO:...
-//    switch(decl->get_tree_type()) {
-//    case tree_type_id::xi_parameter_decl:       return this->lower_parameter(decl->as<xi_parameter_decl>());
-//    case tree_type_id::xi_function_decl:        return this->lower_function(decl->as<xi_function_decl>());
-//    }
-//    return decl;
-//}
 
 void xi_builder::resolution_pass() {
     //TODO:...

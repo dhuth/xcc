@@ -11,3 +11,4 @@ tree_type(xi_slice_expr,                ast_expr)
 tree_type(xi_expr_stmt_expr,            ast_expr)
 
 tree_type(xi_assign_stmt,               ast_stmt)
+tree_type(xi_foriter_stmt,              ast_stmt)

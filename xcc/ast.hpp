@@ -9,6 +9,7 @@
 #define AST_HPP_
 
 #include "tree.hpp"
+#include "source.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -30,9 +31,13 @@ public:
      * Passing constructor for ast_tree
      * \param id overriding tree type id
      */
-    inline ast_tree(tree_type_id id) noexcept : base_type(id) {
+    inline ast_tree(tree_type_id id) noexcept
+            : base_type(id),
+              source_location(this) {
         //...
     }
+
+    property<source_span>                           source_location;
 
 };
 
