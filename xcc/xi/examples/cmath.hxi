@@ -1,0 +1,22 @@
+
+namespace cstd {
+#define TRIG_FUNCS(tp, suffix)              \
+    import cfunc tp sin##suffix(tp);        \
+    import cfunc tp cos##suffix(tp);        \
+    import cfunc tp tan##suffix(tp);        \
+    import cfunc tp asin##suffix(tp);       \
+    import cfunc tp acos##suffix(tp);       \
+    import cfunc tp atan##suffix(tp);       \
+    import cfunc tp atan2##suffix(tp, tp);  \
+    import cfunc tp sinh##suffix(tp);       \
+    import cfunc tp cosh##suffix(tp);       \
+    import cfunc tp tanh##suffix(tp);       \
+    import cfunc tp asinh##suffix(tp);      \
+    import cfunc tp acosh##suffix(tp);      \
+    import cfunc tp atanh##suffix(tp);      \
+
+TRIG_FUNCS(f64,)
+TRIG_FUNCS(f32,f)
+TRIG_FUNCS(f80,l)
+
+}

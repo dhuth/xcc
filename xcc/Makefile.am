@@ -9,7 +9,7 @@ xcc_core_sources       += tree.cpp
 xcc_core_sources       += ast_printer.cpp
 xcc_core_sources       += ast_builder.cpp
 xcc_core_sources       += ast_builder_mangler.cpp
-xcc_core_sources       += ast_builder_namespace.cpp
+xcc_core_sources       += ast_context.cpp
 
 xcc_core_cppflags       = @llvm_cppflags@
 xcc_core_cxxflags       = -std=c++11 -pthread

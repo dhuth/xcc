@@ -315,7 +315,9 @@ void ircode_context::generate_function_decl(ast_function_decl* func) {
     }
     uint32_t i = 0;
     for(auto& arg : fvalue->args()) {
-        arg.setName(param_names[i]);
+        if(!param_names[i].empty()) {
+            arg.setName(param_names[i]);
+        }
         i++;
     }
 

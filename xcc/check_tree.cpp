@@ -113,7 +113,7 @@ TEST_F(TreeTest, TestMangle_Float) {
 
 TEST_F(TreeTest, TestMamgler_Array) {
     ast_array_type arr_tp(&f32, 6);
-    ASSERT_EQ(mangler(&arr_tp), "f32a$6.$");
+    ASSERT_EQ(mangler(&arr_tp), "f32a_6_");
 }
 
 TEST_F(TreeTest, TestMangler_Pointer) {
@@ -123,12 +123,12 @@ TEST_F(TreeTest, TestMangler_Pointer) {
 
 TEST_F(TreeTest, TestMangler_Function) {
     ast_function_type func_tp(&i32, new list<ast_type>({&f32, new ast_pointer_type(&u64)}));
-    ASSERT_EQ(mangler(&func_tp), "i32f$f32.u64p.$");
+    ASSERT_EQ(mangler(&func_tp), "i32ff32_u64p__");
 }
 
 TEST_F(TreeTest, TestMangler_FunctionDecl) {
     ast_function_decl foo("foo", &u32, new list<ast_parameter_decl>({new ast_parameter_decl("x", &u32)}), nullptr);
-    ASSERT_EQ(mangler(&foo), "fooF$u32.$");
+    ASSERT_EQ(mangler(&foo), "___fooFu32__");
 }
 
 }

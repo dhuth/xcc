@@ -254,7 +254,8 @@ public:
               parameters(this, parameters),
               body(this, body),
               is_extern(this, false),
-              is_extern_visible(this, true) {
+              is_extern_visible(this, true),
+              is_c_extern(this, false) {
         //...
     }
 
@@ -263,6 +264,7 @@ public:
     property<ast_stmt>                                          body;               //!<
     property<bool>                                              is_extern;          //!< is defined externally
     property<bool>                                              is_extern_visible;  //!< is visible outside of this module
+    property<bool>                                              is_c_extern;        //!< use c style mangling (none)
 
 };
 
@@ -277,17 +279,17 @@ public:
      * \param name member name
      * \param type member type
      */
-    inline ast_record_member_decl(std::string name, ast_type* type) noexcept
+    inline ast_record_member_decl(std::string name, uint32_t index, ast_type* type) noexcept
             : base_type(name),
-              member_index(this, 0),
+              member_index(this, index),
               type(this, type),
-              parent(this, nullptr) {
+              defining_type(nullptr) {
         //...
     }
 
     property<uint32_t>                                          member_index;   //!<
     property<ast_type>                                          type;           //!<
-    property<ast_decl>                                          parent;         //!< the record declaration that defines contains this member
+    ast_record_decl*                                            defining_type;  //!<
 
 };
 
@@ -305,11 +307,8 @@ public:
     inline ast_record_decl(std::string name, list<ast_record_member_decl>* members) noexcept
             : base_type(name),
               members(this, members) {
-        uint32_t index = 0;
-        for(auto m: members) {
-            m->parent = this;
-            m->member_index = index;
-            index++;
+        for(auto member : this->members) {
+            member->defining_type = this;
         }
     }
 
@@ -1125,6 +1124,12 @@ protected:
     inline pwfunc_t pwrap(const char* svalue) {
         return [&](const char*, std::ostream& s) -> void {
             s << svalue;
+        };
+    }
+
+    inline pwfunc_t pwrap(std::string& str) {
+        return [&](const char*, std::ostream& s) -> void {
+            s << str;
         };
     }
 

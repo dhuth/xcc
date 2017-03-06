@@ -9,6 +9,7 @@
 #define AST_BUILDER_HPP_
 
 #include "ast.hpp"
+#include "ast_context.hpp"
 
 #include <map>
 #include <unordered_map>
@@ -17,94 +18,7 @@
 namespace xcc {
 
 struct translation_unit;
-
-struct ast_context {
-public:
-
-    inline ast_context()                  : parent(nullptr) { };
-    inline ast_context(ast_context* prev) : parent(prev)    { };
-    virtual ~ast_context() = default;
-
-    virtual void      insert(const char*, ast_decl*) = 0;
-    virtual ast_type* get_return_type() = 0;
-
-    inline ptr<ast_decl> find(const char* name, bool search_parent = true) {
-        auto ff = this->find_first_impl(name);
-        if(unbox(ff) != nullptr) {
-            return ff;
-        }
-        else if(search_parent && (this->parent != nullptr)) {
-            return this->parent->find(name, true);
-        }
-        return box<ast_decl>(nullptr);
-    }
-
-    inline ptr<list<ast_decl>> findall(const char* name, bool search_parent = true) {
-        ptr<list<ast_decl>> olist = box(new list<ast_decl>());
-        this->findall(olist, name, search_parent);
-        return olist;
-    }
-
-protected:
-
-    inline void findall(ptr<list<ast_decl>> olist, const char* name, bool search_parent) {
-        this->find_all_impl(olist, name);
-        if(search_parent && (this->parent != nullptr)) {
-            this->parent->findall(olist, name, search_parent);
-        }
-    }
-
-    virtual ptr<ast_decl> find_first_impl(const char* name) = 0;
-    virtual void find_all_impl(ptr<list<ast_decl>>, const char*) = 0;
-
-    friend struct __ast_builder_impl;
-
-    ast_context*                                                         parent;
-
-};
-
-struct ast_namespace_context : public ast_context {
-public:
-
-    ast_namespace_context();
-    ast_namespace_context(ast_context* p, ast_namespace_decl* ns);
-    virtual ~ast_namespace_context() = default;
-
-    void insert(const char*, ast_decl*) final override;
-    ast_type* get_return_type() final override;
-
-protected:
-
-    ptr<ast_decl> find_first_impl(const char*) final override;
-    void find_all_impl(ptr<list<ast_decl>>, const char*) final override;
-
-private:
-
-    ptr<ast_namespace_decl>                                             _ns;
-    bool                                                                _is_global;
-
-};
-
-struct ast_block_context : public ast_context {
-public:
-
-    ast_block_context(ast_context* p, ast_block_stmt* block);
-    virtual ~ast_block_context() = default;
-
-    void insert(const char*, ast_decl*) final override;
-    ast_type* get_return_type() final override;
-    void emit(ast_stmt*);
-
-protected:
-
-    ptr<ast_decl> find_first_impl(const char*) final override;
-    void find_all_impl(ptr<list<ast_decl>>, const char*) final override;
-
-private:
-
-    ptr<ast_block_stmt>                                                 _block;
-
-};
+struct ircode_context;
 
 typedef dispatch_visitor<std::string>                                   ast_name_mangler_t;
 typedef dispatch_visitor<ast_expr>                                      ast_folder_t;
@@ -149,11 +63,41 @@ private:
 
 };
 
+template<typename TDestTreeType,
+         typename TSrcTreeType,
+         typename std::enable_if<std::is_base_of<ast_tree, TDestTreeType>::value, int>::type = 0,
+         typename std::enable_if<std::is_base_of<ast_tree, TSrcTreeType>::value, int>::type = 0>
+TDestTreeType* copyloc(TDestTreeType* t, TSrcTreeType* ft) noexcept { t->source_location = ft->source_location; return t; }
+
+template<typename TDestTreeType,
+         typename TSrcMinTreeType,
+         typename TSrcMaxTreeType,
+         typename std::enable_if<std::is_base_of<ast_tree, TDestTreeType>::value, int>::type = 0,
+         typename std::enable_if<std::is_base_of<ast_tree, TSrcMinTreeType>::value, int>::type = 0,
+         typename std::enable_if<std::is_base_of<ast_tree, TSrcMaxTreeType>::value, int>::type = 0>
+TDestTreeType* copyloc(TDestTreeType *t, TSrcMinTreeType* fmin, TSrcMaxTreeType* fmax) noexcept {
+    t->source_location->first   = fmin->source_location->first;
+    t->source_location->last    = fmax->source_location->last;
+    return t;
+}
+
 struct __ast_builder_impl {
 public:
 
     __ast_builder_impl(translation_unit& tu, ast_name_mangler_t* mangler) noexcept;
     virtual ~__ast_builder_impl() noexcept = default;
+
+    template<typename TTreeType, typename std::enable_if<std::is_base_of<ast_tree, TTreeType>::value, int>::type = 0>
+    TTreeType* setloc(TTreeType* t, source_span& loc) { t->source_location = loc; return t; }
+
+    template<typename TTreeType, typename std::enable_if<std::is_base_of<ast_tree, TTreeType>::value, int>::type = 0>
+    TTreeType* setloc(TTreeType* t, source_span& minloc, source_span& maxloc) {
+        t->source_location->first = minloc.first;
+        t->source_location->last  = maxloc.last;
+        return t;
+    }
+            void                                copyloc(ast_tree* dest, ast_tree* src) const noexcept;
+            void                                copyloc(ast_tree* dest, ast_tree* minsrc, ast_tree* maxsrc) const noexcept;
 
             ast_void_type*                      get_void_type()                                                     const noexcept;
             ast_integer_type*                   get_integer_type(uint32_t bitwidth, bool is_unsigned)               const noexcept;
@@ -191,6 +135,7 @@ public:
     virtual ast_expr*                           make_memberref_expr(ast_expr*, ast_record_member_decl*);
     virtual ast_expr*                           make_deref_expr(ast_expr*)                                          const;
     virtual ast_expr*                           make_addressof_expr(ast_expr*);
+            ast_expr*                           make_lower_addressof_expr(ast_expr*);
     virtual ast_expr*                           make_index_expr(ast_expr*, ast_expr*)                               const;
     virtual ast_expr*                           make_call_expr(ast_expr*, list<ast_expr>*)                          const;
             ast_expr*                           make_lower_call_expr(ast_expr*, list<ast_expr>*)                    const;
@@ -232,19 +177,27 @@ protected:
         this->context = new TContext(this->context, args...);
     }
 
-    inline void pop_context() noexcept {
+    inline ptr<ast_context> pop_context() noexcept {
+        auto popped_context = this->context;
         this->context = this->context->parent;
+        return popped_context;
     }
 
     translation_unit&                                                   tu;
+    ptr<ast_namespace_decl>                                             global_namespace;
 
 public:
+
+            ptr<ast_context>                    get_context()                                                             noexcept;
+            void                                set_context(ptr<ast_context>)                                             noexcept;
+            void                                clear_context()                                                           noexcept;
 
     virtual void                                push_block(ast_block_stmt*)                                               noexcept;
     virtual void                                push_namespace(ast_namespace_decl*)                                       noexcept;
     virtual ast_type*                           get_return_type()                                                         noexcept;
 
     virtual ast_decl*                           find_declaration(const char*)                                             noexcept;
+    virtual ptr<list<ast_decl>>                 find_all_declarations(const char*)                                        noexcept;
 
     virtual void                                pop()                                                                     noexcept;
 
@@ -318,6 +271,7 @@ private:
                                                                         _function_types;
     std::map<std::tuple<ast_type*, uint32_t>, ptr<ast_array_type>>      _array_types;
     std::map<ast_record_decl*, ptr<ast_record_type>>                    _record_types;
+    std::map<ast_decl*, ptr<ast_declref>>                               _declrefs;
 
     ast_name_mangler_t*                                                 _mangler_ptr;
 

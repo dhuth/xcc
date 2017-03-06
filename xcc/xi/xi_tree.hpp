@@ -47,6 +47,8 @@ enum class xi_operator : uint32_t {
     assign_lor,
     assign_band,
     assign_bor,
+    index,
+    invoke,
 };
 
 struct xi_const_type : public extend_tree<tree_type_id::xi_const_type, ast_type> {
@@ -74,6 +76,143 @@ public:
 
     property<ast_type>                              element_type;
     property<list<ast_expr>>                        dimensions;
+
+};
+
+struct xi_name_decl : public extend_tree<tree_type_id::xi_name_decl, ast_decl> {
+public:
+
+    inline xi_name_decl(const char* name)
+            : base_type(name) {
+        //...
+    }
+};
+
+struct xi_infered_type : public extend_tree<tree_type_id::xi_infered_type, ast_type> {
+public:
+
+    inline xi_infered_type()
+            : base_type() {
+        //...
+    }
+};
+
+struct xi_ref_type : public extend_tree<tree_type_id::xi_ref_type, ast_type> {
+public:
+
+    inline xi_ref_type(ast_type* eltype)
+            : base_type(),
+              element_type(this, eltype) {
+        //...
+    }
+
+    property<ast_type>                              element_type;
+
+};
+
+struct xi_member_decl : public extend_tree<tree_type_id::xi_member_decl, ast_decl> {
+public:
+
+    inline xi_member_decl(tree_type_id passing_id, const char* name, xi_type_decl* parent_decl)
+            : base_type(passing_id, name),
+              parent_decl(parent_decl) {
+        //...
+    }
+
+    inline xi_member_decl(tree_type_id passing_id, const char* name)
+            : base_type(passing_id, name),
+              parent_decl(nullptr) {
+        //...
+    }
+
+    xi_type_decl*                                   parent_decl;
+
+};
+
+struct xi_type_decl : public extend_tree<tree_type_id::xi_type_decl, xi_member_decl> {
+public:
+
+    inline xi_type_decl(tree_type_id passing_id, const char* name, list<ast_type>* basetypes)
+            : base_type(passing_id, name, nullptr),
+              basetypes(this, basetypes),
+              mixins(this, nullptr),
+              members(this, new list<xi_member_decl>()) {
+        //...
+    }
+
+    property<list<ast_type>>                        basetypes;
+    property<list<ast_decl>>                        mixins;
+    property<list<xi_member_decl>>                  members;
+
+};
+
+struct xi_struct_decl : public extend_tree<tree_type_id::xi_struct_decl, xi_type_decl> {
+public:
+
+    inline xi_struct_decl(const char* name, list<ast_type>* basetypes)
+            : base_type(name, basetypes),
+              supertype(this, nullptr),
+              generated_record(this, nullptr) {
+        //...
+    }
+
+    inline xi_struct_decl(tree_type_id passing_id, const char* name, list<ast_type>* basetypes)
+            : base_type(passing_id, name, basetypes),
+              supertype(this, nullptr),
+              generated_record(this, nullptr) {
+        //...
+    }
+
+    property<xi_type_decl>                          supertype;
+    property<ast_record_decl>                       generated_record;
+
+};
+
+struct xi_class_decl : public extend_tree<tree_type_id::xi_struct_decl, xi_struct_decl> {
+public:
+
+    inline xi_class_decl(const char* name, list<ast_type>* basetypes)
+            : base_type(name, basetypes) {
+        //...
+    }
+
+};
+
+struct xi_mixin_decl : public extend_tree<tree_type_id::xi_mixin_decl, xi_type_decl> {
+public:
+
+    inline xi_mixin_decl(const char* name, list<ast_type>* basetypes)
+            : base_type(name, basetypes) {
+        //...
+    }
+
+};
+
+struct xi_object_type : public extend_tree<tree_type_id::xi_object_type, ast_type> {
+public:
+
+    inline xi_object_type(xi_type_decl* decl)
+            : base_type(),
+              declaration(this, decl) {
+        //...
+    }
+
+    property<xi_type_decl>                          declaration;
+
+};
+
+struct xi_field_decl : public extend_tree<tree_type_id::xi_field_decl, xi_member_decl> {
+public:
+
+    inline xi_field_decl(const char* name, ast_type* type, ast_expr* init_value)
+            : base_type(name),
+              type(this, type),
+              init_value(this, init_value) {
+        //...
+    }
+
+    property<ast_type>                              type;
+    property<ast_expr>                              init_value;
 
 };
 
@@ -111,6 +250,7 @@ public:
               body(this, new ast_block_stmt(new list<ast_local_decl>(), new list<ast_stmt>())),
               is_extern(this, false),
               is_extern_visible(this, true),
+              is_c_extern(this, false),
               generated_function(this, nullptr) {
         //...
     }
@@ -120,6 +260,7 @@ public:
     property<ast_block_stmt>                        body;
     property<bool>                                  is_extern;
     property<bool>                                  is_extern_visible;
+    property<bool>                                  is_c_extern;
     property<ast_function_decl>                     generated_function;
 };
 
@@ -149,6 +290,34 @@ public:
 
     property<ast_expr>                              array_expr;
     property<list<ast_expr>>                        index_expr_list;
+};
+
+struct xi_name_expr : public extend_tree<tree_type_id::xi_name_expr, ast_expr> {
+public:
+
+    inline xi_name_expr(const char* name)
+            : base_type((ast_type*) nullptr),
+             name(this, name) {
+        //...
+    }
+
+    property<std::string>                           name;
+
+};
+
+struct xi_named_memberref_expr : public extend_tree<tree_type_id::xi_named_memberref_expr, ast_expr> {
+public:
+
+    inline xi_named_memberref_expr(ast_expr* objexpr, const char* member_name)
+            : base_type(nullptr),
+              objexpr(this, objexpr),
+              member_name(this, std::string(member_name)) {
+        //...
+    }
+
+    property<ast_expr>                              objexpr;
+    property<std::string>                           member_name;
+
 };
 
 struct xi_assign_stmt : public extend_tree<tree_type_id::xi_assign_stmt, ast_stmt> {
@@ -185,7 +354,12 @@ public:
 
 };
 
+std::string to_string(xcc::xi_operator op);
 
+}
+
+namespace std {
+inline std::string to_string(xcc::xi_operator op) { return xcc::to_string(op); }
 }
 
 

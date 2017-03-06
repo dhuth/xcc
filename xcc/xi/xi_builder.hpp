@@ -17,27 +17,7 @@
 namespace xcc {
 
 struct xi_lower_walker;
-struct xi_resolve_walker;
-
-struct xi_function_context : public ast_context {
-public:
-
-    xi_function_context(ast_context* parent, xi_function_decl* func);
-    virtual ~xi_function_context() = default;
-
-    void insert(const char*, ast_decl*) final override; //TODO: just throw error
-    ast_type* get_return_type() final override;
-
-protected:
-
-    ptr<ast_decl> find_first_impl(const char*) final override;
-    void find_all_impl(ptr<list<ast_decl>>, const char*) final override;
-
-private:
-
-    ptr<xi_function_decl>                                               _func;
-
-};
+struct ircode_context;
 
 struct xi_builder final : public ast_builder<> {
 public:
@@ -47,15 +27,29 @@ public:
 
     xi_const_type*                                  get_const_type(ast_type*) const noexcept;
     xi_array_type*                                  get_array_type(ast_type*, list<ast_expr>*) const noexcept;
+    xi_infered_type*                                get_infered_type() const noexcept;
+    xi_ref_type*                                    get_ref_type(ast_type*) noexcept;
+    xi_object_type*                                 get_object_type(xi_type_decl*) noexcept;
     ast_type*                                       get_declaration_type(ast_decl*) noexcept override final;
 
     xi_function_decl*                               define_global_function(ast_type*, const char*, list<xi_parameter_decl>*);
     xi_parameter_decl*                              define_parameter(ast_type*, const char*);
     xi_parameter_decl*                              define_parameter(ast_type*);
 
+    xi_struct_decl*                                 define_global_struct(const char*, list<ast_type>*);
+    xi_member_decl*                                 define_field(ast_type*, const char*);
+    xi_member_decl*                                 define_field(ast_type*, const char*, ast_expr*);
+
+    void                                            set_type_widens(ast_type*, ast_type*);
+
+    xi_type_decl*                                   find_type_decl(const char*);
+    //ast_type*                                       find_type(const char*);
+
     ast_expr*                                       make_op(xi_operator op, ast_expr*);
     ast_expr*                                       make_op(xi_operator op, ast_expr*, ast_expr*);
     ast_expr*                                       make_op(xi_operator op, list<ast_expr>*);
+    ast_expr*                                       make_name_expr(const char*);
+    ast_expr*                                       make_memberref_expr(ast_expr*, const char*);
     ast_expr*                                       make_cast_expr(ast_type*, ast_expr*) const override final;
     ast_expr*                                       make_index_expr(ast_expr*, list<ast_expr>*);
     ast_expr*                                       make_call_expr(ast_expr*, list<ast_expr>*) const override final;
@@ -65,18 +59,20 @@ public:
     ast_stmt*                                       make_for_stmt(ast_local_decl*, ast_expr*, ast_stmt*) const noexcept;
 
     ast_expr*                                       widen(ast_type*, ast_expr*) const override final;
+    ast_expr*                                       narrow(ast_type*, ast_expr*) const;
 
     void                                            push_function(xi_function_decl*);
+    void                                            push_member(xi_struct_decl*);
     void                                            pop_function();
 
     void                                            generate();
 
-public: //TODO: make private
+    void                                            dump_parse();
+    void                                            dump_parse(std::ostream& s);
+    void                                            dump_unit();
+    void                                            dump_unit(std::ostream& s);
 
-    ast_expr*                                       resolve(ast_expr*); //TODO: in symbols / out symbols
-    ast_type*                                       resolve(ast_type*); //TODO: in symbols / out symbols
-    ast_decl*                                       resolve(ast_decl*); //TODO: in symbols / out symbols
-    ast_stmt*                                       resolve(ast_stmt*); //TODO: in symbols / out symbols
+public: //TODO: make private
 
     ast_expr*                                       lower(ast_expr*);
     ast_type*                                       lower(ast_type*);
@@ -85,23 +81,31 @@ public: //TODO: make private
 
     ast_parameter_decl*                             lower_parameter(xi_parameter_decl*);
     ast_function_decl*                              lower_function(xi_function_decl*);
+    ast_record_decl*                                lower_struct(xi_struct_decl*);
     void                                            lower_body(xi_function_decl*);
 
 public:
 
-    void                                            resolution_pass();
+    //void                                            read_metadata_pass(ircode_context&, std::vector<std::string>&);
+    void                                            flatten_pass();
+    //void                                            write_metadata_pass(ircode_context&);
     void                                            lower_pass();
 
 private:
 
-    std::vector<ptr<xi_function_decl>>                                  all_functions;
+    ptr<xi_infered_type>                                                _the_infered_type;
 
-    friend struct xi_resolve_walker;
-    friend struct xi_typecheck_walker;
+    std::vector<ptr<xi_function_decl>>                                  all_functions;
+    std::vector<ptr<xi_type_decl>>                                      all_types;
+
     friend struct xi_lower_walker;
 
     xi_lower_walker*                                                    _lower_walker;
-    //xi_resolve_walker&                                                  _resolve_walker;
+
+    std::map<ast_type*, ptr<xi_ref_type>>                               _all_reftypes;
+    std::map<xi_type_decl*, ptr<xi_object_type>>                        _all_objecttypes;
+
+    std::map<ast_type*, std::vector<ast_type*>>                         _type_rules_widens;
 
 };
 

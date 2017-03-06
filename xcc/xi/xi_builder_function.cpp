@@ -6,6 +6,7 @@
  */
 
 #include "xi_builder.hpp"
+#include "xi_builder_function.hpp"
 #include "xi_lower.hpp"
 
 namespace xcc {
@@ -102,7 +103,7 @@ ast_parameter_decl* xi_builder::lower_parameter(xi_parameter_decl* pdecl) {
     if(!pdecl->generated_parameter) {
         auto gparam = new ast_parameter_decl(pdecl->name, this->lower(pdecl->type));
         pdecl->generated_parameter = gparam;
-        gparam->generated_name = this->get_mangled_name.visit(gparam);
+        //gparam->generated_name = this->get_mangled_name.visit(gparam);
         this->_lower_walker->set(pdecl, gparam);
     }
     return pdecl->generated_parameter;
@@ -118,7 +119,18 @@ ast_function_decl* xi_builder::lower_function(xi_function_decl* func) {
         return gparam;
     });
     auto gfunc = new ast_function_decl(func->name, this->lower(func->return_type), lower_parameters, nullptr);
-    gfunc->generated_name = this->get_mangled_name.visit(gfunc);
+    if(!func->is_c_extern) {
+        gfunc->generated_name       = this->get_mangled_name.visit(gfunc);
+        gfunc->is_extern            = func->is_extern;
+        gfunc->is_extern_visible    = func->is_extern_visible;
+        gfunc->is_c_extern          = func->is_c_extern;
+    }
+    else {
+        gfunc->generated_name = func->name;
+        gfunc->is_extern            = func->is_extern;
+        gfunc->is_extern_visible    = func->is_extern_visible;
+        gfunc->is_c_extern          = func->is_c_extern;
+    }
     this->_lower_walker->set(func, gfunc);
     return gfunc;
 }

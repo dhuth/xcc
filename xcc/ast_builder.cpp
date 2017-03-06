@@ -16,49 +16,40 @@
 
 namespace xcc {
 
-ast_block_context::ast_block_context(ast_context* p, ast_block_stmt* block) : ast_context(p), _block(block) { }
-
-void ast_block_context::insert(const char* name, ast_decl* decl) {
-    assert(decl->is<ast_local_decl>());
-    this->_block->decls->append(decl->as<ast_local_decl>());
-}
-
-ast_type* ast_block_context::get_return_type() { return this->parent->get_return_type(); }
-
-ptr<ast_decl> ast_block_context::find_first_impl(const char* name) {
-    for(auto decl: this->_block->decls) {
-        std::string dname = decl->name;
-        if(dname == std::string(name)) {
-            return box<ast_decl>(decl);
-        }
-    }
-    return box<ast_decl>(nullptr);
-}
-
-void ast_block_context::find_all_impl(ptr<list<ast_decl>> olist, const char* name) {
-    for(auto decl: this->_block->decls) {
-        std::string dname = decl->name;
-        if(dname == std::string(name)) {
-            olist->append(decl);
-        }
-    }
-}
-
-void ast_block_context::emit(ast_stmt* stmt) {
-    this->_block->stmts->append(stmt);
-}
-
 __ast_builder_impl::__ast_builder_impl(translation_unit& tu, ast_name_mangler_t* mangler) noexcept
             : _mangler_ptr(mangler),
               get_mangled_name(*mangler),
               tu(tu),
-              context(new ast_namespace_context()),
+              global_namespace(new ast_namespace_decl("global")),
               _pointer_types(0, std::hash<ast_type*>(), sametype_predicate(*this)),
               _function_types(0, functype_hasher(*this), samefunctype_predicate(*this)),
               _the_nop_stmt(new ast_nop_stmt()),
               _the_break_stmt(new ast_break_stmt()),
               _the_continue_stmt(new ast_continue_stmt()) {
+
+    this->context = new ast_namespace_context(nullptr, this->global_namespace);
     this->create_default_types();
+}
+
+void __ast_builder_impl::copyloc(ast_tree* dest, ast_tree* src) const noexcept {
+    if(dest != nullptr && src != nullptr) {
+        dest->source_location = src->source_location;
+    }
+}
+
+void __ast_builder_impl::copyloc(ast_tree* dest, ast_tree* minsrc, ast_tree* maxsrc) const noexcept {
+    if(dest != nullptr) {
+        if(minsrc == nullptr) {
+            this->copyloc(dest, maxsrc);
+        }
+        else if(maxsrc == nullptr) {
+            this->copyloc(dest, minsrc);
+        }
+        else {
+            dest->source_location->first = minsrc->source_location->first;
+            dest->source_location->last  = maxsrc->source_location->last;
+        }
+    }
 }
 
 void __ast_builder_impl::create_default_types() noexcept {
@@ -162,6 +153,14 @@ ast_type* __ast_builder_impl::get_declaration_type(ast_decl* decl) noexcept {
     return nullptr;
 }
 
+ast_namespace_decl* __ast_builder_impl::define_namespace(const char*name) noexcept {
+    auto decl = this->context->find(name, false);
+    if(decl != nullptr && decl->is<ast_namespace_decl>()) {
+        return decl->as<ast_namespace_decl>();
+    }
+    return new ast_namespace_decl(name);
+}
+
 ast_expr* __ast_builder_impl::make_integer(const char* txt, uint8_t radix) const noexcept {
     auto bitsneeded = llvm::APInt::getBitsNeeded(llvm::StringRef(txt), radix);
     llvm::APSInt value(llvm::APInt(bitsneeded, llvm::StringRef(txt), radix));
@@ -174,7 +173,7 @@ ast_expr* __ast_builder_impl::make_integer(const char* txt, uint8_t radix) const
 
     assert(bitwidth != 0);
 
-    return new ast_integer(this->get_integer_type(bitwidth ,true), value);
+    return new ast_integer(this->get_integer_type(bitwidth, false), value);
 }
 
 ast_expr* __ast_builder_impl::make_real(const char* txt) const noexcept {
@@ -440,7 +439,12 @@ ast_expr* __ast_builder_impl::make_op_expr(ast_op op, ast_expr* expr) {
 }
 
 ast_expr* __ast_builder_impl::make_declref_expr(ast_decl* decl) {
-    return new ast_declref(this->get_declaration_type(decl), decl);
+    if(this->_declrefs.find(decl) == this->_declrefs.end()) {
+        auto declref = new ast_declref(this->get_declaration_type(decl), decl);
+        this->_declrefs[decl] = box(declref);
+        return declref;
+    }
+    return unbox(this->_declrefs[decl]);
 }
 
 ast_expr* __ast_builder_impl::make_memberref_expr(ast_expr* obj, ast_record_member_decl* member) {
@@ -459,6 +463,10 @@ ast_expr* __ast_builder_impl::make_deref_expr(ast_expr* e) const {
 }
 
 ast_expr* __ast_builder_impl::make_addressof_expr(ast_expr* e) {
+    return this->make_lower_addressof_expr(e);
+}
+
+ast_expr* __ast_builder_impl::make_lower_addressof_expr(ast_expr* e) {
     if(e->is<ast_deref>()) {
         return e->as<ast_deref>()->expr;
     }
@@ -542,7 +550,7 @@ ast_stmt* __ast_builder_impl::make_assign_stmt(ast_expr* lhs, ast_expr* rhs) noe
 }
 
 ast_stmt* __ast_builder_impl::make_lower_assign_stmt(ast_expr* lhs, ast_expr* rhs) noexcept {
-    auto dest = this->make_addressof_expr(lhs);
+    auto dest = this->make_lower_addressof_expr(lhs);
     auto src  = this->make_lower_cast_expr(lhs->type, rhs);
 
     return new ast_assign_stmt(dest, src);
@@ -828,6 +836,22 @@ ast_expr* __ast_builder_impl::widen(ast_type* typedest, ast_expr* expr) const {
     throw std::runtime_error("unhandled " + std::string(typedest->get_tree_type_name()) + " in __ast_builder_impl::widen\n");
 }
 
+ptr<ast_context> __ast_builder_impl::get_context() noexcept {
+    return this->context;
+}
+
+void __ast_builder_impl::set_context(ptr<ast_context> ctx) noexcept {
+    this->context = ctx;
+}
+
+void __ast_builder_impl::clear_context() noexcept {
+    this->context = nullptr;
+}
+
+void __ast_builder_impl::push_namespace(ast_namespace_decl* ns) noexcept {
+    this->push_context<ast_namespace_context>(ns);
+}
+
 void __ast_builder_impl::push_block(ast_block_stmt* block) noexcept {
     this->push_context<ast_block_context>(block);
 }
@@ -852,6 +876,10 @@ ast_type* __ast_builder_impl::get_return_type() noexcept { return this->context-
 
 ast_decl* __ast_builder_impl::find_declaration(const char* name) noexcept {
     return this->context->find(name);
+}
+
+ptr<list<ast_decl>> __ast_builder_impl::find_all_declarations(const char* name) noexcept {
+    return this->context->findall(name, true);
 }
 
 ast_variable_decl* __ast_builder_impl::define_global_variable(ast_type* type, const char* name, ast_expr* ivalue) noexcept {

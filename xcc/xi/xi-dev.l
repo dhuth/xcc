@@ -9,8 +9,10 @@
 #include "source.hpp"
 
 #define     SHIFTLOC                                xcc::advance_column(yyloc->last, strlen(yytext));
-#define     IGNORE                                  SHIFTLOC
 #define     NEWLINE                                 xcc::advance_line(yyloc->last);
+                                                        
+#define     IGNORE                                  SHIFTLOC
+
 #define     BEGIN_LOC                               xcc::init_source_span(*yyloc, yyloc->last);
 #define     RETURN_VALUE(tp,name,valname,val)       { SHIFTLOC yylval->valname = val; return tp##_##name; }
 #define     RETURN_VOID(tp,name)                    { SHIFTLOC return tp##_##name; }
@@ -21,13 +23,20 @@
 #define     RETURN_TOKEN(n,v,t)                     RETURN_VALUE(TOK,n,v,t)
 #define     RETURN_TYPE(t)                          RETURN_VALUE(TOK,TYPE,type,t)
 #define     RETURN_DECL(t)                          RETURN_VALUE(TOK,DECL,decl,t)
+#define     RETURN_EXPR(e)                          RETURN_VALUE(TOK,EXPR,expr,e)
 
 #define     RESET_IDENTIFIER_CHECK                  \
                                                     {\
                                                         xi_parse_raw_identifier = false;\
                                                     }
-void xi_push_expr_state();
-void xi_pop_expr_state();
+void xi_push_stmt_state();
+void xi_pop_stmt_state();
+
+void xi_push_decl_state();
+void xi_pop_decl_state();
+
+void xi_push_unused_id_state();
+void xi_pop_unused_id_state();
 
 %}
 
@@ -44,11 +53,20 @@ INTEGER_10_LITERAL                                  {DIGIT}+
 INTEGER_16_LITERAL                                  0x{HEX}
 FLOATING_POINT_LITERAL                              ({FP_FRONT}({FP_BACK})?)|({DIGIT}+{FP_BACK})
 
+DBL_STRING_CHAR                                     [^\\"]
+DBL_STRING_ESCAPE                                   \\.
+DBL_STRING_LITERAL                                  ["]({DBL_STRING_CHAR}|{DBL_STRING_ESCAPE})*["]
 
 
 %x                                                  XI_STATE_BLOCK_COMMENT
-%s                                                  XI_STATE_EXPR
+%x                                                  XI_STATE_LINE_COMMENT
+%s                                                  XI_STATE_BEGIN_LINE
+
+%x                                                  XI_STATE_OP
+%x                                                  XI_STATE_UNUSED_ID
+
 %s                                                  XI_STATE_STMT
+%s                                                  XI_STATE_DECL
 %%
 %{
     BEGIN_LOC
@@ -60,6 +78,16 @@ FLOATING_POINT_LITERAL                              ({FP_FRONT}({FP_BACK})?)|({D
 <XI_STATE_BLOCK_COMMENT>"*/"                        { SHIFTLOC; yy_pop_state(); }
 <XI_STATE_BLOCK_COMMENT>\n                          NEWLINE
 <XI_STATE_BLOCK_COMMENT>.                           IGNORE
+
+^#[ \t]+{INTEGER_10_LITERAL}[ \t]+{DBL_STRING_LITERAL}.*\n {
+                                                        char* cpp_filename = (char*)malloc(1024*sizeof(char));
+                                                        int   cpp_line_number;
+                                                        sscanf(yytext, "# %d \"%s\"", &cpp_line_number, cpp_filename);
+                                                        
+                                                        
+                                                        xcc::set_source_span_from_cpp(*yyloc, cpp_filename, cpp_line_number);
+                                                        free(cpp_filename);
+                                                    }
 
 "//"[^\n]*\n                                        NEWLINE
 
@@ -76,33 +104,39 @@ FLOATING_POINT_LITERAL                              ({FP_FRONT}({FP_BACK})?)|({D
 \;                                                  RETURN_OP(SEMICOLON,    none)
 \.                                                  RETURN_OP(DOT,          dot)
 
-\+                                                  RETURN_OP(ADD,          add)
-\-                                                  RETURN_OP(SUB,          sub)
-\*                                                  RETURN_OP(MUL,          mul)
-\/                                                  RETURN_OP(DIV,          div)
-\%                                                  RETURN_OP(MOD,          mod)
-\>\>                                                RETURN_OP(SHR,          shr)
-\<\<                                                RETURN_OP(SHL,          shl)
+<XI_STATE_OP>\n                                     NEWLINE
+<XI_STATE_OP>[ \t]                                  IGNORE
 
-\=\=                                                RETURN_OP(EQ,           eq)
-\!\=                                                RETURN_OP(NE,           ne)
-\<                                                  RETURN_OP(LT,           lt)
-\>                                                  RETURN_OP(GT,           gt)
-\<\=                                                RETURN_OP(LE,           le)
-\>\=                                                RETURN_OP(GE,           ge)
+<XI_STATE_OP,XI_STATE_STMT>\+                       RETURN_OP(ADD,          add)
+<XI_STATE_OP,XI_STATE_STMT>\-                       RETURN_OP(SUB,          sub)
+<XI_STATE_OP,XI_STATE_STMT>\*                       RETURN_OP(MUL,          mul)
+<XI_STATE_OP,XI_STATE_STMT>\/                       RETURN_OP(DIV,          div)
+<XI_STATE_OP,XI_STATE_STMT>\%                       RETURN_OP(MOD,          mod)
+<XI_STATE_OP,XI_STATE_STMT>\>\>                     RETURN_OP(SHR,          shr)
+<XI_STATE_OP,XI_STATE_STMT>\<\<                     RETURN_OP(SHL,          shl)
 
-\=                                                  RETURN_OP(ASSIGN,       assign)
-\+\=                                                RETURN_OP(ASSIGN_ADD,   assign_add)
-\-\=                                                RETURN_OP(ASSIGN_SUB,   assign_sub)
-\*\=                                                RETURN_OP(ASSIGN_MUL,   assign_mul)
-\/\=                                                RETURN_OP(ASSIGN_DIV,   assign_div)
-\%\=                                                RETURN_OP(ASSIGN_MOD,   assign_mod)
-\>\>\=                                              RETURN_OP(ASSIGN_SHR,   assign_shr)
-\<\<\=                                              RETURN_OP(ASSIGN_SHL,   assign_shl)
-\&\=                                                RETURN_OP(ASSIGN_BAND,  assign_band)
-\|\=                                                RETURN_OP(ASSIGN_BOR,   assign_bor)
-\&\&\=                                              RETURN_OP(ASSIGN_LAND,  assign_land)
-\|\|\=                                              RETURN_OP(ASSIGN_LOR,   assign_lor)
+<XI_STATE_OP,XI_STATE_STMT>\=\=                     RETURN_OP(EQ,           eq)
+<XI_STATE_OP,XI_STATE_STMT>\!\=                     RETURN_OP(NE,           ne)
+<XI_STATE_OP,XI_STATE_STMT>\<                       RETURN_OP(LT,           lt)
+<XI_STATE_OP,XI_STATE_STMT>\>                       RETURN_OP(GT,           gt)
+<XI_STATE_OP,XI_STATE_STMT>\<\=                     RETURN_OP(LE,           le)
+<XI_STATE_OP,XI_STATE_STMT>\>\=                     RETURN_OP(GE,           ge)
+
+<XI_STATE_OP,XI_STATE_STMT>\=                       RETURN_OP(ASSIGN,       assign)
+<XI_STATE_OP,XI_STATE_STMT>\+\=                     RETURN_OP(ASSIGN_ADD,   assign_add)
+<XI_STATE_OP,XI_STATE_STMT>\-\=                     RETURN_OP(ASSIGN_SUB,   assign_sub)
+<XI_STATE_OP,XI_STATE_STMT>\*\=                     RETURN_OP(ASSIGN_MUL,   assign_mul)
+<XI_STATE_OP,XI_STATE_STMT>\/\=                     RETURN_OP(ASSIGN_DIV,   assign_div)
+<XI_STATE_OP,XI_STATE_STMT>\%\=                     RETURN_OP(ASSIGN_MOD,   assign_mod)
+<XI_STATE_OP,XI_STATE_STMT>\>\>\=                   RETURN_OP(ASSIGN_SHR,   assign_shr)
+<XI_STATE_OP,XI_STATE_STMT>\<\<\=                   RETURN_OP(ASSIGN_SHL,   assign_shl)
+<XI_STATE_OP,XI_STATE_STMT>\&\=                     RETURN_OP(ASSIGN_BAND,  assign_band)
+<XI_STATE_OP,XI_STATE_STMT>\|\=                     RETURN_OP(ASSIGN_BOR,   assign_bor)
+<XI_STATE_OP,XI_STATE_STMT>\&\&\=                   RETURN_OP(ASSIGN_LAND,  assign_land)
+<XI_STATE_OP,XI_STATE_STMT>\|\|\=                   RETURN_OP(ASSIGN_LOR,   assign_lor)
+
+<XI_STATE_OP>\[[ \t\n]*\]                           RETURN_OP(INDEX,        index)
+<XI_STATE_OP>\([ \t\n]*\)                           RETURN_OP(INVOKE,       invoke)
 
 void                                                RETURN_TYPE(builder.get_void_type())
 bool                                                RETURN_TYPE(builder.get_bool_type())
@@ -117,18 +151,20 @@ u64                                                 RETURN_TYPE(builder.get_inte
 f16                                                 RETURN_TYPE(builder.get_real_type(16))
 f32                                                 RETURN_TYPE(builder.get_real_type(32))
 f64                                                 RETURN_TYPE(builder.get_real_type(64))
+auto                                                RETURN_TYPE(builder.get_infered_type())
 
 abstract                                            RETURN_KW(ABSTRACT)
-auto                                                RETURN_KW(AUTO)
 byref                                               RETURN_KW(BYREF)
 byval                                               RETURN_KW(BYVAL)
 class                                               RETURN_KW(CLASS)
 const                                               RETURN_KW(CONST)
 extern                                              RETURN_KW(EXTERN)
+export[ \t]+cfunc                                   RETURN_KW(EXPORT_CFUNC)
 func                                                RETURN_KW(FUNC)
-generic                                             RETURN_KW(GENERIC)
+import[ \t]+cfunc                                   RETURN_KW(IMPORT_CFUNC)
 inline                                              RETURN_KW(INLINE)
 interface                                           RETURN_KW(INTERFACE)
+internal                                            RETURN_KW(INTERNAL)
 namespace                                           RETURN_KW(NAMESPACE)
 out                                                 RETURN_KW(OUT)
 private                                             RETURN_KW(PRIVATE)
@@ -138,42 +174,93 @@ struct                                              RETURN_KW(STRUCT)
 typedef                                             RETURN_KW(TYPEDEF)
 virtual                                             RETURN_KW(VIRTUAL)
 
-elif                                                RETURN_KW(ELIF)
-else                                                RETURN_KW(ELSE)
-for                                                 RETURN_KW(FOR)
-if                                                  RETURN_KW(IF)
-in                                                  RETURN_KW(IN)
-return                                              RETURN_KW(RETURN)
-while                                               RETURN_KW(WHILE)
-yield                                               RETURN_KW(YIELD)
+<XI_STATE_STMT>elif                                 RETURN_KW(ELIF)
+<XI_STATE_STMT>else                                 RETURN_KW(ELSE)
+<XI_STATE_STMT>for                                  RETURN_KW(FOR)
+<XI_STATE_STMT>if                                   RETURN_KW(IF)
+<XI_STATE_STMT>in                                   RETURN_KW(IN)
+<XI_STATE_STMT>local                                RETURN_KW(LOCAL)
+<XI_STATE_STMT>return                               RETURN_KW(RETURN)
+<XI_STATE_STMT>while                                RETURN_KW(WHILE)
+<XI_STATE_STMT>yield                                RETURN_KW(YIELD)
 
-<XI_STATE_EXPR>iter                                 RETURN_KW(ITER)
-<XI_STATE_EXPR>map                                  RETURN_KW(MAP)
-<XI_STATE_EXPR>range                                RETURN_KW(RANGE)
-<XI_STATE_EXPR>sizeof                               RETURN_KW(SIZEOF)
-<XI_STATE_EXPR>typeof                               RETURN_KW(TYPEOF)
-<XI_STATE_EXPR>zip                                  RETURN_KW(ZIP)
+<XI_STATE_STMT>iter                                 RETURN_KW(ITER)
+<XI_STATE_STMT>map                                  RETURN_KW(MAP)
+<XI_STATE_STMT>range                                RETURN_KW(RANGE)
+<XI_STATE_STMT>sizeof                               RETURN_KW(SIZEOF)
+<XI_STATE_STMT>typeof                               RETURN_KW(TYPEOF)
+<XI_STATE_STMT>zip                                  RETURN_KW(ZIP)
 
-<XI_STATE_EXPR>true                                 RETURN_LITERAL(INTEGER, builder.make_true())
-<XI_STATE_EXPR>false                                RETURN_LITERAL(INTEGER, builder.make_false())
+<XI_STATE_STMT>true                                 RETURN_LITERAL(INTEGER, builder.make_true())
+<XI_STATE_STMT>false                                RETURN_LITERAL(INTEGER, builder.make_false())
 
-<XI_STATE_EXPR>{INTEGER_10_LITERAL}                 RETURN_LITERAL(INTEGER, builder.make_integer(yytext, 10))
-<XI_STATE_EXPR>{INTEGER_16_LITERAL}                 RETURN_LITERAL(INTEGER, builder.make_integer(&yytext[2], 16))
-<XI_STATE_EXPR>{FLOATING_POINT_LITERAL}             RETURN_LITERAL(FLOAT,   builder.make_real(yytext))
+{INTEGER_10_LITERAL}                                RETURN_LITERAL(INTEGER, builder.make_integer(yytext, 10))
+{INTEGER_16_LITERAL}                                RETURN_LITERAL(INTEGER, builder.make_integer(&yytext[2], 16))
+{FLOATING_POINT_LITERAL}                            RETURN_LITERAL(FLOAT,   builder.make_real(yytext))
 
-{IDENTIFIER}                                        RETURN_TOKEN(IDENTIFIER, text, strdup(yytext))
+{IDENTIFIER}                                        {
+                                                        auto t = builder.find_declaration(yytext);
+                                                        if(t == nullptr) {
+                                                            // TODO: is this an error?
+                                                            //RETURN_EXPR(builder.make_name_expr(yytext));
+                                                            RETURN_TOKEN(IDENTIFIER, text, strdup(yytext))
+                                                        }
+                                                        else if(t->is<xcc::xi_type_decl>()    ||
+                                                                t->is<xcc::ast_typedef_decl>()) {
+                                                            RETURN_TYPE(builder.get_declaration_type(t));
+                                                        }
+                                                        else {
+                                                            RETURN_EXPR(builder.make_declref_expr(t->as<xcc::ast_decl>()));
+                                                        }
+                                                    }
+
+<XI_STATE_UNUSED_ID>\n                              NEWLINE
+<XI_STATE_UNUSED_ID>[ \t\n]                         IGNORE
+<XI_STATE_UNUSED_ID>{IDENTIFIER}                    RETURN_TOKEN(IDENTIFIER, text, strdup(yytext))
 
 <<EOF>>                                             return TOK_EOF;
 %%
 
-void xi_push_expr_state() {
-    yy_push_state(XI_STATE_EXPR);
+static inline void on_state_push(const char* name, int state) {
+    //printf("pushing state: %d: %s\n", state, name);                 //TODO: for debugging only
 }
 
-void xi_pop_expr_state() {
+static inline void on_state_pop(const char* name, int state) {
+    //printf("poping state:  %d: %s\n", state, name);                 //TODO: for debugging only
+    assert(state == YY_START);
+}
+
+void xi_push_stmt_state() {
+    on_state_push("stmt", XI_STATE_STMT);
+    yy_push_state(XI_STATE_STMT);
+}
+
+void xi_pop_stmt_state() {
+    on_state_pop("stmt", XI_STATE_STMT);
     yy_pop_state();
 }
 
+
+void xi_push_unused_id_state() {
+    on_state_push("unused id", XI_STATE_UNUSED_ID);
+    yy_push_state(XI_STATE_UNUSED_ID);
+}
+
+void xi_pop_unused_id_state() {
+    on_state_pop("unused id", XI_STATE_UNUSED_ID);
+    yy_pop_state();
+}
+
+
+void xi_push_decl_state() {
+    on_state_push("decl", XI_STATE_DECL);
+    yy_push_state(XI_STATE_DECL);
+}
+
+void xi_pop_decl_state() {
+    on_state_pop("decl", XI_STATE_DECL);
+    yy_pop_state();
+}
 
 
 

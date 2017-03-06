@@ -5,6 +5,10 @@
  *      Author: derick
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <xi_internal.hpp>
 #include <cstdio>
 
@@ -14,52 +18,40 @@
 #include "xi-parser.hpp"
 #include "xi-lex.hpp"
 #include "xi.hpp"
+#include "xi_internal.hpp"
 
 #include "ircodegen.hpp"
 
 namespace xcc {
 
-static void maybe_dump_unit(bool dump_unit, std::string filename, translation_unit& unit) {
-    if(dump_unit) {
-        std::ofstream ostr(filename);
-        for(auto decl: unit.global_variable_declarations) {
-            ast_printer::print(decl, ostr);
-        }
-        for(auto decl: unit.global_function_declarations) {
-            ast_printer::print(decl, ostr);
-        }
-    }
-}
-
 int ximain(const char* input_filename, const char* output_filename, std::vector<std::string>& args) {
     translation_unit            unit;
     xi_builder_t                builder(unit);
 
-    bool                        xi_param_dump_unit              = false;
-    std::string                 xi_param_dump_unit_filename     = "-";
-
-    for(auto a: args) {
-        if(a.substr(0,9) == "dump-unit") {
-            xi_param_dump_unit = true;
-            auto rest = a.substr(9);
-            if(!rest.empty() && rest[0] == '=') {
-                xi_param_dump_unit_filename = rest.substr(1);
-            }
-            else {
-                xi_param_dump_unit_filename = std::string(input_filename) + std::string(".dump-unit");
-            }
-        }
-    }
+    xi_init_printer();
 
     xiin = fopen(input_filename, "r");
     xiparse(builder);
 
-    builder.resolution_pass();
-    builder.lower_pass();
-
-    maybe_dump_unit(xi_param_dump_unit, xi_param_dump_unit_filename, unit);
+    //if(xi_param_dump_parse) {
+    //    std::ofstream s(xi_param_dump_parse_filename);
+    //    builder.dump_parse(s);
+    //}
 
     ircode_context ctx(input_filename);
+
+    //std::vector<std::string> linking_modules;
+    //builder.read_metadata_pass(ctx, linking_modules);
+    //builder.resolution_pass();
+    //builder.flatten_pass();
+    //builder.write_metadata_pass(ctx);
+    builder.lower_pass();
+
+    //if(xi_param_dump_unit) {
+    //    std::ofstream s(xi_param_dump_unit_filename);
+    //    builder.dump_unit(s);
+    //}
+
     ctx.generate(unit, output_filename);
 
     return 0;

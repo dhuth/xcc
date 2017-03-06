@@ -12,7 +12,7 @@
 
 namespace xcc {
 
-struct xi_lower_walker : public dispatch_tree_preorder_walker<ast_tree> {
+struct xi_lower_walker : public dispatch_tree_postorder_walker<ast_tree> {
 public:
 
     inline xi_lower_walker(xi_builder& builder)
@@ -35,8 +35,8 @@ public:
 
 protected:
 
-    void                                            begin(tree_type_id, base_tree_type*) override final;
-    void                                            end(tree_type_id, base_tree_type*) override final;
+    bool                                            begin(tree_type_id, base_tree_type*) override final;
+    bool                                            end(tree_type_id, base_tree_type*) override final;
 
 private:
 

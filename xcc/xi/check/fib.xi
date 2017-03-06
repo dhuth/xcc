@@ -1,5 +1,5 @@
 
-i32 func fib(i32 x) {
+define i32 fib(i32 x) {
     if(x < 0) {
         return 0;
     }

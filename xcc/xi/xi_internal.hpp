@@ -14,6 +14,9 @@
 
 typedef xcc::xi_builder                                                 xi_builder_t;
 
+namespace xcc {
+void xi_init_printer();
+}
 
 
 #endif /* XI_XI_INTERNAL_HPP_ */

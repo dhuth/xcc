@@ -1,2 +1,2 @@
 header(`xi/xi.hpp')
-compiler(xi, dev, (xi, x++),  xcc::ximain)
+compiler(xi, dev, (xi, x++, hxi),  xcc::ximain)

@@ -29,9 +29,11 @@
 %token
         TOK_EOF                         0   "end of file"
         
+        TOK_ERROR                           "error"
         TOK_IDENTIFIER                      "identifier"
         TOK_TYPE                            "a single word type"
         TOK_DECL                            "a named declaration"
+        TOK_EXPR                            "a named expression"
         
         LITERAL_INTEGER
         LITERAL_FLOAT
@@ -87,16 +89,20 @@
         OP_ASSIGN_BAND                      "&="
         OP_ASSIGN_BOR                       "|="
         
+        OP_INDEX                            "[]"
+        OP_INVOKE                           "()"
+        
         KW_ABSTRACT                         "abstract"
-        KW_AUTO                             "auto"
         KW_BYREF                            "byref"
         KW_BYVAL                            "byval"
         KW_BREAK                            "break"
         KW_CLASS                            "class"
         KW_CONST                            "const"
+        KW_EXPORT_CFUNC                     "export cfunc"
         KW_EXTERN                           "extern"
         KW_FUNC                             "func"
         KW_GENERIC                          "generic"
+        KW_IMPORT_CFUNC                     "import cfunc"
         KW_INLINE                           "inline"
         KW_INTERFACE                        "interface"
         KW_INTERNAL                         "internal"
@@ -117,6 +123,7 @@
         KW_FOR                              "for"
         KW_IF                               "if"
         KW_IN                               "in"
+        KW_LOCAL                            "local"
         KW_RETURN                           "return"
         KW_WHILE                            "while"
         KW_YIELD                            "yield"
@@ -143,6 +150,7 @@
         
         xcc::xi_function_decl*              function;
         xcc::xi_parameter_decl*             parameter;
+        xcc::xi_struct_decl*                struct_decl;
         xcc::ast_local_decl*                local;
         xcc::list<xcc::xi_parameter_decl>*  parameter_list;
         
@@ -151,8 +159,10 @@
 }
 
 %type   <text>                              TOK_IDENTIFIER
+%type   <text>                              unused-id
 %type   <decl>                              TOK_DECL
 %type   <type>                              TOK_TYPE
+%type   <expr>                              TOK_EXPR
 
 %type   <expr>                              LITERAL_INTEGER
 %type   <expr>                              LITERAL_FLOAT
@@ -161,6 +171,8 @@
 %type   <type>                              postfix-type
 %type   <type>                              prefix-type
 %type   <type>                              term-type
+%type   <type>                              name-type
+
 
 %type   <expr_list>                         dim-expr-list
 
@@ -227,12 +239,20 @@
 %type   <op>                                tight-prefix-op
 
 %type   <function>                          global-function-proto-decl
+%type   <function>                          global-function-decl-rest
+%type   <struct_decl>                       global-struct-proto-decl
+
+%type   <decl>                              struct-field-decl
 
 %type   <parameter_list>                    function-parameter-list-opt
 %type   <parameter_list>                    function-parameter-list
 %type   <parameter>                         function-parameter
 
+%type   <type_list>                         base-type-list-opt
+%type   <type_list>                         base-type-list
+
 %type   <stmt>                              stmt
+%type   <stmt>                              no-if-stmt
 %type   <stmt>                              block-stmt
 %type   <stmt>                              break-stmt
 %type   <stmt>                              return-stmt
@@ -245,6 +265,8 @@
 %type   <stmt>                              else-stmt
 %type   <stmt>                              elif-stmt
 %type   <stmt>                              expr-stmt
+%type   <stmt>                              op-colon-stmt
+%type   <stmt>                              op-colon-noif-stmt
 
 %type   <stmt>                              begin-block-stmt
 
@@ -255,14 +277,27 @@
 extern YY_DECL;
 void yyerror(XILTYPE* loc, xi_builder_t& builder, const char* msg);
 
-extern void xi_push_expr_state();
-extern void xi_pop_expr_state();
+extern void xi_push_stmt_state();
+extern void xi_pop_stmt_state();
+
+extern void xi_push_decl_state();
+extern void xi_pop_decl_state();
+
+extern void xi_push_unused_id_state();
+extern void xi_pop_unused_id_state();
 
 }
 %param                              {xi_builder_t&          builder}
 
 %start  translation-unit
 %%
+
+unused-id
+        : { xi_push_unused_id_state(); }
+            TOK_IDENTIFIER
+          { xi_pop_unused_id_state(); $$ = $2; }
+        ;
+
 
 translation-unit
         : global-decl-list-opt TOK_EOF
@@ -282,35 +317,71 @@ global-decl
         : global-namespace-decl
         | global-variable-decl
         | global-function-decl
+        | global-struct-decl
         | global-typedef-decl
         ;
 
 global-namespace-decl
-        : KW_NAMESPACE TOK_IDENTIFIER
+        : KW_NAMESPACE unused-id
             OP_LBRACE                       { builder.push_namespace(builder.define_namespace($2)); }
             global-decl-list
             OP_RBRACE                       { builder.pop(); }
         ;
 global-typedef-decl
-        : KW_TYPEDEF type TOK_IDENTIFIER OP_SEMICOLON                                               { builder.define_named_type($3, $2); }
+        : KW_TYPEDEF type unused-id OP_SEMICOLON                                                    { builder.setloc(builder.define_named_type($3, $2), @$); }
         ;
 global-variable-decl
-        : KW_EXTERN type TOK_IDENTIFIER OP_SEMICOLON                                                { auto var = builder.define_global_variable($2, $3); var->is_extern = true; }
-        |           type TOK_IDENTIFIER OP_SEMICOLON                                                {            builder.define_global_variable($1, $2); }
-        |           type TOK_IDENTIFIER OP_EQ expr OP_SEMICOLON                                     {            builder.define_global_variable($1, $2, $4); }
+        : KW_EXTERN type unused-id      OP_SEMICOLON                                                { auto var = builder.setloc(builder.define_global_variable($2, $3), @$); var->is_extern = true; }
+        |           type unused-id      OP_SEMICOLON                                                {            builder.setloc(builder.define_global_variable($1, $2), @$);     }
+        |           type unused-id      OP_EQ expr OP_SEMICOLON                                     {            builder.setloc(builder.define_global_variable($1, $2, $4), @$); }
         ;
 global-function-decl
-        : KW_EXTERN global-function-proto-decl OP_SEMICOLON                                         { $2->is_extern = true; }
-        |           global-function-proto-decl OP_SEMICOLON                                         { /* do nothing */ }
-        |           global-function-proto-decl
-                      OP_LBRACE             { builder.push_function($1); }
-                        stmt-list-opt
-                      OP_RBRACE             { builder.pop_function(); }
+        : KW_EXTERN       KW_FUNC global-function-proto-decl OP_SEMICOLON                           { builder.setloc($3, @$); $3->is_extern = true; }
+        |                 KW_FUNC global-function-proto-decl OP_SEMICOLON                           { builder.setloc($2, @$); }
+        |                 KW_FUNC global-function-decl-rest                                         { /* do nothing */ }
+        | KW_IMPORT_CFUNC     global-function-proto-decl OP_SEMICOLON                               { builder.setloc($2, @$); $2->is_extern = true; $2->is_c_extern = true; }
+        | KW_EXPORT_CFUNC     global-function-decl-rest                                             { builder.setloc($2, @$); $2->is_c_extern = true; }
+        | KW_INTERNAL     KW_FUNC global-function-proto-decl OP_SEMICOLON                           { builder.setloc($3, @$); $3->is_extern_visible = false; }
+        | KW_INTERNAL     KW_FUNC global-function-decl-rest                                         { builder.setloc($3, @$); $3->is_extern_visible = false; }
+        ;
+global-function-decl-rest
+        : global-function-proto-decl
+            OP_LBRACE push-stmt-state { builder.push_function($1); }
+              stmt-list-opt
+            OP_RBRACE pop-stmt-state  { builder.pop_function(); builder.setloc($1, @$); $$ = $1; }
+        ;
+global-struct-decl
+        : global-struct-proto-decl OP_SEMICOLON                                                     { builder.setloc($1, @$); }
+        | global-struct-proto-decl
+                OP_LBRACE push-decl-state { builder.push_member($1); }
+                    struct-member-list-opt
+                OP_RBRACE pop-decl-state  { builder.pop(); builder.setloc($1, @$); }
+        ;
+global-struct-proto-decl
+        : KW_STRUCT unused-id      base-type-list-opt                                               { $$ = builder.setloc(builder.define_global_struct($2, $3), @$); }
+        ;
+global-function-proto-decl
+        : type unused-id      OP_LPAREN function-parameter-list-opt OP_RPAREN                       { $$ = builder.setloc(builder.define_global_function($1, $2, $4), @$); }
         ;
 
-global-function-proto-decl
-        : KW_FUNC type TOK_IDENTIFIER OP_LPAREN function-parameter-list-opt OP_RPAREN               { $$ = builder.define_global_function($2, $3, $5); }
+base-type-list-opt
+        : OP_COLON base-type-list                                                                   { $$ = $2; }
+        | %empty                                                                                    { $$ = new xcc::list<xcc::ast_type>(); }
         ;
+base-type-list
+        : base-type-list OP_COMA name-type                                                          { $1->append($3); $$ = $1; }
+        | name-type                                                                                 { $$ = new xcc::list<xcc::ast_type>($1); }
+        ;
+
+push-decl-state
+        : %empty    { xi_push_decl_state(); }
+        ;
+pop-decl-state
+        : %empty    { xi_pop_decl_state(); }
+        ;
+
+
+
 
 function-parameter-list-opt
         : function-parameter-list                                                                   { $$ = $1; }
@@ -321,15 +392,44 @@ function-parameter-list
         | function-parameter                                                                        { $$ = new xcc::list<xcc::xi_parameter_decl>($1); }
         ;
 function-parameter
-        : type TOK_IDENTIFIER                                                                       { $$ = builder.define_parameter($1, $2); }
-        | type                                                                                      { $$ = builder.define_parameter($1);     }
+        : type unused-id                                                                            { $$ = builder.setloc(builder.define_parameter($1, $2), @$); }
+        | type                                                                                      { $$ = builder.setloc(builder.define_parameter($1), @$);     }
         ;
-        
+
+
+
+
+struct-member-list-opt
+        : struct-member-list
+        | %empty
+        ;
+struct-member-list
+        : struct-member-decl struct-member-list
+        | struct-member-decl
+        ;
+struct-member-decl
+        : struct-field-decl
+        ;
+struct-field-decl
+        : type unused-id      OP_ASSIGN expr OP_SEMICOLON                                           { $$ = builder.setloc(builder.define_field($1, $2, $4), @$); }
+        | type unused-id      OP_SEMICOLON                                                          { $$ = builder.setloc(builder.define_field($1, $2), @$);     }
+        ;
+
+
+
 stmt-list-opt
         : stmt        { builder.emit($1); } stmt-list-opt
         | local-stmt  { builder.emit($1); }
         | %empty
         ;
+
+push-stmt-state
+        : %empty      { xi_push_stmt_state(); }
+        ;
+pop-stmt-state
+        : %empty      { xi_pop_stmt_state(); }
+        ;
+        
 stmt
         : block-stmt                                                                                { $$ = $1; }
         | return-stmt OP_SEMICOLON                                                                  { $$ = $1; }
@@ -342,17 +442,36 @@ stmt
         | for-stmt                                                                                  { $$ = $1; }
         | OP_SEMICOLON                                                                              { $$ = builder.make_nop_stmt(); }
         ;
+no-if-stmt
+        : block-stmt                                                                                { $$ = $1; }
+        | return-stmt OP_SEMICOLON                                                                  { $$ = $1; }
+        | continue-stmt OP_SEMICOLON                                                                { $$ = $1; }
+        | break-stmt OP_SEMICOLON                                                                   { $$ = $1; }
+        | assign-stmt OP_SEMICOLON                                                                  { $$ = $1; }
+        | expr-stmt OP_SEMICOLON                                                                    { $$ = $1; }
+        | while-stmt                                                                                { $$ = $1; }
+        | for-stmt                                                                                  { $$ = $1; }
+        | OP_SEMICOLON                                                                              { $$ = builder.make_nop_stmt(); }
+        ;
+op-colon-stmt
+        : OP_COLON stmt                                                                             { $$ = $2; }
+        |          block-stmt                                                                       { $$ = $1; }
+        ;
+op-colon-noif-stmt
+        : OP_COLON no-if-stmt                                                                       { $$ = $2; }
+        |          block-stmt                                                                       { $$ = $1; }
+        ;
 block-stmt
         : OP_LBRACE begin-block-stmt { builder.push_block($2->as<xcc::ast_block_stmt>()); }
             stmt-list-opt
-          OP_RBRACE { $$ = $2; builder.pop(); }
+          OP_RBRACE { $$ = builder.setloc($2, @$); builder.pop(); }
         ;
 begin-block-stmt
         : %empty { $$ = builder.make_block_stmt(); }
         ;
 return-stmt
-        : KW_RETURN                                                                                 { $$ = builder.make_return_stmt(nullptr, nullptr);   }
-        | KW_RETURN expr                                                                            { $$ = builder.make_return_stmt(builder.get_return_type(), $2); }
+        : KW_RETURN                                                                                 { $$ = builder.setloc(builder.make_return_stmt(nullptr, nullptr), @$);   }
+        | KW_RETURN expr                                                                            { $$ = builder.setloc(builder.make_return_stmt(builder.get_return_type(), $2), @$); }
         ;
 continue-stmt
         : KW_CONTINUE                                                                               { $$ = builder.make_continue_stmt(); }
@@ -361,67 +480,71 @@ break-stmt
         : KW_BREAK                                                                                  { $$ = builder.make_break_stmt(); }
         ;
 assign-stmt
-        : expr assign-op expr                                                                       { $$ = builder.make_assign_stmt($2, $1, $3); }
+        : expr assign-op expr                                                                       { $$ = builder.setloc(builder.make_assign_stmt($2, $1, $3), @$); }
         ;
 expr-stmt
-        : expr                                                                                      { $$ = builder.make_expr_stmt($1); }
+        : expr                                                                                      { $$ = builder.setloc(builder.make_expr_stmt($1), @$); }
         ;
         
 if-stmt
-        : KW_IF OP_LPAREN expr OP_RPAREN stmt                                                       { $$ = builder.make_if_stmt($3, $5, nullptr); }
-        | KW_IF OP_LPAREN expr OP_RPAREN stmt else-stmt                                             { $$ = builder.make_if_stmt($3, $5, $6);      }
-        | KW_IF OP_LPAREN expr OP_RPAREN stmt elif-stmt                                             { $$ = builder.make_if_stmt($3, $5, $6);      }
+        : KW_IF expr op-colon-noif-stmt                                                             { $$ = builder.setloc(builder.make_if_stmt($2, $3, nullptr), @$); }
+        | KW_IF expr op-colon-noif-stmt else-stmt                                                   { $$ = builder.setloc(builder.make_if_stmt($2, $3, $4), @$);      }
+        | KW_IF expr op-colon-noif-stmt elif-stmt                                                   { $$ = builder.setloc(builder.make_if_stmt($2, $3, $4), @$);      }
         ;
 else-stmt
-        : KW_ELSE stmt                                                                              { $$ = $2; }
+        : KW_ELSE op-colon-noif-stmt                                                                { $$ = $2; }
         ;
 elif-stmt
-        : KW_ELIF OP_LPAREN expr OP_RPAREN stmt                                                     { $$ = builder.make_if_stmt($3, $5, nullptr); }
-        | KW_ELIF OP_LPAREN expr OP_RPAREN stmt elif-stmt                                           { $$ = builder.make_if_stmt($3, $5, $6);      }
-        | KW_ELIF OP_LPAREN expr OP_RPAREN stmt else-stmt                                           { $$ = builder.make_if_stmt($3, $5, $6);      }
+        : KW_ELIF expr op-colon-noif-stmt                                                           { $$ = builder.setloc(builder.make_if_stmt($2, $3, nullptr), @$); }
+        | KW_ELIF expr op-colon-noif-stmt else-stmt                                                 { $$ = builder.setloc(builder.make_if_stmt($2, $3, $4), @$);      }
+        | KW_ELIF expr op-colon-noif-stmt elif-stmt                                                 { $$ = builder.setloc(builder.make_if_stmt($2, $3, $4), @$);      }
         ;
 while-stmt
-        : KW_WHILE OP_LPAREN expr OP_RPAREN stmt                                                    { $$ = builder.make_while_stmt($3, $5); }
+        : KW_WHILE expr op-colon-stmt                                                               { $$ = builder.setloc(builder.make_while_stmt($2, $3), @$); }
         ;
 local-stmt
-        : type TOK_IDENTIFIER OP_SEMICOLON begin-block-stmt
+        : KW_LOCAL type unused-id      OP_SEMICOLON begin-block-stmt
                 {
-                    builder.push_block($4->as<xcc::ast_block_stmt>());
-                    auto vardecl = builder.define_local_variable($1, $2);
+                    builder.push_block($5->as<xcc::ast_block_stmt>());
+                    auto vardecl = builder.setloc(builder.define_local_variable($2, $3), @1, @4);
                     builder.emit(
-                            builder.make_assign_stmt(
-                                xcc::xi_operator::assign,
-                                builder.make_declref_expr(vardecl),
-                                builder.make_zero($1)));
+                            builder.setloc(
+                                builder.make_assign_stmt(
+                                    xcc::xi_operator::assign,
+                                    builder.setloc(builder.make_declref_expr(vardecl), @3),
+                                    builder.make_zero($2)),
+                                @1, @3));
                 }
             stmt-list-opt
-                { $$ = $4; builder.pop(); }
-        | type TOK_IDENTIFIER OP_ASSIGN expr OP_SEMICOLON begin-block-stmt
+                { $$ = $5; builder.pop(); }
+        | KW_LOCAL type unused-id      OP_ASSIGN expr OP_SEMICOLON begin-block-stmt
                 {
-                    builder.push_block($6->as<xcc::ast_block_stmt>());
-                    auto vardecl = builder.define_local_variable($1, $2);
+                    builder.push_block($7->as<xcc::ast_block_stmt>());
+                    auto vardecl = builder.setloc(builder.define_local_variable($2, $3), @1, @6);
                     builder.emit(
-                            builder.make_assign_stmt(
-                                xcc::xi_operator::assign,
-                                builder.make_declref_expr(vardecl),
-                                $4));
+                            builder.setloc(
+                                builder.make_assign_stmt(
+                                    xcc::xi_operator::assign,
+                                    builder.setloc(builder.make_declref_expr(vardecl), @3),
+                                    $5),
+                                @1, @3));
                 }
             stmt-list-opt
-                { $$ = $6; builder.pop(); }
+                { $$ = builder.setloc($7, @$); builder.pop(); }
         ;
 for-stmt
         : KW_FOR begin-block-stmt
                 { builder.push_block($2->as<xcc::ast_block_stmt>()); }
-            OP_LPAREN for-init-decl KW_IN expr OP_RPAREN
-            stmt
+            for-init-decl KW_IN expr
+            op-colon-stmt
                 {
-                    builder.emit(builder.make_for_stmt($5, $7, $9));
+                    builder.emit(builder.setloc(builder.make_for_stmt($4, $6, $7), @1, @7));
                     builder.pop();
-                    $$ = $2;
+                    $$ = builder.setloc($2, @$);
                 }
         ;
 for-init-decl
-        : type TOK_IDENTIFIER { $$ = builder.define_local_variable($1, $2); }
+        : type unused-id      { $$ = builder.define_local_variable($1, $2); }
         ;
 
 
@@ -435,10 +558,14 @@ postfix-type
         ;
 prefix-type
         : term-type                                                                                 { $$ = $1; }
+        | KW_CONST prefix-type                                                                      { $$ = builder.get_const_type($2); }
         ;
 term-type
-        : TOK_TYPE                                                                                  { $$ = $1; }
+        : name-type                                                                                 { $$ = $1; }
         | OP_LPAREN type OP_RPAREN                                                                  { $$ = $2; }
+        ;
+name-type
+        : TOK_TYPE                                                                                  { $$ = $1; }
         ;
 
 
@@ -453,57 +580,50 @@ dim-expr-list
 
 
 
-push-expr-state
-        : %empty                                                { xi_push_expr_state(); }
-        ;
-pop-expr-state
-        : %empty                                                { xi_pop_expr_state(); }
-        ;
-expr                : push-expr-state
-                      land-expr
-                      pop-expr-state                            { $$ = $2; }
+
+expr                : land-expr                                 { $$ = $1; }
                     ;
-land-expr           : land-expr     land-op lor-expr            { $$ = builder.make_op($2, $1, $3); }
+land-expr           : land-expr     land-op lor-expr            { $$ = builder.setloc(builder.make_op($2, $1, $3), @$); }
                     | lor-expr                                  { $$ = $1; }
                     ;
-lor-expr            : lor-expr      lor-op  loose-prefix-expr   { $$ = builder.make_op($2, $1, $3); }
+lor-expr            : lor-expr      lor-op  loose-prefix-expr   { $$ = builder.setloc(builder.make_op($2, $1, $3), @$); }
                     | loose-prefix-expr                         { $$ = $1; }
                     ;
-loose-prefix-expr   : loose-prefix-op loose-prefix-expr         { $$ = builder.make_op($1, $2); }
+loose-prefix-expr   : loose-prefix-op loose-prefix-expr         { $$ = builder.setloc(builder.make_op($1, $2), @$); }
                     | cmp-expr                                  { $$ = $1; }
                     ;
-cmp-expr            : band-expr     cmp-op  band-expr           { $$ = builder.make_op($2, $1, $3); }
+cmp-expr            : band-expr     cmp-op  band-expr           { $$ = builder.setloc(builder.make_op($2, $1, $3), @$); }
                     | band-expr                                 { $$ = $1; }
                     ;
-band-expr           : band-expr     band-op bor-expr            { $$ = builder.make_op($2, $1, $3); }
+band-expr           : band-expr     band-op bor-expr            { $$ = builder.setloc(builder.make_op($2, $1, $3), @$); }
                     | bor-expr                                  { $$ = $1; }
                     ;
-bor-expr            : bor-expr      bor-op  add-expr            { $$ = builder.make_op($2, $1, $3); }
+bor-expr            : bor-expr      bor-op  add-expr            { $$ = builder.setloc(builder.make_op($2, $1, $3), @$); }
                     | add-expr                                  { $$ = $1; }
                     ;
-add-expr            : add-expr      add-op  shift-expr          { $$ = builder.make_op($2, $1, $3); }
+add-expr            : add-expr      add-op  shift-expr          { $$ = builder.setloc(builder.make_op($2, $1, $3), @$); }
                     | shift-expr                                { $$ = $1; }
                     ;
-shift-expr          : shift-expr    shift-op mul-expr           { $$ = builder.make_op($2, $1, $3); }
+shift-expr          : shift-expr    shift-op mul-expr           { $$ = builder.setloc(builder.make_op($2, $1, $3), @$); }
                     | mul-expr                                  { $$ = $1; }
                     ;
-mul-expr            : mul-expr      mul-op  tight-prefix-expr   { $$ = builder.make_op($2, $1, $3); }
+mul-expr            : mul-expr      mul-op  tight-prefix-expr   { $$ = builder.setloc(builder.make_op($2, $1, $3), @$); }
                     | tight-prefix-expr                         { $$ = $1; }
                     ;
-tight-prefix-expr   : tight-prefix-op tight-prefix-expr         { $$ = builder.make_op($1, $2); }
+tight-prefix-expr   : tight-prefix-op tight-prefix-expr         { $$ = builder.setloc(builder.make_op($1, $2), @$); }
+//                    | KW_NEW          ctor-expr                 { $$ = builder.setloc(builder.make_new_exr($1
                     | postfix-expr                              { $$ = $1; }
                     ;
-postfix-expr        : postfix-expr OP_LPAREN expr-list-opt OP_RPAREN
-                                                                { $$ = builder.make_call_expr($1, $3); }
-                    | postfix-expr OP_LBRACKET expr-list-opt OP_RBRACKET
-                                                                { $$ = builder.make_index_expr($1, $3); }
-                    | term-expr                                 { $$ = $1; }
+postfix-expr        : postfix-expr OP_LPAREN expr-list-opt OP_RPAREN            { $$ = builder.setloc(builder.make_call_expr($1, $3), @$);      }
+//                    | type-name    OP_LPAREN expr-list-opt OP_RPAREN            { $$ = builder.setloc(builder.make_ctor_expr($1, $3), @$);      }
+                    | postfix-expr OP_LBRACKET expr-list-opt OP_RBRACKET        { $$ = builder.setloc(builder.make_index_expr($1, $3), @$);     }
+                    | postfix-expr OP_DOT unused-id                             { $$ = builder.setloc(builder.make_memberref_expr($1, $3), @$); }
+                    | term-expr                                                 { $$ = $1; }
                     ;
 term-expr           : LITERAL_INTEGER                           { $$ = $1; }
                     | LITERAL_FLOAT                             { $$ = $1; }
-                    | TOK_IDENTIFIER                            { $$ = builder.make_declref_expr(builder.find_declaration($1)); }
+                    | TOK_EXPR                                  { $$ = $1; }
                     ;
-
 
 expr-list-opt
                     : expr-list                                 { $$ = $1; }
@@ -513,6 +633,9 @@ expr-list
                     : expr-list OP_COMA expr                    { $1->append($3); $$ = $1; }
                     | expr                                      { $$ = new xcc::list<xcc::ast_expr>($1); }
                     ;
+
+type-or-expr
+                    : type
 
 
 

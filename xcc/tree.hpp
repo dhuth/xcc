@@ -234,7 +234,7 @@ public:
 
     inline __tree_list_value()                                          noexcept : base_list_t()                  { }
     inline __tree_list_value(TElement f)                                noexcept : base_list_t()                  { this->_list.push_back(f); }
-    inline __tree_list_value(TElement f, const list_ptr_t r)            noexcept : base_list_t(), _list(f->_list) { this->_list.insert(this->list.begin(), f); }
+    inline __tree_list_value(TElement f, const list_ptr_t r)            noexcept : base_list_t(), _list(r->_list) { this->_list.insert(this->_list.begin(), f); }
     inline __tree_list_value(const list_ptr_t f, TElement l)            noexcept : base_list_t(), _list(f->_list) { this->_list.push_back(l); }
     inline __tree_list_value(std::vector<TElement>& vec)                noexcept : base_list_t() {
         for(auto el: vec) {
@@ -748,6 +748,21 @@ public:
         this->_functions[__get_tree_type_id<TTreeType>()] = wfunc;
     }
 
+    template<typename TTreeType,
+             typename TClassType,
+             typename std::enable_if<std::is_base_of<__dispatch_tree_walker<TParamTypes...>, TClassType>::value, int>::type = 0,
+             __is_tree_type<TTreeType> = 0>
+    using walk_method_t = void(TClassType::*)(TTreeType*, TParamTypes...);
+
+    template<typename TTreeType,
+             typename TClassType>
+    inline void add(walk_method_t<TTreeType, TClassType> mtd) {
+        auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
+            (dynamic_cast<TClassType*>(this)->*mtd)(node->as<TTreeType>(), args...);
+        };
+        this->_functions[__get_tree_type_id<TTreeType>()] = wfunc;
+    }
+
 protected:
 
     virtual __tree_base* visit_impl(__tree_base*, TParamTypes...) = 0;
@@ -767,22 +782,26 @@ protected:
 };
 
 template<typename TBaseType, typename... TParameterTypes>
-struct dispatch_tree_preorder_walker : public __dispatch_tree_walker<TParameterTypes...> {
+struct dispatch_tree_postorder_walker : public __dispatch_tree_walker<TParameterTypes...> {
 public:
 
     typedef TBaseType                                                   base_tree_type;
 
-    virtual ~dispatch_tree_preorder_walker() = default;
+    virtual ~dispatch_tree_postorder_walker() = default;
 
     inline TBaseType* visit(TBaseType* t, TParameterTypes... args) {
         return dynamic_cast<TBaseType*>(this->visit_impl(t, args...));
     }
 
-    virtual void begin(tree_type_id type_id, base_tree_type*, TParameterTypes...) { }
-    virtual void end(tree_type_id type_id,   base_tree_type*, TParameterTypes...) { }
+    virtual bool begin(tree_type_id type_id, base_tree_type*, TParameterTypes...) { return true; }
+    virtual bool end(tree_type_id type_id,   base_tree_type*, TParameterTypes...) { return true; }
 
-    inline void set(TBaseType* t, TBaseType* v) {
+    inline void set(TBaseType* t, TBaseType* v) noexcept {
         this->_visited[t] = box((__tree_base*) v);
+    }
+
+    inline void reset() noexcept {
+        this->_visited.clear();
     }
 
 protected:
@@ -790,20 +809,22 @@ protected:
     __tree_base* visit_impl(__tree_base* t, TParameterTypes... args) {
         if(t != nullptr) {
             if(this->_visited.find(t) == this->_visited.end()) {
-                this->begin(t->get_tree_type(), (TBaseType*) t, args...);
-                this->walk_children(t, args...);
-                this->end(t->get_tree_type(), (TBaseType*) t, args...);
-
-                auto tpid = t->get_tree_type();
-                if(this->_functions.find(tpid) != this->_functions.end()) {
-                    __tree_base* retv = t;
-                    this->_functions[tpid](&retv, t, args...);
-                    this->_visited[t] = retv;
-                    return retv;
+                if(this->begin(t->get_tree_type(), (TBaseType*) t, args...)) {
+                    this->walk_children(t, args...);
                 }
-                else {
-                    this->_visited[t] = box(t);
-                    return t;
+                if(this->end(t->get_tree_type(), (TBaseType*) t, args...)) {
+
+                    auto tpid = t->get_tree_type();
+                    if(this->_functions.find(tpid) != this->_functions.end()) {
+                        __tree_base* retv = t;
+                        this->_functions[tpid](&retv, t, args...);
+                        this->_visited[t] = retv;
+                        return retv;
+                    }
+                    else {
+                        this->_visited[t] = box(t);
+                        return t;
+                    }
                 }
             }
             else {
@@ -816,6 +837,51 @@ protected:
     std::map<__tree_base*,ptr<__tree_base>>                             _visited;
 };
 
+template<typename TBaseType, typename... TParameterTypes>
+struct dispatch_tree_walker : public __dispatch_tree_walker<TParameterTypes...> {
+public:
+
+    typedef TBaseType                                                   base_tree_type;
+
+    virtual ~dispatch_tree_walker() = default;
+
+    inline TBaseType* visit(TBaseType* t, TParameterTypes... args) {
+        return dynamic_cast<TBaseType*>(this->visit_impl(t, args...));
+    }
+
+    inline void set(TBaseType* t, TBaseType* v) {
+        this->_visited[t] = box((__tree_base*) v);
+    }
+
+    inline void reset() noexcept {
+        this->_visited.clear();
+    }
+
+protected:
+
+    __tree_base* visit_impl(__tree_base* t, TParameterTypes... args) {
+        if(t != nullptr) {
+            if(this->_visited.find(t) == this->_visited.end()) {
+                auto tpid = t->get_tree_type();
+                if(this->_functions.find(tpid) == this->_functions.end()) {
+                    this->walk_children(t, args...);
+                    this->_visited[t] = t;
+                }
+                else {
+                    __tree_base* retv = t;
+                    this->_functions[tpid](&retv, t, args...);
+                    this->_visited[t] = retv;
+                }
+            }
+            else {
+                return this->_visited[t];
+            }
+        }
+        return nullptr;
+    }
+
+    std::map<__tree_base*,ptr<__tree_base>>                             _visited;
+};
 
 template<tree_type_id tp, typename base = __tree_base>
 using extend_tree = __extend_tree<tp, base>;
