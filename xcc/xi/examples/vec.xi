@@ -9,11 +9,17 @@ struct fmat2 { f32[2,2]     _el; }
 struct fmat3 { f32[3,3]     _el; }
 struct fmat4 { f32[4,4]     _el; }
 
-func f32 dot(fvec3 a, fvec3 b) {
+func void __init__(fvec3& v, f32 x, f32 y, f32 z) {
+    v._el[0] = x;
+    v._el[1] = y;
+    v._el[2] = z;
+}
+
+func f32 dot(const fvec3& a, const fvec3& b) {
     f32 sum = 0;
     u32 i = 0;
     while i < 3 {
-        sum += a[i] * b[i];
+        sum += a._el[i] * b._el[i];
         i += 1;
     }
     return sum;

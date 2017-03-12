@@ -31,6 +31,7 @@ public:
 
         this->add(&xi_bottom_up_typecheck_pass::check_named_memberref_expr);
         this->add(&xi_bottom_up_typecheck_pass::check_op_expr);
+        this->add(&xi_bottom_up_typecheck_pass::check_index_expr);
     }
 
     virtual void postvisit(tree_type_id, ast_tree*) override final;

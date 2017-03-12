@@ -450,6 +450,7 @@ type
         ;
 postfix-type
         : postfix-type OP_LBRACKET dim-expr-list OP_RBRACKET                                        { $$ = builder.get_array_type($1, $3); }
+        | prefix-type  OP_BAND                                                                      { $$ = builder.get_ref_type($1); }
         | prefix-type                                                                               { $$ = $1; }
         ;
 prefix-type

@@ -91,43 +91,57 @@ void xi_bottom_up_typecheck_pass::postvisit(tree_type_id id, ast_tree* t) {
     }
 }
 
+static ast_expr* find_named_member(xi_builder& builder, xi_type_decl* decl, ast_expr* expr, const char* name) {
+    //TODO: consider visibility
+    //TODO: consider method overloading
+    ptr<list<xi_member_decl>> member_list = find_instance_members(decl, name);
+    //...
+    if(member_list->size() == 0) {
+        //TODO: a common error
+        throw std::runtime_error("not implemented yet");
+    }
+    else if(member_list->size() == 1) {
+        xi_member_decl* m = (*member_list)[0];
+        switch(m->get_tree_type()) {
+        case tree_type_id::xi_field_decl:
+            auto f = m->as<xi_field_decl>();
+            return builder.make_fieldref_expr(expr, f);
+            break;
+        }
+        throw std::runtime_error("Unhandled " + std::string(m->get_tree_type_name()) + " in " + std::string(__FILE__) + ":" + std::to_string(__LINE__));
+    }
+    else {
+        //TODO: return a member group type
+        throw std::runtime_error("not implemented yet");
+    }
 
-ast_expr* xi_bottom_up_typecheck_pass::check_named_memberref_expr(xi_named_memberref_expr* expr) {
-    ast_type* otype = expr->objexpr->type;
+}
 
+static ast_expr* find_named_member(xi_builder& builder, ast_type* otype, ast_expr* expr, const char* name) {
     switch(otype->get_tree_type()) {
     case tree_type_id::xi_object_type:
         {
             xi_type_decl* decl = otype->as<xi_object_type>()->declaration;
-            //TODO: consider visibility
-            //TODO: consider method overloading
-            ptr<list<xi_member_decl>> member_list = find_instance_members(decl, expr->member_name);
-            //...
-            if(member_list->size() == 0) {
-                //TODO: a common error
-                assert(false);
-            }
-            else if(member_list->size() == 1) {
-                xi_member_decl* m = (*member_list)[0];
-                switch(m->get_tree_type()) {
-                case tree_type_id::xi_field_decl:
-                    auto f = m->as<xi_field_decl>();
-                    return builder.make_fieldref_expr(expr->objexpr, f);
-                    break;
-                }
-                throw std::runtime_error("Unhandled " + std::string(m->get_tree_type_name()) + " in " + std::string(__FILE__) + ":" + std::to_string(__LINE__));
-            }
-            else {
-                //TODO: return a member group type
-                assert(false);
-            }
+            return find_named_member(builder, decl, expr, name);
         }
-        break;
+    case tree_type_id::xi_const_type:
+        {
+            ast_type* eltype = otype->as<xi_const_type>()->type;
+            ast_expr* rexpr  = find_named_member(builder, eltype, expr, name);
+            rexpr->type = builder.get_const_type(rexpr->type);
+            return rexpr;
+        }
     case tree_type_id::xi_ref_type:
         break;
     }
-
     throw std::runtime_error("Uhandled object type " + std::string(otype->get_tree_type_name()) + " in xi_bottom_up_typecheck_pass::check_xi_named_memberref_expr\n");
+}
+
+ast_expr* xi_bottom_up_typecheck_pass::check_named_memberref_expr(xi_named_memberref_expr* expr) {
+    ast_expr* oexpr = expr->objexpr;
+    ast_type* otype = expr->objexpr->type;
+
+    return find_named_member(this->builder, otype, oexpr, expr->member_name->c_str());
 }
 
 static ast_expr* get_binary_op(xi_builder& builder, xi_operator op, ast_expr* lhs, ast_expr* rhs) {
@@ -154,9 +168,9 @@ static ast_expr* get_binary_op(xi_builder& builder, xi_operator op, ast_expr* lh
 
 static ast_expr* get_unary_op(xi_builder& builder, xi_operator op, ast_expr* expr) {
     switch(op) {
-    case xi_operator::sub:      return builder.make_op_expr(ast_op::neg, expr);
+    case xi_operator::sub:      return builder.make_op_expr(ast_op::neg,         expr);
     case xi_operator::lnot:     return builder.make_op_expr(ast_op::logical_not, expr);
-    case xi_operator::bnot:     return builder.make_op_expr(ast_op::binary_not, expr);
+    case xi_operator::bnot:     return builder.make_op_expr(ast_op::binary_not,  expr);
     }
     throw std::runtime_error("what?\n");
 }
@@ -166,28 +180,57 @@ ast_expr* xi_bottom_up_typecheck_pass::check_op_expr(xi_op_expr* expr) {
     //...
 
     if(expr->operands->size() == 1) {
-        return get_unary_op(this->builder, expr->op, (ast_expr*) expr->operands[0]);
+        auto opr = this->builder.lower((ast_expr*) expr->operands[0]);
+        return get_unary_op(this->builder, expr->op, opr);
     }
     else if(expr->operands->size() == 2) {
-        return get_binary_op(this->builder, expr->op, (ast_expr*) expr->operands[0], (ast_expr*) expr->operands[1]);
+        auto lhs = this->builder.lower((ast_expr*) expr->operands[0]);
+        auto rhs = this->builder.lower((ast_expr*) expr->operands[1]);
+        return get_binary_op(this->builder, expr->op, lhs, rhs);
     }
     throw std::runtime_error("what?\n");
 }
 
+static xi_array_type* get_array_type(ast_type* tp, bool& is_const) {
+    if(tp->is<xi_array_type>()) {
+        return tp->as<xi_array_type>();
+    }
+    else if(tp->is<xi_const_type>()) {
+        is_const = true;
+        return get_array_type(tp->as<xi_const_type>()->type, is_const);
+    }
+    else {
+        //TODO: not an indexable type
+        throw std::runtime_error("Not implemented yet\n");
+    }
+}
+
 ast_expr* xi_bottom_up_typecheck_pass::check_index_expr(xi_index_expr* expr) {
+    auto aexpr = expr->array_expr->as<ast_expr>();
     //TODO: check for overloads
 
-    if(!expr->type->is<xi_array_type>()) {
-        //TODO: user error
-        assert(false);
-    }
+    bool is_const = false;
+    auto atype = get_array_type(aexpr->type, is_const);
 
-    auto atype = expr->type->as<xi_array_type>();
+
     if(expr->index_expr_list->size() != atype->dimensions->size()) {
         //TODO: user error
         assert(false);
     }
 
+    if(expr->index_expr_list->size() == atype->dimensions->size()) {
+        if(is_const) {
+            expr->type = this->builder.get_const_type(atype->element_type);
+        }
+        else {
+            expr->type = atype->element_type;
+        }
+    }
+    else {
+        throw std::runtime_error("Not implemented yet\n");
+    }
+
+    return expr;
 }
 
 }
