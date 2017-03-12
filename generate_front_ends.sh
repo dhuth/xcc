@@ -17,6 +17,7 @@ done
 
 m4_cmd="m4 -P -I$top_srcdir/m4"
 $m4_cmd -Dswitch_frontends_header   $top_srcdir/m4/lang.def.m4 $lang_files       > $top_srcdir/xcc/all_frontends.def.hpp
+$m4_cmd -Dswitch_tree_header        $top_srcdir/m4/lang.def.m4 $lang_files       > $top_srcdir/xcc/all_tree_headers.def.hpp
 $m4_cmd -Dswitch_frontends_compiler $top_srcdir/m4/lang.def.m4 $lang_files       > $top_srcdir/xcc/all_frontend_compilers.def.hpp
 $m4_cmd -Dswitch_tree_types_header  $top_srcdir/m4/tree.def.m4 $tree_def_files   > $top_srcdir/xcc/all_tree_types.def.hpp
 

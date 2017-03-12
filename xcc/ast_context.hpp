@@ -23,31 +23,53 @@ public:
     virtual void      insert(const char*, ast_decl*) = 0;
     virtual ast_type* get_return_type() = 0;
 
-    inline ptr<ast_decl> find(const char* name, bool search_parent = true) {
+    ptr<ast_decl>       find(const char* name, bool search_parent = true);
+    ptr<list<ast_decl>> findall(const char* name, bool search_parent = true);
+
+    template<typename TTreeType,
+             typename std::enable_if<std::is_base_of<ast_decl, TTreeType>::value, int>::type = 0>
+    ptr<TTreeType>          find_of(const char* name, bool search_parent = true) {
         auto ff = this->find_first_impl(name);
-        if(unbox(ff) != nullptr) {
-            return ff;
+        if(ff == nullptr || !ff->is<TTreeType>()) {
+            if(search_parent && this->parent != nullptr) {
+                return this->parent->find_of<TTreeType>(name, search_parent);
+            }
+            else {
+                return box<TTreeType>(nullptr);
+            }
         }
-        else if(search_parent && (this->parent != nullptr)) {
-            return this->parent->find(name, true);
+        else {
+            return box(ff->as<TTreeType>());
         }
-        return box<ast_decl>(nullptr);
     }
 
-    inline ptr<list<ast_decl>> findall(const char* name, bool search_parent = true) {
-        ptr<list<ast_decl>> olist = box(new list<ast_decl>());
-        this->findall(olist, name, search_parent);
+    template<typename TTreeType,
+             typename std::enable_if<std::is_base_of<ast_decl, TTreeType>::value, int>::type = 0>
+    ptr<list<TTreeType>>    findall_of(const char* name, bool search_parent = true) {
+        ptr<list<TTreeType>> olist = box(new list<TTreeType>());
+        this->findall_of<TTreeType>(olist, name, search_parent);
         return olist;
     }
 
 protected:
 
-    inline void findall(ptr<list<ast_decl>> olist, const char* name, bool search_parent) {
-        this->find_all_impl(olist, name);
-        if(search_parent && (this->parent != nullptr)) {
-            this->parent->findall(olist, name, search_parent);
+    void findall(ptr<list<ast_decl>> olist, const char* name, bool search_parent);
+
+    template<typename TTreeType,
+             typename std::enable_if<std::is_base_of<ast_decl, TTreeType>::value, int>::type = 0>
+    void findall_of(ptr<list<TTreeType>> olist, const char* name, bool search_parent) {
+        ptr<list<ast_decl>> dlist = box(new list<ast_decl>());
+        this->find_all_impl(dlist, name);
+        for(auto decl: unbox(dlist)) {
+            if(decl->is<TTreeType>()) {
+                olist->append(decl->as<TTreeType>());
+            }
+        }
+        if(search_parent && this->parent != nullptr) {
+            this->parent->findall_of<TTreeType>(olist, name, search_parent);
         }
     }
+
 
     virtual ptr<ast_decl> find_first_impl(const char* name) = 0;
     virtual void find_all_impl(ptr<list<ast_decl>>, const char*) = 0;

@@ -1,6 +1,8 @@
 %defines                                            "xi-parser.hpp"
 %define     api.prefix                              {xi}
 %define     api.pure
+%define     parse.trace
+%define     parse.error                             verbose
 
 %locations
 
@@ -34,9 +36,11 @@
         TOK_TYPE                            "a single word type"
         TOK_DECL                            "a named declaration"
         TOK_EXPR                            "a named expression"
+        TOK_NAMESPACE                       "a namespace"
         
         LITERAL_INTEGER
         LITERAL_FLOAT
+        LITERAL_STRING
         
         OP_LBRACE                           "{"
         OP_RBRACE                           "}"
@@ -92,31 +96,22 @@
         OP_INDEX                            "[]"
         OP_INVOKE                           "()"
         
-        KW_ABSTRACT                         "abstract"
-        KW_BYREF                            "byref"
-        KW_BYVAL                            "byval"
-        KW_BREAK                            "break"
+        
         KW_CLASS                            "class"
         KW_CONST                            "const"
         KW_EXPORT_CFUNC                     "export cfunc"
         KW_EXTERN                           "extern"
         KW_FUNC                             "func"
-        KW_GENERIC                          "generic"
         KW_IMPORT_CFUNC                     "import cfunc"
-        KW_INLINE                           "inline"
-        KW_INTERFACE                        "interface"
         KW_INTERNAL                         "internal"
         KW_NAMESPACE                        "namespace"
-        KW_OUT                              "out"
-        KW_PRIVATE                          "private"
-        KW_PROTECTED                        "protected"
-        KW_PUBLIC                           "public"
+        KW_STATIC                           "static"
         KW_STRUCT                           "struct"
         KW_TYPEDEF                          "typedef"
-        KW_VIRTUAL                          "virtual"
 
         // Statement context keywords
         
+        KW_BREAK                            "break"
         KW_CONTINUE                         "continue"
         KW_ELSE                             "else"
         KW_ELIF                             "elif"
@@ -143,6 +138,7 @@
         xcc::ast_decl*                      decl;
         xcc::ast_type*                      type;
         xcc::ast_stmt*                      stmt;
+        xcc::ast_namespace_decl*            namespace_decl;
         xcc::list<xcc::ast_expr>*           expr_list;
         xcc::list<xcc::ast_decl>*           decl_list;
         xcc::list<xcc::ast_type>*           type_list;
@@ -161,17 +157,21 @@
 %type   <text>                              TOK_IDENTIFIER
 %type   <text>                              unused-id
 %type   <decl>                              TOK_DECL
+%type   <namespace_decl>                    TOK_NAMESPACE
 %type   <type>                              TOK_TYPE
 %type   <expr>                              TOK_EXPR
 
 %type   <expr>                              LITERAL_INTEGER
 %type   <expr>                              LITERAL_FLOAT
+%type   <expr>                              LITERAL_STRING
 
 %type   <type>                              type
 %type   <type>                              postfix-type
 %type   <type>                              prefix-type
 %type   <type>                              term-type
 %type   <type>                              name-type
+%type   <type>                              type-explicit
+%type   <expr>                              dim-expr
 
 
 %type   <expr_list>                         dim-expr-list
@@ -238,6 +238,8 @@
 %type   <op>                                mul-op
 %type   <op>                                tight-prefix-op
 
+%type   <namespace_decl>                    namespace-name
+
 %type   <function>                          global-function-proto-decl
 %type   <function>                          global-function-decl-rest
 %type   <struct_decl>                       global-struct-proto-decl
@@ -283,8 +285,23 @@ extern void xi_pop_stmt_state();
 extern void xi_push_decl_state();
 extern void xi_pop_decl_state();
 
+extern void xi_push_struct_decl_state();
+extern void xi_pop_struct_decl_state();
+
+extern void xi_push_type_state();
+extern void xi_pop_type_state();
+
+extern void xi_push_expr_state();
+extern void xi_pop_expr_state();
+
 extern void xi_push_unused_id_state();
 extern void xi_pop_unused_id_state();
+
+extern void xi_ready_namespace_member(xcc::ast_namespace_decl*);
+extern void xi_clear_namespace_member();
+
+extern void xi_ready_static_type_member(xcc::ast_type*);
+extern void xi_clear_static_type_member();
 
 }
 %param                              {xi_builder_t&          builder}
@@ -297,7 +314,6 @@ unused-id
             TOK_IDENTIFIER
           { xi_pop_unused_id_state(); $$ = $2; }
         ;
-
 
 translation-unit
         : global-decl-list-opt TOK_EOF
@@ -322,10 +338,16 @@ global-decl
         ;
 
 global-namespace-decl
-        : KW_NAMESPACE unused-id
-            OP_LBRACE                       { builder.push_namespace(builder.define_namespace($2)); }
+        : KW_NAMESPACE global-namespace-decl-cont
+        ;
+        
+global-namespace-decl-cont
+        : unused-id                         { builder.push_namespace(builder.define_namespace($1)); }
+            OP_LBRACE
             global-decl-list
             OP_RBRACE                       { builder.pop(); }
+        | unused-id OP_DOUBLE_COLON         { builder.push_namespace(builder.define_namespace($1)); }
+            global-namespace-decl-cont      { builder.pop(); }
         ;
 global-typedef-decl
         : KW_TYPEDEF type unused-id OP_SEMICOLON                                                    { builder.setloc(builder.define_named_type($3, $2), @$); }
@@ -346,22 +368,22 @@ global-function-decl
         ;
 global-function-decl-rest
         : global-function-proto-decl
-            OP_LBRACE push-stmt-state { builder.push_function($1); }
+            OP_LBRACE push-stmt-state { builder.push_function_and_body($1); }
               stmt-list-opt
-            OP_RBRACE pop-stmt-state  { builder.pop_function(); builder.setloc($1, @$); $$ = $1; }
+            OP_RBRACE pop-stmt-state  { builder.pop_function_and_body(); builder.setloc($1, @$); $$ = $1; }
         ;
 global-struct-decl
         : global-struct-proto-decl OP_SEMICOLON                                                     { builder.setloc($1, @$); }
         | global-struct-proto-decl
-                OP_LBRACE push-decl-state { builder.push_member($1); }
+                OP_LBRACE push-struct-decl-state { builder.push_member($1); }
                     struct-member-list-opt
-                OP_RBRACE pop-decl-state  { builder.pop(); builder.setloc($1, @$); }
+                OP_RBRACE pop-struct-decl-state  { builder.pop(); builder.setloc($1, @$); }
         ;
 global-struct-proto-decl
         : KW_STRUCT unused-id      base-type-list-opt                                               { $$ = builder.setloc(builder.define_global_struct($2, $3), @$); }
         ;
 global-function-proto-decl
-        : type unused-id      OP_LPAREN function-parameter-list-opt OP_RPAREN                       { $$ = builder.setloc(builder.define_global_function($1, $2, $4), @$); }
+        : type-explicit unused-id      OP_LPAREN function-parameter-list-opt OP_RPAREN              { $$ = builder.setloc(builder.define_global_function($1, $2, $4), @$); }
         ;
 
 base-type-list-opt
@@ -369,15 +391,15 @@ base-type-list-opt
         | %empty                                                                                    { $$ = new xcc::list<xcc::ast_type>(); }
         ;
 base-type-list
-        : base-type-list OP_COMA name-type                                                          { $1->append($3); $$ = $1; }
-        | name-type                                                                                 { $$ = new xcc::list<xcc::ast_type>($1); }
+        : base-type-list OP_COMA name-type                                                          { xi_clear_static_type_member(); $1->append($3); $$ = $1; }
+        | name-type                                                                                 { xi_clear_static_type_member(); $$ = new xcc::list<xcc::ast_type>($1); }
         ;
 
-push-decl-state
-        : %empty    { xi_push_decl_state(); }
+push-struct-decl-state
+        : %empty    { xi_push_struct_decl_state(); }
         ;
-pop-decl-state
-        : %empty    { xi_pop_decl_state(); }
+pop-struct-decl-state
+        : %empty    { xi_pop_struct_decl_state(); }
         ;
 
 
@@ -411,15 +433,63 @@ struct-member-decl
         : struct-field-decl
         ;
 struct-field-decl
-        : type unused-id      OP_ASSIGN expr OP_SEMICOLON                                           { $$ = builder.setloc(builder.define_field($1, $2, $4), @$); }
-        | type unused-id      OP_SEMICOLON                                                          { $$ = builder.setloc(builder.define_field($1, $2), @$);     }
+        : KW_STATIC type unused-id      OP_ASSIGN expr OP_SEMICOLON                                 { $$ = builder.setloc( builder.define_field($2, $3, $5, true),  @$); }
+        | KW_STATIC type unused-id      OP_SEMICOLON                                                { $$ = builder.setloc( builder.define_field($2, $3, true),      @$); }
+        |           type unused-id      OP_ASSIGN expr OP_SEMICOLON                                 { $$ = builder.setloc( builder.define_field($1, $2, $4, false), @$); }
+        |           type unused-id      OP_SEMICOLON                                                { $$ = builder.setloc( builder.define_field($1, $2, false),     @$); }
+        ;
+
+namespace-name
+        : TOK_NAMESPACE                                                                             { xi_ready_namespace_member($1); $$ = $1; }
+        | namespace-name OP_DOUBLE_COLON TOK_NAMESPACE                                              { xi_ready_namespace_member($3); $$ = $3; }
+        ;
+
+
+type
+        : postfix-type                                                                              { $$ = $1; }
+        ;
+postfix-type
+        : postfix-type OP_LBRACKET dim-expr-list OP_RBRACKET                                        { $$ = builder.get_array_type($1, $3); }
+        | prefix-type                                                                               { $$ = $1; }
+        ;
+prefix-type
+        : term-type                                                                                 { $$ = $1; }
+        | KW_CONST prefix-type                                                                      { $$ = builder.get_const_type($2); }
+        ;
+term-type
+        : name-type                                                                                 { xi_clear_static_type_member();  $$ = $1; }
+        | OP_LPAREN type OP_RPAREN                                                                  { $$ = $2; }
+        ;
+name-type
+        : TOK_TYPE                                                                                  { $$ = $1; }
+        | name-type      OP_DOUBLE_COLON TOK_TYPE                                                   { xi_ready_static_type_member($3); $$ = $3; }
+        | namespace-name OP_DOUBLE_COLON TOK_TYPE                                                   { xi_clear_namespace_member();     $$ = $3; }
+        ;
+type-explicit
+        : { xi_push_type_state(); }
+            type
+          { xi_pop_type_state(); $$ = $2; }
+        ;
+
+dim-expr-list
+        : dim-expr-list OP_COMA                                                                     { $1->append(nullptr); $$=$1;            }
+        | dim-expr-list OP_COMA dim-expr                                                            { $1->append($3);      $$=$1;            }
+        | dim-expr                                                                                  { $$ = new xcc::list<xcc::ast_expr>($1); }
+        | %empty                                                                                    { $$ = new xcc::list<xcc::ast_expr>();   }
+        ;
+dim-expr
+        : { xi_push_expr_state(); }
+            expr
+          { xi_pop_expr_state(); $$ = $2; }
         ;
 
 
 
+
 stmt-list-opt
-        : stmt        { builder.emit($1); } stmt-list-opt
-        | local-stmt  { builder.emit($1); }
+        : stmt                { builder.emit($1); } stmt-list-opt
+        | local-stmt          { builder.emit($1); }
+        | KW_LOCAL local-stmt { builder.emit($2); }
         | %empty
         ;
 
@@ -503,34 +573,34 @@ while-stmt
         : KW_WHILE expr op-colon-stmt                                                               { $$ = builder.setloc(builder.make_while_stmt($2, $3), @$); }
         ;
 local-stmt
-        : KW_LOCAL type unused-id      OP_SEMICOLON begin-block-stmt
+        : type unused-id      OP_SEMICOLON begin-block-stmt
                 {
-                    builder.push_block($5->as<xcc::ast_block_stmt>());
-                    auto vardecl = builder.setloc(builder.define_local_variable($2, $3), @1, @4);
+                    builder.push_block($4->as<xcc::ast_block_stmt>());
+                    auto vardecl = builder.setloc(builder.define_local_variable($1, $2), @1, @3);
                     builder.emit(
                             builder.setloc(
                                 builder.make_assign_stmt(
                                     xcc::xi_operator::assign,
-                                    builder.setloc(builder.make_declref_expr(vardecl), @3),
-                                    builder.make_zero($2)),
-                                @1, @3));
+                                    builder.setloc(builder.make_declref_expr(vardecl), @2),
+                                    builder.make_default_initializer($1)),
+                                @1, @2));
                 }
             stmt-list-opt
-                { $$ = $5; builder.pop(); }
-        | KW_LOCAL type unused-id      OP_ASSIGN expr OP_SEMICOLON begin-block-stmt
+                { $$ = $4; builder.pop(); }
+        | type unused-id      OP_ASSIGN expr OP_SEMICOLON begin-block-stmt
                 {
-                    builder.push_block($7->as<xcc::ast_block_stmt>());
-                    auto vardecl = builder.setloc(builder.define_local_variable($2, $3), @1, @6);
+                    builder.push_block($6->as<xcc::ast_block_stmt>());
+                    auto vardecl = builder.setloc(builder.define_local_variable($1, $2), @1, @5);
                     builder.emit(
                             builder.setloc(
                                 builder.make_assign_stmt(
                                     xcc::xi_operator::assign,
-                                    builder.setloc(builder.make_declref_expr(vardecl), @3),
-                                    $5),
+                                    builder.setloc(builder.make_declref_expr(vardecl), @2),
+                                    $4),
                                 @1, @3));
                 }
             stmt-list-opt
-                { $$ = builder.setloc($7, @$); builder.pop(); }
+                { $$ = builder.setloc($6, @$); builder.pop(); }
         ;
 for-stmt
         : KW_FOR begin-block-stmt
@@ -545,37 +615,6 @@ for-stmt
         ;
 for-init-decl
         : type unused-id      { $$ = builder.define_local_variable($1, $2); }
-        ;
-
-
-
-type
-        : postfix-type                                                                              { $$ = $1; }
-        ;
-postfix-type
-        : postfix-type OP_LBRACKET dim-expr-list OP_RBRACKET                                        { $$ = builder.get_array_type($1, $3); }
-        | prefix-type                                                                               { $$ = $1; }
-        ;
-prefix-type
-        : term-type                                                                                 { $$ = $1; }
-        | KW_CONST prefix-type                                                                      { $$ = builder.get_const_type($2); }
-        ;
-term-type
-        : name-type                                                                                 { $$ = $1; }
-        | OP_LPAREN type OP_RPAREN                                                                  { $$ = $2; }
-        ;
-name-type
-        : TOK_TYPE                                                                                  { $$ = $1; }
-        ;
-
-
-
-
-dim-expr-list
-        : dim-expr-list OP_COMA                                                                     { $1->append(nullptr); $$=$1;            }
-        | dim-expr-list OP_COMA expr                                                                { $1->append($3);      $$=$1;            }
-        | expr                                                                                      { $$ = new xcc::list<xcc::ast_expr>($1); }
-        | %empty                                                                                    { $$ = new xcc::list<xcc::ast_expr>();   }
         ;
 
 
@@ -615,13 +654,15 @@ tight-prefix-expr   : tight-prefix-op tight-prefix-expr         { $$ = builder.s
                     | postfix-expr                              { $$ = $1; }
                     ;
 postfix-expr        : postfix-expr OP_LPAREN expr-list-opt OP_RPAREN            { $$ = builder.setloc(builder.make_call_expr($1, $3), @$);      }
-//                    | type-name    OP_LPAREN expr-list-opt OP_RPAREN            { $$ = builder.setloc(builder.make_ctor_expr($1, $3), @$);      }
-                    | postfix-expr OP_LBRACKET expr-list-opt OP_RBRACKET        { $$ = builder.setloc(builder.make_index_expr($1, $3), @$);     }
-                    | postfix-expr OP_DOT unused-id                             { $$ = builder.setloc(builder.make_memberref_expr($1, $3), @$); }
+//                    | name-type    post-name-type OP_LPAREN expr-list-opt OP_RPAREN            { $$ = builder.setloc(builder.make_ctor_expr($1, $3), @$);      }
+                    | postfix-expr OP_LBRACKET expr-list OP_RBRACKET            { $$ = builder.setloc(builder.make_index_expr($1, $3), @$);     }
+                    | postfix-expr OP_DOT      unused-id                        { $$ = builder.setloc(builder.make_memberref_expr($1, $3), @$); }
+                    | name-type    OP_DOUBLE_COLON TOK_EXPR                     { xi_clear_static_type_member(); $$ = $3; }
                     | term-expr                                                 { $$ = $1; }
                     ;
 term-expr           : LITERAL_INTEGER                           { $$ = $1; }
                     | LITERAL_FLOAT                             { $$ = $1; }
+                    | LITERAL_STRING                            { $$ = $1; }
                     | TOK_EXPR                                  { $$ = $1; }
                     ;
 
@@ -634,8 +675,11 @@ expr-list
                     | expr                                      { $$ = new xcc::list<xcc::ast_expr>($1); }
                     ;
 
-type-or-expr
-                    : type
+//type-or-expr
+//                    : type
+//                    | expr
+//                    | TOK_IDENTIFIER
+//                    ;
 
 
 
@@ -702,7 +746,8 @@ tight-prefix-op
 %%
 
 void yyerror(XILTYPE* loc, xi_builder_t& builder, const char* msg) {
-    printf("at %d:%d: %s\n", loc->first.line_number, loc->first.column_number, msg);
+    printf("at %d:%d: %s\n", loc->first.line_number+1, loc->first.column_number+1, msg);
+    assert(false);
 }
 
 

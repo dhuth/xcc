@@ -60,6 +60,8 @@ public:
         this->addmethod(&ircode_expr_generator::generate_integer);
         this->addmethod(&ircode_expr_generator::generate_real);
         this->addmethod(&ircode_expr_generator::generate_cast);
+        this->addmethod(&ircode_expr_generator::generate_record);
+        this->addmethod(&ircode_expr_generator::generate_array);
         this->addmethod(&ircode_expr_generator::generate_binary_op);
         this->addmethod(&ircode_expr_generator::generate_unary_op);
         this->addmethod(&ircode_expr_generator::generate_index);
@@ -76,6 +78,8 @@ private:
 
     llvm::Value*                                    generate_integer(ast_integer*);
     llvm::Value*                                    generate_real(ast_real*);
+    llvm::Value*                                    generate_record(ast_record*);
+    llvm::Value*                                    generate_array(ast_array*);
     llvm::Value*                                    generate_cast(ast_cast*);
     llvm::Value*                                    generate_binary_op(ast_binary_op*);
     llvm::Value*                                    generate_unary_op(ast_unary_op*);
@@ -89,6 +93,25 @@ private:
     ircode_context&                                                     context;
 };
 
+struct ircode_address_generator : public dispatch_visitor<llvm::Value*> {
+public:
+
+    inline ircode_address_generator(ircode_context& context)
+            : context(context) {
+        this->addmethod(&ircode_address_generator::generate_declref);
+        this->addmethod(&ircode_address_generator::generate_memberref);
+    }
+
+    inline llvm::Value* operator()(ast_expr* expr) { return this->visit(expr); }
+
+private:
+
+    llvm::Value*                                    generate_declref(ast_declref*);
+    llvm::Value*                                    generate_memberref(ast_memberref*);
+
+    ircode_context&                                                     context;
+};
+
 struct ircode_context final {
 public:
 
@@ -98,7 +121,8 @@ public:
           _local_scope(new local_scope(nullptr)),
           _header_bb(nullptr),
           generate_expr(*this),
-          generate_type(*this) {
+          generate_type(*this),
+          generate_address(*this) {
         this->module = llvm::make_unique<llvm::Module>(module_name, this->llvm_context);
     }
     inline ~ircode_context() {
@@ -112,6 +136,7 @@ public:
     llvm::IRBuilder<>                                                   ir_builder;
     std::unique_ptr<llvm::Module>                                       module;
     ircode_expr_generator                                               generate_expr;
+    ircode_address_generator                                            generate_address;
     ircode_type_generator                                               generate_type;
 
 //private:

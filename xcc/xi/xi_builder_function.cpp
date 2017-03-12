@@ -89,12 +89,16 @@ xi_function_decl* xi_builder::define_global_function(ast_type* rtype, const char
     return func;
 }
 
-void xi_builder::push_function(xi_function_decl* func) {
+void xi_builder::push_function_and_body(xi_function_decl* func) {
     this->context = new xi_function_context(this->context, func);
     this->push_block(func->body);
 }
 
-void xi_builder::pop_function() {
+void xi_builder::push_function(xi_function_decl* func) {
+    this->context = new xi_function_context(this->context, func);
+}
+
+void xi_builder::pop_function_and_body() {
     this->pop();    // pop function body
     this->pop();    // pop function
 }

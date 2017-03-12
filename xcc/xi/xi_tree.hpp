@@ -136,35 +136,58 @@ public:
             : base_type(passing_id, name, nullptr),
               basetypes(this, basetypes),
               mixins(this, nullptr),
-              members(this, new list<xi_member_decl>()) {
+              members(this, new list<xi_member_decl>()),
+              instance_field_count(this, 0),
+              static_field_count(this, 0) {
         //...
     }
 
     property<list<ast_type>>                        basetypes;
     property<list<ast_decl>>                        mixins;
     property<list<xi_member_decl>>                  members;
+    property<uint32_t>                              instance_field_count;
+    property<uint32_t>                              static_field_count;
 
 };
 
 struct xi_struct_decl : public extend_tree<tree_type_id::xi_struct_decl, xi_type_decl> {
 public:
 
+    inline xi_struct_decl(const char* name)
+            : base_type(name, new list<ast_type>()),
+              supertype(this, nullptr),
+              instance_record_type(this, nullptr),
+              static_record_type(this, nullptr){
+        //...
+    }
+
+    inline xi_struct_decl(tree_type_id passing_id, const char* name)
+            : base_type(name, new list<ast_type>()),
+              supertype(this, nullptr),
+              instance_record_type(this, nullptr),
+              static_record_type(this, nullptr) {
+        //...
+    }
+
     inline xi_struct_decl(const char* name, list<ast_type>* basetypes)
             : base_type(name, basetypes),
               supertype(this, nullptr),
-              generated_record(this, nullptr) {
+              instance_record_type(this, nullptr),
+              static_record_type(this, nullptr) {
         //...
     }
 
     inline xi_struct_decl(tree_type_id passing_id, const char* name, list<ast_type>* basetypes)
             : base_type(passing_id, name, basetypes),
               supertype(this, nullptr),
-              generated_record(this, nullptr) {
+              instance_record_type(this, nullptr),
+              static_record_type(this, nullptr) {
         //...
     }
 
     property<xi_type_decl>                          supertype;
-    property<ast_record_decl>                       generated_record;
+    property<ast_record_type>                       instance_record_type;
+    property<ast_record_type>                       static_record_type;
 
 };
 
@@ -204,15 +227,19 @@ public:
 struct xi_field_decl : public extend_tree<tree_type_id::xi_field_decl, xi_member_decl> {
 public:
 
-    inline xi_field_decl(const char* name, ast_type* type, ast_expr* init_value)
+    inline xi_field_decl(const char* name, ast_type* type, ast_expr* init_value, bool is_static)
             : base_type(name),
               type(this, type),
-              init_value(this, init_value) {
+              init_value(this, init_value),
+              is_static(this, is_static),
+              field_index(this, 0) {
         //...
     }
 
     property<ast_type>                              type;
     property<ast_expr>                              init_value;
+    property<bool>                                  is_static;
+    property<uint32_t>                              field_index;
 
 };
 
@@ -264,6 +291,54 @@ public:
     property<ast_function_decl>                     generated_function;
 };
 
+struct xi_method_decl : public extend_tree<tree_type_id::xi_method_decl, xi_member_decl> {
+public:
+
+    inline xi_method_decl(tree_type_id passing_id, const char* name, ast_type* rtype, xi_parameter_decl* self_parameter, list<xi_parameter_decl>* parameters)
+            : base_type(passing_id, name),
+              function(this, new xi_function_decl(name, rtype, parameters)),
+              self_parameter(this, self_parameter),
+              is_static(this, false),
+              is_virtual(this, false) {
+        //...
+    }
+
+    inline xi_method_decl(const char* name, ast_type* rtype, xi_parameter_decl* self_parameter, list<xi_parameter_decl>* parameters)
+            : base_type(name),
+              function(this, new xi_function_decl(name, rtype, parameters)),
+              self_parameter(this, self_parameter),
+              is_static(this, false),
+              is_virtual(this, false) {
+        //...
+    }
+
+    property<xi_function_decl>                      function;
+    property<xi_parameter_decl>                     self_parameter;
+    property<bool>                                  is_static;
+    property<bool>                                  is_virtual;
+
+};
+
+struct xi_constructor_decl : public extend_tree<tree_type_id::xi_constructor_decl, xi_method_decl> {
+public:
+
+    inline xi_constructor_decl(const char* name, ast_type* rtype, xi_parameter_decl* self_parameter, list<xi_parameter_decl>* parameters)
+            : base_type(name, rtype, self_parameter, parameters) {
+        //...
+    }
+
+};
+
+struct xi_destructor_decl : public extend_tree<tree_type_id::xi_destructor_decl, xi_method_decl> {
+public:
+
+    inline xi_destructor_decl(const char* name, ast_type* rtype, xi_parameter_decl* self_parameter, list<xi_parameter_decl>* parameters)
+            : base_type(name, rtype, self_parameter, parameters) {
+        //...
+    }
+
+};
+
 struct xi_op_expr : public extend_tree<tree_type_id::xi_op_expr, ast_expr> {
 public:
 
@@ -292,6 +367,19 @@ public:
     property<list<ast_expr>>                        index_expr_list;
 };
 
+struct xi_zero_initializer_expr : public extend_tree<tree_type_id::xi_zero_initializer_expr, ast_expr> {
+public:
+
+    inline xi_zero_initializer_expr(ast_type* type, xi_type_decl* decl)
+            : base_type(type),
+              declaration(this, decl) {
+        //...
+    }
+
+    property<xi_type_decl>                          declaration;
+
+};
+
 struct xi_name_expr : public extend_tree<tree_type_id::xi_name_expr, ast_expr> {
 public:
 
@@ -318,6 +406,20 @@ public:
     property<ast_expr>                              objexpr;
     property<std::string>                           member_name;
 
+};
+
+struct xi_static_named_memberref_expr : public extend_tree<tree_type_id::xi_static_named_memberref_expr, ast_expr> {
+public:
+
+    inline xi_static_named_memberref_expr(ast_type* objtype, const char* member_name)
+            : base_type(nullptr),
+              objtype(this, objtype),
+              member_name(this, std::string(member_name)) {
+        //...
+    }
+
+    property<ast_type>                              objtype;
+    property<std::string>                           member_name;
 };
 
 struct xi_assign_stmt : public extend_tree<tree_type_id::xi_assign_stmt, ast_stmt> {
@@ -355,6 +457,8 @@ public:
 };
 
 std::string to_string(xcc::xi_operator op);
+
+
 
 }
 

@@ -8,6 +8,10 @@
 #include "xi_builder.hpp"
 #include "xi_lower.hpp"
 
+// passes
+#include "xi_pass_finalize_types.hpp"
+#include "xi_pass_typecheck.hpp"
+
 namespace xcc {
 
 xi_builder::xi_builder(translation_unit& tu)
@@ -17,8 +21,13 @@ xi_builder::xi_builder(translation_unit& tu)
     //TODO: settup builtin type rules
 }
 
-xi_const_type* xi_builder::get_const_type(ast_type* type) const noexcept {
-    return new xi_const_type(type);
+xi_const_type* xi_builder::get_const_type(ast_type* type) noexcept {
+    if(this->_all_consttypes.find(type) == this->_all_consttypes.end()) {
+        auto ct = new xi_const_type(type);
+        this->_all_consttypes[type] = ct;
+        return ct;
+    }
+    return this->_all_consttypes[type];
 }
 
 xi_array_type* xi_builder::get_array_type(ast_type* eltype, list<ast_expr>* dims) const noexcept {
@@ -61,9 +70,29 @@ ast_type* xi_builder::get_declaration_type(ast_decl* decl) noexcept {
             list<ast_type>*         plist = new list<ast_type>(pvec);
             return this->get_function_type(rtype, box(plist));
         }
+    case tree_type_id::xi_struct_decl:
+    case tree_type_id::xi_class_decl:
+    case tree_type_id::xi_mixin_decl:
+        {
+            return this->get_object_type(decl->as<xi_type_decl>());
+        }
     }
 
     return ast_builder<>::get_declaration_type(decl);
+}
+
+ast_decl* xi_builder::find_member(ast_namespace_decl* decl, const char* name) {
+    auto sname = std::string(name);
+    for(auto m: decl->declarations) {
+        if(sname == (std::string) m->name) {
+            return m;
+        }
+    }
+    return nullptr;
+}
+
+ast_decl* xi_builder::find_member(xi_type_decl* decl, const char* name) {
+    throw std::runtime_error("Not implemented");
 }
 
 xi_type_decl* xi_builder::find_type_decl(const char* name) {
@@ -73,6 +102,15 @@ xi_type_decl* xi_builder::find_type_decl(const char* name) {
         }
     }
     return nullptr;
+}
+
+ast_expr* xi_builder::make_default_initializer(ast_type* tp) {
+    if(tp->is<xi_object_type>()) {
+        return new xi_zero_initializer_expr(tp, tp->as<xi_object_type>()->declaration);
+    }
+    else {
+        return this->make_zero(tp);
+    }
 }
 
 ast_expr* xi_builder::make_op(xi_operator op, ast_expr* expr) {
@@ -90,6 +128,18 @@ ast_expr* xi_builder::make_op(xi_operator op, list<ast_expr>* operands) {
 
 ast_expr* xi_builder::make_memberref_expr(ast_expr* mexpr, const char* name) {
     return new xi_named_memberref_expr(mexpr, name);
+}
+
+ast_expr* xi_builder::make_fieldref_expr(ast_expr* objexpr, xi_field_decl* field) {
+    return new ast_memberref(field->type, objexpr, field->field_index);
+}
+
+ast_expr* xi_builder::make_memberref_expr(ast_type* type, const char* name) {
+    return new xi_static_named_memberref_expr(type, name);
+}
+
+ast_expr* xi_builder::make_fieldref_expr(ast_type* objexpr, xi_field_decl* field) {
+    throw std::runtime_error(__FILE__ ":" + std::to_string(__LINE__) + ": Not implemented");
 }
 
 ast_expr* xi_builder::make_cast_expr(ast_type* type, ast_expr* expr) const {
@@ -174,10 +224,6 @@ ast_type* xi_builder::lower(ast_type* type) {
     return this->_lower_walker->lower_type(type);
 }
 
-void xi_builder::flatten_pass() {
-    //TODO: ...
-}
-
 void xi_builder::lower_pass() {
     for(auto f : this->all_functions) {
         f->generated_function = this->lower_function(f);
@@ -191,6 +237,13 @@ void xi_builder::lower_pass() {
 
 void xi_builder::generate() {
     //TODO: do all xi passes
+
+    xi_finalize_types_pass finalize_types(*this);
+    finalize_types.visit(this->global_namespace);
+
+    xi_typecheck_pass typecheck_pass(*this);
+    typecheck_pass.visit(this->global_namespace);
+
     this->lower_pass();
 }
 

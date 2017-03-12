@@ -1,2 +1,2 @@
-tree_type(xpp_tree,                                 tree)
-tree_type(xpp_macro_defn,                           xpp_tree)
+//tree_type(xpp_tree,                                 tree)
+//tree_type(xpp_macro_defn,                           xpp_tree)

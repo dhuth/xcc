@@ -67,6 +67,12 @@ ast_expr* xi_lower_walker::lower_op_expr(xi_op_expr* e) {
     return nullptr;
 }
 
+ast_expr* xi_lower_walker::lower_zero_initializer_expr(xi_zero_initializer_expr* e) {
+    //TODO: this should only be for struct types without default constructors
+    //auto decl = e->declaration->as<xi_struct_decl>();
+    return this->_xi_builder.make_zero(e->type);
+}
+
 ast_expr* xi_lower_walker::lower_cast_expr(ast_cast* e) {
     return this->_ast_builder.make_lower_cast_expr(e->type, e->expr);
 }

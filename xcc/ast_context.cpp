@@ -10,6 +10,31 @@
 
 namespace xcc {
 
+ptr<ast_decl> ast_context::find(const char* name, bool search_parent) {
+    auto ff = this->find_first_impl(name);
+    if(unbox(ff) != nullptr) {
+        return ff;
+    }
+    else if(search_parent && (this->parent != nullptr)) {
+        return this->parent->find(name, true);
+    }
+    return box<ast_decl>(nullptr);
+}
+
+ptr<list<ast_decl>> ast_context::findall(const char* name, bool search_parent) {
+    ptr<list<ast_decl>> olist = box(new list<ast_decl>());
+    this->findall(olist, name, search_parent);
+    return olist;
+}
+
+void ast_context::findall(ptr<list<ast_decl>> olist, const char* name, bool search_parent) {
+    this->find_all_impl(olist, name);
+    if(search_parent && (this->parent != nullptr)) {
+        this->parent->findall(olist, name, search_parent);
+    }
+}
+
+
 ast_namespace_context::ast_namespace_context(ast_context* p, ast_namespace_decl* ns) : ast_context(p), _ns(ns), _is_global(p == nullptr) { }
 
 void ast_namespace_context::insert(const char* name, ast_decl* decl) {

@@ -9,7 +9,11 @@ libxi_a_SOURCES    += xi_builder_struct.cpp
 libxi_a_SOURCES    += xi_lower.cpp
 libxi_a_SOURCES    += xi_lower_expr.cpp
 libxi_a_SOURCES    += xi_lower_stmt.cpp
+libxi_a_SOURCES    += xi_lower_type.cpp
+libxi_a_SOURCES    += xi_pass.cpp
 libxi_a_SOURCES    += xi_printer.cpp
+libxi_a_SOURCES    += xi_typecheck.cpp
+
 libxi_a_CPPFLAGS    = @llvm_cppflags@
 libxi_a_CXXFLAGS    = -std=c++11 -pthread
 

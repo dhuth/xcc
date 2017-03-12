@@ -12,13 +12,18 @@
 
 namespace xcc {
 
-struct xi_lower_walker : public dispatch_tree_postorder_walker<ast_tree> {
+struct xi_lower_walker : public dispatch_postorder_tree_walker<ast_tree> {
 public:
 
     inline xi_lower_walker(xi_builder& builder)
             : _xi_builder(builder),
               _ast_builder(builder) {
+        this->add(&xi_lower_walker::lower_const_type);
+        this->add(&xi_lower_walker::lower_object_type);
+        this->add(&xi_lower_walker::lower_array_type);
+
         this->add(&xi_lower_walker::lower_op_expr);
+        this->add(&xi_lower_walker::lower_zero_initializer_expr);
         this->add(&xi_lower_walker::lower_cast_expr);
         this->add(&xi_lower_walker::lower_invoke_expr);
 
@@ -35,12 +40,17 @@ public:
 
 protected:
 
-    bool                                            begin(tree_type_id, base_tree_type*) override final;
-    bool                                            end(tree_type_id, base_tree_type*) override final;
+    void                                            begin(tree_type_id, ast_tree*) override final;
+    void                                            end(tree_type_id, ast_tree*) override final;
 
 private:
 
+    ast_type*                                       lower_const_type(xi_const_type*);
+    ast_type*                                       lower_object_type(xi_object_type*);
+    ast_type*                                       lower_array_type(xi_array_type*);
+
     ast_expr*                                       lower_op_expr(xi_op_expr*);
+    ast_expr*                                       lower_zero_initializer_expr(xi_zero_initializer_expr*);
     ast_expr*                                       lower_cast_expr(ast_cast*);
     ast_expr*                                       lower_invoke_expr(ast_invoke*);
 

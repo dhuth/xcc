@@ -39,13 +39,7 @@ int ximain(const char* input_filename, const char* output_filename, std::vector<
     //}
 
     ircode_context ctx(input_filename);
-
-    //std::vector<std::string> linking_modules;
-    //builder.read_metadata_pass(ctx, linking_modules);
-    //builder.resolution_pass();
-    //builder.flatten_pass();
-    //builder.write_metadata_pass(ctx);
-    builder.lower_pass();
+    builder.generate();
 
     //if(xi_param_dump_unit) {
     //    std::ofstream s(xi_param_dump_unit_filename);

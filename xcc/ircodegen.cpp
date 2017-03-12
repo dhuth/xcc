@@ -59,10 +59,9 @@ llvm::Type* ircode_type_generator::generate_function_type(ast_function_type* fty
 }
 
 llvm::Type* ircode_type_generator::generate_record_type(ast_record_type* rtype) {
-    ast_record_decl* rdecl = rtype->declaration;
     std::vector<llvm::Type*> types;
-    for(auto m : rdecl->members) {
-        types.push_back(this->visit(m->type));
+    for(auto m : rtype->field_types) {
+        types.push_back(this->visit(m));
     }
     return llvm::StructType::get(context.llvm_context, llvm::ArrayRef<llvm::Type*>(types));
 }
@@ -75,6 +74,38 @@ llvm::Value* ircode_expr_generator::generate_real(ast_real* fexpr) {
     auto ftype      = context.generate_type(fexpr->type);
     auto fvalue     = llvm::ConstantFP::get(context.llvm_context, fexpr->value);
     return            context.ir_builder.CreateFPCast(fvalue, ftype);
+}
+
+llvm::Value* ircode_expr_generator::generate_record(ast_record* rexpr) {
+    std::vector<llvm::Constant*> field_values;
+
+    for(auto expr_fval: rexpr->values) {
+        auto fval = context.generate_expr(expr_fval);
+        assert(llvm::isa<llvm::Constant>(fval));
+        field_values.push_back(llvm::dyn_cast<llvm::Constant>(fval));
+    }
+    llvm::ArrayRef<llvm::Constant*> field_values_ref(field_values);
+
+    auto rtype      = context.generate_type(rexpr->type);
+    assert(llvm::isa<llvm::StructType>(rtype));
+
+    return llvm::ConstantStruct::get((llvm::StructType*) rtype, field_values_ref);
+}
+
+llvm::Value* ircode_expr_generator::generate_array(ast_array* arrexpr) {
+    std::vector<llvm::Constant*> values;
+
+    for(auto expr_fval: arrexpr->values) {
+        auto fval = context.generate_expr(expr_fval);
+        assert(llvm::isa<llvm::Constant>(fval));
+        values.push_back(llvm::dyn_cast<llvm::Constant>(fval));
+    }
+    llvm::ArrayRef<llvm::Constant*> values_ref(values);
+
+    auto atype      = context.generate_type(arrexpr->type);
+    assert(llvm::isa<llvm::ArrayType>(atype));
+
+    return llvm::ConstantArray::get((llvm::ArrayType*) atype, values_ref);
 }
 
 llvm::Value* ircode_expr_generator::generate_cast(ast_cast* cexpr) {
@@ -179,6 +210,8 @@ llvm::Value* ircode_expr_generator::generate_unary_op(ast_unary_op* b) {
 }
 
 llvm::Value* ircode_expr_generator::generate_index(ast_index* e) {
+    throw std::runtime_error(__FILE__":" + std::to_string(__LINE__) + "Not implemented");
+
     auto type = context.generate_type(e->type);
     auto arr_expr = this->visit(e->arr_expr);
     auto idx_expr = this->visit(e->index_expr);
@@ -196,32 +229,34 @@ llvm::Value* ircode_expr_generator::generate_deref(ast_deref* e) {
 }
 
 llvm::Value* ircode_expr_generator::generate_memberref(ast_memberref* e) {
-    auto obj = this->visit(e->objexpr);
-    std::vector<uint32_t> idxs = { (uint32_t) e->member->member_index };
+    auto obj = context.generate_address(e);
+    std::vector<uint32_t> idxs = { 0, (uint32_t) e->member_index };
     return context.ir_builder.CreateExtractValue(obj, llvm::ArrayRef<uint32_t>(idxs));
 }
 
 llvm::Value* ircode_expr_generator::generate_addressof(ast_addressof* e) {
-    switch(e->expr->get_tree_type()) {
+    return context.generate_address(e);
+    /*switch(e->expr->get_tree_type()) {
     case tree_type_id::ast_declref:
         return context.find(e->expr->as<ast_declref>()->declaration);
     case tree_type_id::ast_index:
         return context.ir_builder.CreateGEP(context.generate_type(e->type), this->visit(e->as<ast_index>()->arr_expr), this->visit(e->as<ast_index>()->index_expr));
     default:
         throw std::runtime_error(std::string("unhandled ") + std::string(e->expr->get_tree_type_name()) + std::string(" in ircode_expr_generator::generate_addressof"));
-    }
+    }*/
 }
 
 llvm::Value* ircode_expr_generator::generate_invoke(ast_invoke* e) {
     llvm::Value* func = nullptr;
-    if(e->as<ast_invoke>()->funcexpr->is<ast_declref>()) {
-        auto declref = e->as<ast_invoke>()->funcexpr->as<ast_declref>();
+    if(e->funcexpr->is<ast_declref>()) {
+        func = context.generate_address(e->funcexpr);
+        /*auto declref = e->funcexpr->as<ast_declref>();
         if(declref->type->is<ast_function_type>()) {
             func = context.find(declref->declaration);
         }
         else {
             func = this->visit(e->funcexpr);
-        }
+        }*/
     }
     else {
         func = this->visit(e->funcexpr);
@@ -233,6 +268,27 @@ llvm::Value* ircode_expr_generator::generate_invoke(ast_invoke* e) {
     }
     return context.ir_builder.CreateCall(func, llvm::ArrayRef<llvm::Value*>(args));
 }
+
+
+llvm::Value* ircode_address_generator::generate_declref(ast_declref* decl) {
+    return context.find(decl->declaration);
+}
+
+llvm::Value* ircode_address_generator::generate_memberref(ast_memberref* memref) {
+    auto objaddr = this->visit(memref->objexpr);
+    auto objtype = context.generate_type(memref->objexpr->type);
+    std::vector<llvm::Value*> indecies;
+
+    auto i32 = llvm::Type::getInt64Ty(context.llvm_context);
+
+    indecies.push_back(llvm::ConstantInt::get(i32, 0));
+    indecies.push_back(llvm::ConstantInt::get(i32, memref->member_index));
+
+    return context.ir_builder.CreateConstGEP2_32(objtype, objaddr, 0, memref->member_index);
+}
+
+
+
 
 void ircode_context::generate(translation_unit& tu, const char* outfile) {
     for(auto vdecl: tu.global_variable_declarations) {
@@ -356,6 +412,10 @@ void ircode_context::generate_function_body(ast_function_decl* decl) {
 
     this->generate_stmt(decl->body, nullptr, nullptr);
 
+    if((!this->ir_builder.GetInsertBlock()->getTerminator()) && decl->return_type->is<ast_void_type>()) {
+        this->ir_builder.CreateRetVoid();
+    }
+
     this->ir_builder.SetInsertPoint(this->_header_bb);
     this->ir_builder.CreateBr(bb);
     this->ir_builder.ClearInsertionPoint();
@@ -364,6 +424,7 @@ void ircode_context::generate_function_body(ast_function_decl* decl) {
 
     //TODO: post function generation
     if(llvm::verifyFunction(*fvalue, &llvm::outs())) {
+        //TODO: better error handling
         std::exit(1);
     }
 }
@@ -388,10 +449,8 @@ void ircode_context::generate_stmt(ast_stmt* stmt, llvm::BasicBlock* continue_ta
 }
 
 void ircode_context::generate_assign_stmt(ast_assign_stmt* stmt) {
-    assert(stmt->lhs->is<ast_addressof>());
-
     auto val        = this->generate_expr(stmt->rhs);
-    auto addr       = this->generate_expr(stmt->lhs);
+    auto addr       = this->generate_address(stmt->lhs);
 
     this->ir_builder.CreateStore(val, addr);
 }

@@ -270,54 +270,6 @@ public:
 
 
 /**
- * A member of a record declaration
- */
-struct ast_record_member_decl final : public extend_tree<tree_type_id::ast_record_member_decl, ast_decl> {
-public:
-
-    /**
-     * \param name member name
-     * \param type member type
-     */
-    inline ast_record_member_decl(std::string name, uint32_t index, ast_type* type) noexcept
-            : base_type(name),
-              member_index(this, index),
-              type(this, type),
-              defining_type(nullptr) {
-        //...
-    }
-
-    property<uint32_t>                                          member_index;   //!<
-    property<ast_type>                                          type;           //!<
-    ast_record_decl*                                            defining_type;  //!<
-
-};
-
-
-/**
- * Record declartion
- */
-struct ast_record_decl final : public extend_tree<tree_type_id::ast_record_decl, ast_decl> {
-public:
-
-    /**
-     * \param name
-     * \param members
-     */
-    inline ast_record_decl(std::string name, list<ast_record_member_decl>* members) noexcept
-            : base_type(name),
-              members(this, members) {
-        for(auto member : this->members) {
-            member->defining_type = this;
-        }
-    }
-
-    property<list<ast_record_member_decl>>                        members;  //!<
-
-};
-
-
-/**
  * Named type declaration
  */
 struct ast_typedef_decl final : public extend_tree<tree_type_id::ast_typedef_decl, ast_decl> {
@@ -469,16 +421,27 @@ struct ast_record_type final : public extend_tree<tree_type_id::ast_record_type,
 public:
 
     /**
-     * \param declaration
+     * \param is_packed is this type tightly packed ?
      */
-    inline ast_record_type(ast_record_decl* declaration, bool is_packed = false) noexcept
+    inline ast_record_type(bool is_packed = false) noexcept
             : base_type(),
-              declaration(this, declaration),
+              field_types(this, new list<ast_type>()),
               is_packed(this, is_packed){
         //...
     }
 
-    property<ast_record_decl>                                   declaration;    //!<
+    /**
+     * \param types
+     * \param is_packed
+     */
+    inline ast_record_type(list<ast_type>* types, bool is_packed = false) noexcept
+            : base_type(),
+              field_types(this, types),
+              is_packed(this, is_packed) {
+        //...
+    }
+
+    property<list<ast_type>>                                    field_types;    //!<
     property<bool>                                              is_packed;      //!<
 
 };
@@ -522,6 +485,69 @@ public:
     }
 
     property<llvm::APFloat>                                     value;  //!<
+
+};
+
+
+/**
+ * A constant string value
+ */
+struct ast_string final : public extend_tree<tree_type_id::ast_string, ast_expr> {
+public:
+
+    /**
+     * \param stype
+     * \param value
+     */
+    inline ast_string(ast_type* stype, std::string value)
+            : base_type(stype),
+              value(this, value) {
+        //...
+    }
+
+    property<std::string>                                       value; //!<
+
+};
+
+
+/**
+ * An array value
+ */
+struct ast_array final : public extend_tree<tree_type_id::ast_array, ast_expr> {
+public:
+
+    /**
+     * \param atype    the array type
+     * \param values   a list of values
+     */
+    inline ast_array(ast_type* atype, list<ast_expr>* values)
+            : base_type(atype),
+              values(this, values) {
+        //...
+    }
+
+    property<list<ast_expr>>                                    values; //!<
+
+};
+
+
+/**
+ * A record value
+ */
+struct ast_record final : public extend_tree<tree_type_id::ast_record, ast_expr> {
+public:
+
+    /**
+     * \param rtype     the record type
+     * \param values    a list of values
+     */
+    inline ast_record(ast_type* rtype, list<ast_expr>* values)
+            : base_type(rtype),
+              values(this, values) {
+        //...
+    }
+
+    property<list<ast_expr>>                                    values; //!<
 
 };
 
@@ -746,15 +772,15 @@ public:
 struct ast_memberref final : public extend_tree<tree_type_id::ast_memberref, ast_expr> {
 public:
 
-    inline ast_memberref(ast_type* type, ast_expr* objexpr, ast_record_member_decl* member) noexcept
+    inline ast_memberref(ast_type* type, ast_expr* objexpr, uint32_t member) noexcept
             : base_type(type),
               objexpr(this, objexpr),
-              member(this, member) {
+              member_index(this, member) {
         //...
     }
 
     property<ast_expr>                                          objexpr;
-    property<ast_record_member_decl>                            member;
+    property<uint32_t>                                          member_index;
 
 };
 

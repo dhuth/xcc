@@ -30,8 +30,6 @@ public:
         this->addmethod(&ast_default_name_mangler::mangle_variable);
         this->addmethod(&ast_default_name_mangler::mangle_parameter);
         this->addmethod(&ast_default_name_mangler::mangle_function);
-        this->addmethod(&ast_default_name_mangler::mangle_record);
-        this->addmethod(&ast_default_name_mangler::mangle_record_member);
 
         this->addmethod(&ast_default_name_mangler::mangle_void_type);
         this->addmethod(&ast_default_name_mangler::mangle_integer_type);
@@ -58,8 +56,6 @@ private:
     std::string                 mangle_variable(ast_variable_decl*);
     std::string                 mangle_parameter(ast_parameter_decl*);
     std::string                 mangle_function(ast_function_decl*);
-    std::string                 mangle_record(ast_record_decl*);
-    std::string                 mangle_record_member(ast_record_member_decl*);
 
 };
 
@@ -106,7 +102,9 @@ public:
             ast_pointer_type*                   get_pointer_type(ast_type* eltype)                                        noexcept;
             ast_array_type*                     get_array_type(ast_type* artype, uint32_t size)                           noexcept;
             ast_function_type*                  get_function_type(ast_type*, ptr<list<ast_type>>)                         noexcept;
-            ast_record_type*                    get_record_type(ast_record_decl*)                                         noexcept;
+            ast_record_type*                    get_record_type(ptr<list<ast_type>>)                                      noexcept;
+    virtual ast_type*                           get_string_type(uint32_t length)                                          noexcept;
+    virtual ast_type*                           get_char_type()                                                           noexcept;
 
     virtual ast_type*                           get_declaration_type(ast_decl*)                                           noexcept;
 
@@ -121,6 +119,8 @@ public:
     // Constant values
     virtual ast_expr*                           make_integer(const char* txt, uint8_t radix)                        const noexcept;
     virtual ast_expr*                           make_real(const char* txt)                                          const noexcept;
+    virtual ast_expr*                           make_string(const char* txt, uint32_t from, uint32_t length)              noexcept;
+
     virtual ast_expr*                           make_true()                                                         const noexcept;
     virtual ast_expr*                           make_false()                                                        const noexcept;
     virtual ast_expr*                           make_zero(ast_type* tp)                                             const noexcept;
@@ -132,7 +132,7 @@ public:
     virtual ast_expr*                           make_cast_expr(ast_type*, ast_expr*)                                const;
             ast_expr*                           make_lower_cast_expr(ast_type*, ast_expr*)                          const;
     virtual ast_expr*                           make_declref_expr(ast_decl*);
-    virtual ast_expr*                           make_memberref_expr(ast_expr*, ast_record_member_decl*);
+    virtual ast_expr*                           make_memberref_expr(ast_expr*, uint32_t);
     virtual ast_expr*                           make_deref_expr(ast_expr*)                                          const;
     virtual ast_expr*                           make_addressof_expr(ast_expr*);
             ast_expr*                           make_lower_addressof_expr(ast_expr*);
@@ -206,6 +206,7 @@ private:
             ast_expr*                           cast_to(ast_integer_type*, ast_expr*)                               const;
             ast_expr*                           cast_to(ast_real_type*, ast_expr*)                                  const;
             ast_expr*                           cast_to(ast_pointer_type*, ast_expr*)                               const;
+            ast_expr*                           cast_to(ast_record_type*, ast_expr*)                                const;
 
     struct sametype_predicate {
         __ast_builder_impl&                                             builder;
@@ -217,7 +218,23 @@ private:
         }
     };
 
-    typedef std::tuple<ast_type*, ptr<list<ast_type>>>                 functypekey_t;
+    struct sametypelist_predicate {
+        __ast_builder_impl&                                             builder;
+
+        inline sametypelist_predicate(__ast_builder_impl& builder): builder(builder) { }
+        inline bool operator()(ptr<list<ast_type>> const& lhs, ptr<list<ast_type>> const& rhs) const {
+            if(lhs->size() != rhs->size()) return false;
+            for(uint32_t i = 0; i < lhs->size(); i++) {
+                if(!builder.sametype((*unbox(lhs))[i], (*unbox(rhs))[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    };
+
+    typedef ptr<list<ast_type>>                                         typelistkey_t;
+    typedef std::tuple<ast_type*, ptr<list<ast_type>>>                  functypekey_t;
 
     struct samefunctype_predicate {
         __ast_builder_impl&                                             builder;
@@ -237,6 +254,22 @@ private:
         }
     };
 
+    struct typelist_hasher {
+        __ast_builder_impl&                                             builder;
+
+        inline typelist_hasher(__ast_builder_impl& builder): builder(builder) { }
+
+        inline size_t operator()(const typelistkey_t& k) const {
+            std::hash<ast_type*> hasher;
+            if(k->size() == 0) return 0;
+            auto h = hasher(nullptr);
+            for(auto t: unbox(k)) {
+                h = (h << 5) | hasher(t);
+            }
+            return h;
+        }
+    };
+
     struct functype_hasher {
         __ast_builder_impl&                                             builder;
 
@@ -246,7 +279,7 @@ private:
             std::hash<ast_type*> hasher;
             auto h = hasher(std::get<0>(k));
             for(auto p: unbox(std::get<1>(k))) {
-                h = (h >> 5) | hasher(p);
+                h = (h << 5) | hasher(p);
             }
             return h;
         }
@@ -270,8 +303,8 @@ private:
     std::unordered_map<functypekey_t, ptr<ast_function_type>, functype_hasher, samefunctype_predicate>
                                                                         _function_types;
     std::map<std::tuple<ast_type*, uint32_t>, ptr<ast_array_type>>      _array_types;
-    std::map<ast_record_decl*, ptr<ast_record_type>>                    _record_types;
-    std::map<ast_decl*, ptr<ast_declref>>                               _declrefs;
+    std::unordered_map<typelistkey_t, ptr<ast_record_type>, typelist_hasher, sametypelist_predicate>
+                                                                        _record_types;
 
     ast_name_mangler_t*                                                 _mangler_ptr;
 

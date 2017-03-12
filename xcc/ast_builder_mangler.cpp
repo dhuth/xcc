@@ -20,18 +20,11 @@ std::string ast_default_name_mangler::mangle_parameter(ast_parameter_decl* decl)
 }
 std::string ast_default_name_mangler::mangle_function(ast_function_decl* decl) {
     std::stringstream s;
-    s << "___" << (std::string) decl->name << "F";
+    s << (std::string) decl->name << "$F";
     for(auto param : decl->parameters) {
-        s << (std::string) this->visit(param->type) << "_";
+        s << (std::string) this->visit(param->type);
     }
-    s << "_";
     return s.str();
-}
-std::string ast_default_name_mangler::mangle_record(ast_record_decl* decl) {
-    return decl->name;
-}
-std::string ast_default_name_mangler::mangle_record_member(ast_record_member_decl* decl) {
-    return (std::string) decl->name;
 }
 std::string ast_default_name_mangler::mangle_void_type(ast_void_type*) {
     return "void";
@@ -48,22 +41,26 @@ std::string ast_default_name_mangler::mangle_real_type(ast_real_type* tp) {
     return "f" + std::to_string((uint32_t) tp->bitwidth);
 }
 std::string ast_default_name_mangler::mangle_array_type(ast_array_type* tp) {
-    return this->visit(tp->element_type) + "a_" + std::to_string((uint32_t) tp->size) + "_";
+    return this->visit(tp->element_type) + "a" + std::to_string((uint32_t) tp->size) + ".";
 }
 std::string ast_default_name_mangler::mangle_pointer_type(ast_pointer_type* tp) {
     return this->visit(tp->element_type) + "p";
 }
 std::string ast_default_name_mangler::mangle_function_type(ast_function_type* tp) {
     std::stringstream s;
-    s << this->visit(tp->return_type) << "f";
+    s << this->visit(tp->return_type) << "$f";
     for(auto param_tp : tp->parameter_types) {
-        s << this->visit(param_tp) << "_";
+        s << this->visit(param_tp) << ".";
     }
-    s << "_";
     return s.str();
 }
-std::string ast_default_name_mangler::mangle_record_type(ast_record_type* tp) {
-    return (std::string) tp->declaration->name + "r$";
+std::string ast_default_name_mangler::mangle_record_type(ast_record_type* rec) {
+    std::stringstream s;
+    s << "$R";
+    for(auto tp: rec->field_types) {
+        s << this->visit(tp);
+    }
+    return s.str();
 }
 
 }

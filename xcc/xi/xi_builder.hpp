@@ -25,7 +25,7 @@ public:
     xi_builder(translation_unit&);
     virtual ~xi_builder() = default;
 
-    xi_const_type*                                  get_const_type(ast_type*) const noexcept;
+    xi_const_type*                                  get_const_type(ast_type*) noexcept;
     xi_array_type*                                  get_array_type(ast_type*, list<ast_expr>*) const noexcept;
     xi_infered_type*                                get_infered_type() const noexcept;
     xi_ref_type*                                    get_ref_type(ast_type*) noexcept;
@@ -36,20 +36,27 @@ public:
     xi_parameter_decl*                              define_parameter(ast_type*, const char*);
     xi_parameter_decl*                              define_parameter(ast_type*);
 
+    xi_struct_decl*                                 define_global_struct(const char*);
     xi_struct_decl*                                 define_global_struct(const char*, list<ast_type>*);
-    xi_member_decl*                                 define_field(ast_type*, const char*);
-    xi_member_decl*                                 define_field(ast_type*, const char*, ast_expr*);
+    xi_member_decl*                                 define_field(ast_type*, const char*, bool is_static);
+    xi_member_decl*                                 define_field(ast_type*, const char*, ast_expr*, bool is_static);
 
     void                                            set_type_widens(ast_type*, ast_type*);
 
+    ast_decl*                                       find_member(ast_namespace_decl* decl, const char* name);
+    ast_decl*                                       find_member(xi_type_decl* decl, const char* name);
     xi_type_decl*                                   find_type_decl(const char*);
-    //ast_type*                                       find_type(const char*);
+
+    ast_expr*                                       make_default_initializer(ast_type* tp);
 
     ast_expr*                                       make_op(xi_operator op, ast_expr*);
     ast_expr*                                       make_op(xi_operator op, ast_expr*, ast_expr*);
     ast_expr*                                       make_op(xi_operator op, list<ast_expr>*);
     ast_expr*                                       make_name_expr(const char*);
     ast_expr*                                       make_memberref_expr(ast_expr*, const char*);
+    ast_expr*                                       make_fieldref_expr(ast_expr*, xi_field_decl*);
+    ast_expr*                                       make_memberref_expr(ast_type*, const char*);
+    ast_expr*                                       make_fieldref_expr(ast_type*, xi_field_decl*);
     ast_expr*                                       make_cast_expr(ast_type*, ast_expr*) const override final;
     ast_expr*                                       make_index_expr(ast_expr*, list<ast_expr>*);
     ast_expr*                                       make_call_expr(ast_expr*, list<ast_expr>*) const override final;
@@ -61,9 +68,15 @@ public:
     ast_expr*                                       widen(ast_type*, ast_expr*) const override final;
     ast_expr*                                       narrow(ast_type*, ast_expr*) const;
 
+    void                                            push_function_and_body(xi_function_decl*);
     void                                            push_function(xi_function_decl*);
     void                                            push_member(xi_struct_decl*);
-    void                                            pop_function();
+    void                                            push_member(xi_class_decl*);
+    void                                            push_member(xi_mixin_decl*);
+    void                                            push_member(xi_method_decl*);
+    void                                            push_member(xi_constructor_decl*);
+    void                                            push_member(xi_destructor_decl*);
+    void                                            pop_function_and_body();
 
     void                                            generate();
 
@@ -81,14 +94,10 @@ public: //TODO: make private
 
     ast_parameter_decl*                             lower_parameter(xi_parameter_decl*);
     ast_function_decl*                              lower_function(xi_function_decl*);
-    ast_record_decl*                                lower_struct(xi_struct_decl*);
     void                                            lower_body(xi_function_decl*);
 
 public:
 
-    //void                                            read_metadata_pass(ircode_context&, std::vector<std::string>&);
-    void                                            flatten_pass();
-    //void                                            write_metadata_pass(ircode_context&);
     void                                            lower_pass();
 
 private:
@@ -102,6 +111,7 @@ private:
 
     xi_lower_walker*                                                    _lower_walker;
 
+    std::map<ast_type*, ptr<xi_const_type>>                             _all_consttypes;
     std::map<ast_type*, ptr<xi_ref_type>>                               _all_reftypes;
     std::map<xi_type_decl*, ptr<xi_object_type>>                        _all_objecttypes;
 

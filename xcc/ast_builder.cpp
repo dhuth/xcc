@@ -23,6 +23,7 @@ __ast_builder_impl::__ast_builder_impl(translation_unit& tu, ast_name_mangler_t*
               global_namespace(new ast_namespace_decl("global")),
               _pointer_types(0, std::hash<ast_type*>(), sametype_predicate(*this)),
               _function_types(0, functype_hasher(*this), samefunctype_predicate(*this)),
+              _record_types(0, typelist_hasher(*this), sametypelist_predicate(*this)),
               _the_nop_stmt(new ast_nop_stmt()),
               _the_break_stmt(new ast_break_stmt()),
               _the_continue_stmt(new ast_continue_stmt()) {
@@ -116,12 +117,19 @@ ast_function_type* __ast_builder_impl::get_function_type(ast_type* rtype, ptr<li
     return this->_function_types[key];
 }
 
-ast_record_type* __ast_builder_impl::get_record_type(ast_record_decl* decl) noexcept {
-    auto key = decl;
-    if(this->_record_types.find(key) == this->_record_types.end()) {
-        this->_record_types[key] = new ast_record_type(decl);
+ast_record_type* __ast_builder_impl::get_record_type(ptr<list<ast_type>> types) noexcept {
+    if(this->_record_types.find(types) == this->_record_types.end()) {
+        this->_record_types[types] = new ast_record_type(types);
     }
-    return this->_record_types[key];
+    return this->_record_types[types];
+}
+
+ast_type* __ast_builder_impl::get_string_type(uint32_t length) noexcept {
+    return this->get_array_type(this->get_char_type(), length);
+}
+
+ast_type* __ast_builder_impl::get_char_type() noexcept {
+    return this->get_integer_type(8, true);
 }
 
 ast_type* __ast_builder_impl::get_declaration_type(ast_decl* decl) noexcept {
@@ -143,10 +151,6 @@ ast_type* __ast_builder_impl::get_declaration_type(ast_decl* decl) noexcept {
             list<ast_type>*         plist = new list<ast_type>(pvec);
             return this->get_function_type(rtype, box(plist));
         }
-    case tree_type_id::ast_record_decl:
-        return this->get_record_type(decl->as<ast_record_decl>());
-    case tree_type_id::ast_record_member_decl:
-        return decl->as<ast_record_member_decl>()->type;
     }
     //TODO: error unhandled
     assert(false);
@@ -158,7 +162,11 @@ ast_namespace_decl* __ast_builder_impl::define_namespace(const char*name) noexce
     if(decl != nullptr && decl->is<ast_namespace_decl>()) {
         return decl->as<ast_namespace_decl>();
     }
-    return new ast_namespace_decl(name);
+    else {
+        auto new_ns = new ast_namespace_decl(name);
+        this->context->insert(name, new_ns);
+        return new_ns;
+    }
 }
 
 ast_expr* __ast_builder_impl::make_integer(const char* txt, uint8_t radix) const noexcept {
@@ -182,6 +190,13 @@ ast_expr* __ast_builder_impl::make_real(const char* txt) const noexcept {
     return new ast_real(this->get_real_type(64), value);
 }
 
+ast_expr* __ast_builder_impl::make_string(const char* txt, uint32_t start, uint32_t length) noexcept {
+    char dest[length + 1];
+    std::strncpy(dest, &txt[start], length);
+    dest[length] = '\0';
+    return new ast_string(this->get_string_type(length + 1), std::string(dest));
+}
+
 ast_expr* __ast_builder_impl::make_true() const noexcept {
     return this->_true_value;
 }
@@ -194,6 +209,24 @@ ast_expr* __ast_builder_impl::make_zero(ast_type* tp) const noexcept {
     switch(tp->get_tree_type()) {
     case tree_type_id::ast_integer_type:        return new ast_integer(tp, llvm::APSInt::get(0));
     case tree_type_id::ast_real_type:           return new ast_real(tp,    llvm::APFloat(0.0));
+    case tree_type_id::ast_record_type:
+        {
+            auto rectype = tp->as<ast_record_type>();
+            ptr<list<ast_expr>> exprlist = new list<ast_expr>();
+            for(auto ftp: rectype->field_types) {
+                exprlist->append(this->make_zero(ftp));
+            }
+            return new ast_record(tp, exprlist);
+        }
+    case tree_type_id::ast_array_type:
+        {
+            auto arrtype = tp->as<ast_array_type>();
+            ptr<list<ast_expr>> exprlist = new list<ast_expr>();
+            for(size_t i = 0; i < arrtype->size; i++) {
+                exprlist->append(this->make_zero(arrtype->element_type));
+            }
+            return new ast_array(tp, exprlist);
+        }
     }
     throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) tp->get_tree_type()));
 }
@@ -207,8 +240,9 @@ ast_expr* __ast_builder_impl::make_lower_cast_expr(ast_type* desttype, ast_expr*
     case tree_type_id::ast_integer_type:            return this->cast_to(desttype->as<ast_integer_type>(), expr);
     case tree_type_id::ast_real_type:               return this->cast_to(desttype->as<ast_real_type>(),    expr);
     case tree_type_id::ast_pointer_type:            return this->cast_to(desttype->as<ast_pointer_type>(), expr);
+    case tree_type_id::ast_record_type:             return this->cast_to(desttype->as<ast_record_type>(),  expr);
     }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) desttype->get_tree_type()));
+    throw std::runtime_error("unhandled ast type " + std::string(desttype->get_tree_type_name()) + " in __ast_builder::make_lower_cast_expr");
 }
 
 static ast_expr* make_arithmetic_op_expr(__ast_builder_impl* builder, ast_op op, ast_expr* lhs, ast_expr* rhs) {
@@ -439,16 +473,12 @@ ast_expr* __ast_builder_impl::make_op_expr(ast_op op, ast_expr* expr) {
 }
 
 ast_expr* __ast_builder_impl::make_declref_expr(ast_decl* decl) {
-    if(this->_declrefs.find(decl) == this->_declrefs.end()) {
-        auto declref = new ast_declref(this->get_declaration_type(decl), decl);
-        this->_declrefs[decl] = box(declref);
-        return declref;
-    }
-    return unbox(this->_declrefs[decl]);
+    return new ast_declref(this->get_declaration_type(decl), decl);
 }
 
-ast_expr* __ast_builder_impl::make_memberref_expr(ast_expr* obj, ast_record_member_decl* member) {
-    return new ast_memberref(this->get_declaration_type(member), obj, member);
+ast_expr* __ast_builder_impl::make_memberref_expr(ast_expr* obj, uint32_t member) {
+    assert(obj->type->is<ast_record_type>());
+    return new ast_memberref(obj->as<ast_record_type>()->field_types[member], obj, member);
 }
 
 ast_expr* __ast_builder_impl::make_deref_expr(ast_expr* e) const {
@@ -550,7 +580,7 @@ ast_stmt* __ast_builder_impl::make_assign_stmt(ast_expr* lhs, ast_expr* rhs) noe
 }
 
 ast_stmt* __ast_builder_impl::make_lower_assign_stmt(ast_expr* lhs, ast_expr* rhs) noexcept {
-    auto dest = this->make_lower_addressof_expr(lhs);
+    auto dest = lhs;
     auto src  = this->make_lower_cast_expr(lhs->type, rhs);
 
     return new ast_assign_stmt(dest, src);
@@ -825,6 +855,13 @@ ast_expr* __ast_builder_impl::cast_to(ast_pointer_type* ptype, ast_expr* expr) c
         }
     }
     throw std::runtime_error("unhandled type " + std::string(expr->type->get_tree_type_name()) + " in __ast_builder_impl::cast_to(ptr)\n");
+}
+
+ast_expr* __ast_builder_impl::cast_to(ast_record_type* rtype, ast_expr* expr) const {
+    if(this->sametype(rtype, expr->type)) {
+        return expr;
+    }
+    throw std::runtime_error("I'm lazy\n");
 }
 
 ast_expr* __ast_builder_impl::widen(ast_type* typedest, ast_expr* expr) const {

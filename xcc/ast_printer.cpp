@@ -209,7 +209,7 @@ static void print_function_type(ast_function_type* ftype, std::ostream& s) {
 }
 
 static void print_record_type(ast_record_type* rtype, std::ostream& s) {
-    ast_printer::print(s, "%0", rtype->declaration->name);
+    ast_printer::print(s, "type {%{0:, }}", rtype->field_types);
 }
 
 static void print_namespace_decl(ast_namespace_decl* ns, std::ostream& s) {
@@ -236,14 +236,6 @@ static void print_function_decl(ast_function_decl* func, std::ostream& s) {
             func->body,
             func->is_extern,
             func->is_extern_visible);
-}
-
-static void print_record_decl(ast_record_decl* rec, std::ostream& s) {
-    ast_printer::print(s, "%0 = struct {%{1:, }};", rec->name, rec->members);
-}
-
-static void print_record_member_decl(ast_record_member_decl* mem, std::ostream& s) {
-    ast_printer::print(s, "%0 %1 [member_index=%2]", mem->type, mem->name, mem->member_index);
 }
 
 static void print_typedef_decl(ast_typedef_decl* decl, std::ostream& s) {
@@ -319,7 +311,7 @@ static void print_declref_expr(ast_declref* e, std::ostream& s) {
 }
 
 static void print_memberref_expr(ast_memberref* e, std::ostream& s) {
-    ast_printer::print(s, "([%0] member: %1, %2)", e->type, e->objexpr, e->member->name);
+    ast_printer::print(s, "([%0] member: %1, %2)", e->type, e->objexpr, e->member_index);
 }
 
 static void print_deref_expr(ast_deref* e, std::ostream& s) {
@@ -350,8 +342,6 @@ ast_printer::ast_printer()
     ast_printer::add(&print_local_decl);
     ast_printer::add(&print_parameter_decl);
     ast_printer::add(&print_function_decl);
-    ast_printer::add(&print_record_decl);
-    ast_printer::add(&print_record_member_decl);
     ast_printer::add(&print_typedef_decl);
 
     ast_printer::add(&print_nop_stmt);
