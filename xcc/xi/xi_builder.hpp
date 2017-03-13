@@ -52,7 +52,7 @@ public:
     ast_expr*                                       make_op(xi_operator op, ast_expr*);
     ast_expr*                                       make_op(xi_operator op, ast_expr*, ast_expr*);
     ast_expr*                                       make_op(xi_operator op, list<ast_expr>*);
-    ast_expr*                                       make_name_expr(const char*);
+    ast_expr*                                       make_deref_expr(ast_expr*) const override final;
     ast_expr*                                       make_memberref_expr(ast_expr*, const char*);
     ast_expr*                                       make_fieldref_expr(ast_expr*, xi_field_decl*);
     ast_expr*                                       make_memberref_expr(ast_type*, const char*);
@@ -66,6 +66,7 @@ public:
     ast_stmt*                                       make_for_stmt(ast_local_decl*, ast_expr*, ast_stmt*) const noexcept;
 
     ast_expr*                                       widen(ast_type*, ast_expr*) const override final;
+    bool                                            sametype(ast_type*, ast_type*) const override final;
     ast_expr*                                       narrow(ast_type*, ast_expr*) const;
 
     void                                            push_function_and_body(xi_function_decl*);
@@ -118,6 +119,19 @@ private:
     std::map<ast_type*, std::vector<ast_type*>>                         _type_rules_widens;
 
 };
+
+bool same_function_by_signature(xi_builder& builder, xi_function_decl* lfunc, xi_function_decl* rfunc, bool check_return_type);
+
+struct member_search_parameters {
+    std::string                                                         name;
+    std::vector<xi_type_decl*>                                          searched;
+    ptr<list<xi_member_decl>>                                           found;
+
+    bool                                                                search_static;
+    bool                                                                search_instance;
+};
+
+//...
 
 }
 

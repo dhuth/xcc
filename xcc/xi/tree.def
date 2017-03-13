@@ -21,9 +21,9 @@ tree_type(xi_op_expr,                           ast_expr)           // an operat
 tree_type(xi_index_expr,                        ast_expr)           // an index expression                  [+  parse   to type-check               check       to ast_expr...]
 tree_type(xi_named_memberref_expr,              ast_expr)           // a member of expr                     [+  parse   to type-infer               infer       to ...]
 tree_type(xi_static_named_memberref_expr,       ast_expr)           // a static member of type              [+  parse   to lower                    lower       to ast_declref]
-tree_type(xi_name_expr,                         ast_expr)           // an unidentified name expr            [?  parse   to type-infer               infer       to ast_declref]
+//tree_type(xi_name_expr,                         ast_expr)           // an unidentified name expr            [?  parse   to type-infer               infer       to ast_declref]
 tree_type(xi_zero_initializer_expr,             ast_expr)           // a zero initializer                   [+  parse   to lower                    lower       to ast_expr...]
-//tree_type(xi_bound_function_expr,               ast_expr)           // a mehtod attached to it's object     [+  parse   to ...                      ...         to ...]
+tree_type(xi_function_group_expr,               ast_expr)           // functions with the same name         [+  check   to check                    check       to ast_declref]
 
 tree_type(xi_assign_stmt,                       ast_stmt)           // hides ast_assign                     [+  parse   to type-check               check       to ast_assign_stmt]
 tree_type(xi_foriter_stmt,                      ast_stmt)           // for stmts                            [+  parse   to ?                        ?           to ast_stmt...]

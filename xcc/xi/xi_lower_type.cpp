@@ -68,5 +68,9 @@ ast_type* xi_lower_walker::lower_array_type(xi_array_type* tp) {
     //throw std::runtime_error("Not implemented\n");
 }
 
+ast_type* xi_lower_walker::lower_ref_type(xi_ref_type* tp) {
+    return this->_ast_builder.get_pointer_type(tp->element_type);
+}
+
 
 }

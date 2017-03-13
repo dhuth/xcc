@@ -501,7 +501,7 @@ public:
     }
     template<typename TOther, __is_tree_type<TOther> = 0>
     inline bool operator==(const __tree_property_tree<TOther>& p) {
-        return this->__get() == p.get();
+        return this->__get() == p.__get();
     }
 
 protected:

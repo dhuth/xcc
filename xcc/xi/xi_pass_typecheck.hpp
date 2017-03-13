@@ -32,13 +32,16 @@ public:
         this->add(&xi_bottom_up_typecheck_pass::check_named_memberref_expr);
         this->add(&xi_bottom_up_typecheck_pass::check_op_expr);
         this->add(&xi_bottom_up_typecheck_pass::check_index_expr);
+        this->add(&xi_bottom_up_typecheck_pass::check_invoke_expr);
     }
 
     virtual void postvisit(tree_type_id, ast_tree*) override final;
 
     ast_expr* check_named_memberref_expr(xi_named_memberref_expr*);
+    ast_expr* check_static_named_memberref_expr(xi_static_named_memberref_expr*);
     ast_expr* check_index_expr(xi_index_expr*);
     ast_expr* check_op_expr(xi_op_expr*);
+    ast_expr* check_invoke_expr(ast_invoke*);
 };
 
 struct xi_typecheck_pass {

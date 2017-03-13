@@ -380,19 +380,6 @@ public:
 
 };
 
-struct xi_name_expr : public extend_tree<tree_type_id::xi_name_expr, ast_expr> {
-public:
-
-    inline xi_name_expr(const char* name)
-            : base_type((ast_type*) nullptr),
-             name(this, name) {
-        //...
-    }
-
-    property<std::string>                           name;
-
-};
-
 struct xi_named_memberref_expr : public extend_tree<tree_type_id::xi_named_memberref_expr, ast_expr> {
 public:
 
@@ -420,6 +407,19 @@ public:
 
     property<ast_type>                              objtype;
     property<std::string>                           member_name;
+};
+
+struct xi_function_group_expr : public extend_tree<tree_type_id::xi_function_group_expr, ast_expr> {
+public:
+
+    inline xi_function_group_expr()
+            : base_type(nullptr),
+              functions(this, new list<ast_decl>()) {
+        //...
+    }
+
+    property<list<ast_decl>>                        functions;
+
 };
 
 struct xi_assign_stmt : public extend_tree<tree_type_id::xi_assign_stmt, ast_stmt> {

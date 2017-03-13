@@ -99,7 +99,9 @@ public:
     inline ircode_address_generator(ircode_context& context)
             : context(context) {
         this->addmethod(&ircode_address_generator::generate_declref);
+        this->addmethod(&ircode_address_generator::generate_deref);
         this->addmethod(&ircode_address_generator::generate_memberref);
+        this->addmethod(&ircode_address_generator::generate_index);
     }
 
     inline llvm::Value* operator()(ast_expr* expr) { return this->visit(expr); }
@@ -107,7 +109,9 @@ public:
 private:
 
     llvm::Value*                                    generate_declref(ast_declref*);
+    llvm::Value*                                    generate_deref(ast_deref*);
     llvm::Value*                                    generate_memberref(ast_memberref*);
+    llvm::Value*                                    generate_index(ast_index*);
 
     ircode_context&                                                     context;
 };
@@ -150,6 +154,7 @@ public:
 
         inline llvm::Value* operator[](ast_decl* decl) {
             auto itr = this->named_values.find(decl);
+
             if(itr == this->named_values.end()) {
                 if(this->prev != nullptr) {
                     return (*prev)[decl];

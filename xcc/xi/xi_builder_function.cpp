@@ -48,7 +48,7 @@ xi_parameter_decl* xi_builder::define_parameter(ast_type* type) {
     return new xi_parameter_decl("$annon", type);
 }
 
-static bool same_function_by_signature(xi_builder* builder, xi_function_decl* lfunc, xi_function_decl* rfunc, bool check_return_type) {
+bool same_function_by_signature(xi_builder& builder, xi_function_decl* lfunc, xi_function_decl* rfunc, bool check_return_type) {
     //TODO: check context
 
     std::string lname = lfunc->name;
@@ -59,18 +59,18 @@ static bool same_function_by_signature(xi_builder* builder, xi_function_decl* lf
     }
 
     if(check_return_type) {
-        if(!builder->sametype(lfunc->return_type, rfunc->return_type))
+        if(!builder.sametype(lfunc->return_type, rfunc->return_type))
             return false;
     }
 
     if(lfunc->parameters->size() == rfunc->parameters->size()) {
         for(size_t i = 0; i < lfunc->parameters->size(); i++) {
-            if(!builder->sametype((*lfunc->parameters)[i]->type, (*rfunc->parameters)[i]->type)) {
+            if(!builder.sametype((*lfunc->parameters)[i]->type, (*rfunc->parameters)[i]->type)) {
                 return false;
             }
         }
     }
-    return false;
+    return true;
 }
 
 xi_function_decl* xi_builder::define_global_function(ast_type* rtype, const char* name, list<xi_parameter_decl>* parameters) {
@@ -78,7 +78,7 @@ xi_function_decl* xi_builder::define_global_function(ast_type* rtype, const char
     auto others = filter<xi_function_decl>(this->context->findall(name, false));
 
     for(auto ofunc: others) {
-        if(same_function_by_signature(this, func, ofunc, true)) {
+        if(same_function_by_signature(*this, func, ofunc, true)) {
             delete func;
             return ofunc;
         }

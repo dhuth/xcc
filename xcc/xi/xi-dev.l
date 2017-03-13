@@ -149,11 +149,11 @@ DBL_STRING_LITERAL                                  ["]({DBL_STRING_CHAR}|{DBL_S
 
 <XI_STATE_OP,XI_STATE_STMT>\+                       RETURN_OP(ADD,          add)
 <XI_STATE_OP,XI_STATE_STMT>\-                       RETURN_OP(SUB,          sub)
-<XI_STATE_OP,XI_STATE_STMT>\*                      RETURN_OP(MUL,          mul)
+<XI_STATE_OP,XI_STATE_STMT>\*                       RETURN_OP(MUL,          mul)
 <XI_STATE_OP,XI_STATE_STMT>\/                       RETURN_OP(DIV,          div)
 <XI_STATE_OP,XI_STATE_STMT>\%                       RETURN_OP(MOD,          mod)
-<XI_STATE_OP,XI_STATE_STMT>\*\>                    RETURN_OP(SHR,          shr)
-<XI_STATE_OP,XI_STATE_STMT>\<\*                    RETURN_OP(SHL,          shl)
+<XI_STATE_OP,XI_STATE_STMT>\*\>                     RETURN_OP(SHR,          shr)
+<XI_STATE_OP,XI_STATE_STMT>\<\*                     RETURN_OP(SHL,          shl)
 
 <XI_STATE_OP,XI_STATE_STMT>\=\=                     RETURN_OP(EQ,           eq)
 <XI_STATE_OP,XI_STATE_STMT>\!\=                     RETURN_OP(NE,           ne)
@@ -161,6 +161,14 @@ DBL_STRING_LITERAL                                  ["]({DBL_STRING_CHAR}|{DBL_S
 <XI_STATE_OP,XI_STATE_STMT>\>                       RETURN_OP(GT,           gt)
 <XI_STATE_OP,XI_STATE_STMT>\<\=                     RETURN_OP(LE,           le)
 <XI_STATE_OP,XI_STATE_STMT>\>\=                     RETURN_OP(GE,           ge)
+
+\&                                                  RETURN_OP(BAND,         band)
+\|                                                  RETURN_OP(BOR,          bor)
+\^                                                  RETURN_OP(BXOR,         bxor)
+\~                                                  RETURN_OP(BNOT,         bnot)
+\&&                                                 RETURN_OP(LAND,         land)
+\|\|                                                RETURN_OP(LOR,          lor)
+\!                                                  RETURN_OP(LNOT,         lnot)
 
 <XI_STATE_OP,XI_STATE_STMT>\=                       RETURN_OP(ASSIGN,       assign)
 <XI_STATE_OP,XI_STATE_STMT>\+\=                     RETURN_OP(ASSIGN_ADD,   assign_add)

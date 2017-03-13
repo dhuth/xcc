@@ -81,5 +81,13 @@ ast_expr* xi_lower_walker::lower_invoke_expr(ast_invoke* e) {
     return this->_ast_builder.make_lower_call_expr(e->funcexpr, e->arguments);
 }
 
+ast_expr* xi_lower_walker::lower_index_expr(xi_index_expr* expr) {
+    ast_expr* final_expr = expr->array_expr;
+    for(auto idxexpr: expr->index_expr_list) {
+        final_expr = this->_ast_builder.make_index_expr(final_expr, idxexpr);
+    }
+    return final_expr;
+}
+
 }
 

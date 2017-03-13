@@ -55,6 +55,18 @@ static void find_members(FIND_MEMBER_ARGS_DECL(xi_struct_decl)) {
                         found->append(f);
                     }
                 }
+                break;
+            case tree_type_id::xi_method_decl:
+            case tree_type_id::xi_constructor_decl:
+            case tree_type_id::xi_destructor_decl:
+                {
+                    auto t = m->as<xi_method_decl>();
+                    if((t->is_static  && search_static) ||
+                       (!t->is_static && search_instance)) {
+                        found->append(t);
+                    }
+                }
+                break;
             }
         }
     }
@@ -64,10 +76,12 @@ static void find_members(FIND_MEMBER_ARGS_DECL(xi_struct_decl)) {
 }
 
 static void find_members(FIND_MEMBER_ARGS_DECL(xi_mixin_decl)) {
+    throw std::runtime_error("Not implemented\n");
 }
 
 static void find_members(FIND_MEMBER_ARGS_DECL(xi_class_decl)) {
     find_members(FIND_MEMBER_ARGS_PASS(tp, xi_struct_decl));
+    throw std::runtime_error("Not implemented\n");
 }
 
 static ptr<list<xi_member_decl>> find_members(xi_type_decl* tp, std::string name, bool search_instance, bool search_static) {
@@ -137,11 +151,54 @@ static ast_expr* find_named_member(xi_builder& builder, ast_type* otype, ast_exp
     throw std::runtime_error("Uhandled object type " + std::string(otype->get_tree_type_name()) + " in xi_bottom_up_typecheck_pass::check_xi_named_memberref_expr\n");
 }
 
-ast_expr* xi_bottom_up_typecheck_pass::check_named_memberref_expr(xi_named_memberref_expr* expr) {
-    ast_expr* oexpr = expr->objexpr;
-    ast_type* otype = expr->objexpr->type;
+static ast_expr* remove_const(xi_builder& builder, ast_type* t, ast_expr* e) {
+    if(t->is<xi_const_type>()) {
+        ast_type* nt = t->as<xi_const_type>()->type;
+        return builder.make_cast_expr(nt, remove_const(builder, nt, e));
+    }
+    return e;
+}
 
-    return find_named_member(this->builder, otype, oexpr, expr->member_name->c_str());
+static ast_expr* remove_ref(xi_builder& builder, ast_type* t, ast_expr* e) {
+    if(t->is<xi_ref_type>()) {
+        ast_type* nt = t->as<xi_ref_type>()->element_type;
+        return builder.make_deref_expr(e);
+    }
+    return e;
+}
+
+static ast_expr* remove_ref(xi_builder& builder, ast_expr* e) {
+    return remove_ref(builder, e->type, e);
+}
+
+static ast_expr* remove_const_and_ref(xi_builder& builder, ast_type* t, ast_expr* e) {
+    if(t->is<xi_const_type>()) {
+        ast_type* nt = t->as<xi_const_type>()->type;
+        return builder.make_cast_expr(nt, remove_const_and_ref(builder, nt, e));
+    }
+    if(t->is<xi_ref_type>()) {
+        ast_type* nt = t->as<xi_ref_type>()->element_type;
+        return builder.make_deref_expr(remove_const_and_ref(builder, nt, e));
+    }
+    return e;
+}
+
+static ast_expr* to_lower_rhs(xi_builder& builder, ast_expr* e) {
+    return remove_const_and_ref(builder, e->type, e);
+}
+
+ast_expr* xi_bottom_up_typecheck_pass::check_named_memberref_expr(xi_named_memberref_expr* expr) {
+    ast_expr* obj_expr = remove_ref(this->builder, expr->objexpr);
+    ast_type* obj_type = obj_expr->type;
+
+    return find_named_member(this->builder, obj_type, obj_expr, expr->member_name->c_str());
+}
+
+ast_expr* xi_bottom_up_typecheck_pass::check_static_named_memberref_expr(xi_static_named_memberref_expr* expr) {
+    assert(expr->type->is<xi_type_decl>());
+
+    expr->type->as<xi_type_decl>();
+    //return find_unbound_named_member(this->builder, )
 }
 
 static ast_expr* get_binary_op(xi_builder& builder, xi_operator op, ast_expr* lhs, ast_expr* rhs) {
@@ -180,12 +237,15 @@ ast_expr* xi_bottom_up_typecheck_pass::check_op_expr(xi_op_expr* expr) {
     //...
 
     if(expr->operands->size() == 1) {
-        auto opr = this->builder.lower((ast_expr*) expr->operands[0]);
+        //auto opr = this->builder.lower((ast_expr*) expr->operands[0]);
+        auto opr = to_lower_rhs(this->builder, (ast_expr*) expr->operands[0]);
         return get_unary_op(this->builder, expr->op, opr);
     }
     else if(expr->operands->size() == 2) {
-        auto lhs = this->builder.lower((ast_expr*) expr->operands[0]);
-        auto rhs = this->builder.lower((ast_expr*) expr->operands[1]);
+        //auto lhs = this->builder.lower((ast_expr*) expr->operands[0]);
+        //auto rhs = this->builder.lower((ast_expr*) expr->operands[1]);
+        auto lhs = to_lower_rhs(this->builder, (ast_expr*) expr->operands[0]);
+        auto rhs = to_lower_rhs(this->builder, (ast_expr*) expr->operands[1]);
         return get_binary_op(this->builder, expr->op, lhs, rhs);
     }
     throw std::runtime_error("what?\n");

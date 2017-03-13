@@ -290,6 +290,14 @@ static void print_real_expr(ast_real* e, std::ostream& s) {
     ast_printer::print(s, "[%0] %1", e->type, e->value);
 }
 
+static void print_record_expr(ast_record* e, std::ostream& s) {
+    ast_printer::print(s, "{%{0:, }}", e->values);
+}
+
+static void print_array_expr(ast_array* e, std::ostream& s) {
+    ast_printer::print(s, "{%{0:, }}", e->values);
+}
+
 static void print_cast_expr(ast_cast* e, std::ostream& s) {
     ast_printer::print(s, "([%0] cast %1 %2)", e->type, e->op, e->expr);
 }
@@ -357,6 +365,8 @@ ast_printer::ast_printer()
 
     ast_printer::add(&print_integer_expr);
     ast_printer::add(&print_real_expr);
+    ast_printer::add(&print_record_expr);
+    ast_printer::add(&print_array_expr);
     ast_printer::add(&print_cast_expr);
     ast_printer::add(&print_binary_op_expr);
     ast_printer::add(&print_unary_op_expr);

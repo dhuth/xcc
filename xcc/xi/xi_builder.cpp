@@ -39,6 +39,7 @@ xi_infered_type* xi_builder::get_infered_type() const noexcept {
 }
 
 xi_ref_type* xi_builder::get_ref_type(ast_type* tp) noexcept {
+    assert(!tp->is<xi_ref_type>());
     if(this->_all_reftypes.find(tp) == this->_all_reftypes.end()) {
         auto rt = new xi_ref_type(tp);
         this->_all_reftypes[tp] = box(rt);
@@ -126,6 +127,14 @@ ast_expr* xi_builder::make_op(xi_operator op, list<ast_expr>* operands) {
     return new xi_op_expr(nullptr, op, operands);
 }
 
+ast_expr* xi_builder::make_deref_expr(ast_expr* expr) const {
+    assert(expr->type->is<xi_ref_type>() || expr->type->is<ast_pointer_type>()); //TODO: maybe not until typecheck
+    if(expr->type->is<xi_ref_type>()) {
+        return new ast_deref(expr->type->as<xi_ref_type>()->element_type, expr);
+    }
+    return ast_builder<>::make_deref_expr(expr);
+}
+
 ast_expr* xi_builder::make_memberref_expr(ast_expr* mexpr, const char* name) {
     return new xi_named_memberref_expr(mexpr, name);
 }
@@ -176,6 +185,34 @@ ast_expr* xi_builder::widen(ast_type* desttype, ast_expr* expr) const {
     return ast_builder<>::widen(desttype, expr);
 }
 
+bool xi_builder::sametype(ast_type* lhs, ast_type* rhs) const {
+
+    if(lhs == rhs) return true;
+    if(lhs->get_tree_type() != rhs->get_tree_type()) return false;
+
+    switch(lhs->get_tree_type()) {
+    //case tree_type_id::xi_array_type:
+    case tree_type_id::xi_const_type:
+        {
+            return this->sametype(lhs->as<xi_const_type>()->type,
+                                  rhs->as<xi_const_type>()->type);
+        }
+    case tree_type_id::xi_object_type:
+        {
+            //TODO: better declaration comparison???
+            return lhs->as<xi_object_type>()->declaration ==
+                   rhs->as<xi_object_type>()->declaration;
+        }
+    case tree_type_id::xi_ref_type:
+        {
+            return this->sametype(lhs->as<xi_ref_type>()->element_type,
+                                  rhs->as<xi_ref_type>()->element_type);
+        }
+    }
+
+    return ast_builder<>::sametype(lhs, rhs);
+}
+
 void xi_builder::dump_parse() {
     this->dump_parse(std::cout);
 }
@@ -195,7 +232,7 @@ void xi_builder::dump_unit() {
 }
 
 void xi_builder::dump_unit(std::ostream& ostr) {
-    for(auto f: this->all_functions) {
+    for(auto f: this->tu.global_function_declarations) {
         ast_printer::print(f, ostr);
     }
 }

@@ -210,13 +210,13 @@ llvm::Value* ircode_expr_generator::generate_unary_op(ast_unary_op* b) {
 }
 
 llvm::Value* ircode_expr_generator::generate_index(ast_index* e) {
-    throw std::runtime_error(__FILE__":" + std::to_string(__LINE__) + "Not implemented");
-
+    //throw std::runtime_error(__FILE__":" + std::to_string(__LINE__) + "Not implemented");
+    auto addr = context.generate_address(e);
     auto type = context.generate_type(e->type);
-    auto arr_expr = this->visit(e->arr_expr);
-    auto idx_expr = this->visit(e->index_expr);
+    //auto arr_expr = this->visit(e->arr_expr);
+    //auto idx_expr = this->visit(e->index_expr);
 
-    return context.ir_builder.CreateExtractElement(arr_expr, idx_expr);
+    return context.ir_builder.CreateLoad(type, addr);
 }
 
 llvm::Value* ircode_expr_generator::generate_declref(ast_declref* e) {
@@ -230,8 +230,9 @@ llvm::Value* ircode_expr_generator::generate_deref(ast_deref* e) {
 
 llvm::Value* ircode_expr_generator::generate_memberref(ast_memberref* e) {
     auto obj = context.generate_address(e);
-    std::vector<uint32_t> idxs = { 0, (uint32_t) e->member_index };
-    return context.ir_builder.CreateExtractValue(obj, llvm::ArrayRef<uint32_t>(idxs));
+    //std::vector<uint32_t> idxs = { (uint32_t) e->member_index };
+    //obj->getType()->dump();
+    return context.ir_builder.CreateLoad(context.generate_type(e->type), obj);
 }
 
 llvm::Value* ircode_expr_generator::generate_addressof(ast_addressof* e) {
@@ -274,19 +275,28 @@ llvm::Value* ircode_address_generator::generate_declref(ast_declref* decl) {
     return context.find(decl->declaration);
 }
 
+llvm::Value* ircode_address_generator::generate_deref(ast_deref* deref) {
+    return context.generate_expr(deref->expr);
+}
+
 llvm::Value* ircode_address_generator::generate_memberref(ast_memberref* memref) {
     auto objaddr = this->visit(memref->objexpr);
     auto objtype = context.generate_type(memref->objexpr->type);
-    std::vector<llvm::Value*> indecies;
-
-    auto i32 = llvm::Type::getInt64Ty(context.llvm_context);
-
-    indecies.push_back(llvm::ConstantInt::get(i32, 0));
-    indecies.push_back(llvm::ConstantInt::get(i32, memref->member_index));
 
     return context.ir_builder.CreateConstGEP2_32(objtype, objaddr, 0, memref->member_index);
 }
 
+llvm::Value* ircode_address_generator::generate_index(ast_index* expr) {
+    auto arr        = this->visit(expr->arr_expr);
+    auto idx        = context.generate_expr(expr->index_expr);
+
+    std::vector<llvm::Value*> indecies;
+    auto i64 = llvm::Type::getInt32Ty(context.llvm_context);
+    indecies.push_back(llvm::ConstantInt::get(i64, 0));
+    indecies.push_back(idx);
+
+    return context.ir_builder.CreateGEP(arr, indecies);
+}
 
 
 
