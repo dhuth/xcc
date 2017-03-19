@@ -73,12 +73,14 @@ public:
     inline ast_decl(tree_type_id id, std::string name) noexcept
             : base_type(id),
               name(this, name),
-              generated_name(this, "") {
+              generated_name(this, ""),
+              parent_namespace(nullptr) {
         //...
     }
 
-    property<std::string>                                       name;           //!< declaration name
-    property<std::string>                                       generated_name; //!< mangled declaration name
+    ast_namespace_decl*                                         parent_namespace;   //!< namespace where declaration was made
+    property<std::string>                                       name;               //!< declaration name
+    property<std::string>                                       generated_name;     //!< mangled declaration name
 
 };
 
@@ -829,7 +831,7 @@ public:
 
 
 /**
- * A function call expression
+ * A function call by address expression
  */
 struct ast_invoke final : public extend_tree<tree_type_id::ast_invoke, ast_expr> {
 public:
@@ -848,6 +850,54 @@ public:
 
     property<ast_expr>                                          funcexpr;   //!<
     property<list<ast_expr>>                                    arguments;  //!<
+
+};
+
+
+/**
+ * A function call by name expression
+ */
+struct ast_call final : public extend_tree<tree_type_id::ast_call, ast_expr> {
+public:
+
+    /**
+     * \param type
+     * \param funcdecl
+     * \param arguments
+     */
+    inline ast_call(ast_type* type, ast_decl* funcdecl, list<ast_expr>* arguments) noexcept
+            : base_type(type),
+              funcdecl(this, funcdecl),
+              arguments(this, arguments) {
+        //...
+    }
+
+    property<ast_decl>                                          funcdecl;   //!<
+    property<list<ast_expr>>                                    arguments;  //!<
+
+};
+
+
+/**
+ * A list of stmts evaluated for side effects, and then an expression
+ */
+struct ast_stmt_expr final : public extend_tree<tree_type_id::ast_stmt_expr, ast_expr> {
+public:
+
+    /**
+     * \param type
+     * \param statements
+     * \param expr
+     */
+    inline ast_stmt_expr(ast_type* type, list<ast_stmt>* statements, ast_expr* expr) noexcept
+            : base_type(type),
+              statements(this, statements),
+              expr(this, expr) {
+        //...
+    }
+
+    property<list<ast_stmt>>                                    statements; //!<
+    property<ast_expr>                                          expr;       //!<
 
 };
 

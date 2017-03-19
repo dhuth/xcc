@@ -414,8 +414,8 @@ function-parameter-list
         | function-parameter                                                                        { $$ = new xcc::list<xcc::xi_parameter_decl>($1); }
         ;
 function-parameter
-        : type unused-id                                                                            { $$ = builder.setloc(builder.define_parameter($1, $2), @$); }
-        | type                                                                                      { $$ = builder.setloc(builder.define_parameter($1), @$);     }
+        : type-explicit unused-id                                                                   { $$ = builder.setloc(builder.define_parameter($1, $2), @$); }
+        | type-explicit                                                                             { $$ = builder.setloc(builder.define_parameter($1), @$);     }
         ;
 
 
@@ -651,11 +651,10 @@ mul-expr            : mul-expr      mul-op  tight-prefix-expr   { $$ = builder.s
                     | tight-prefix-expr                         { $$ = $1; }
                     ;
 tight-prefix-expr   : tight-prefix-op tight-prefix-expr         { $$ = builder.setloc(builder.make_op($1, $2), @$); }
-//                    | KW_NEW          ctor-expr                 { $$ = builder.setloc(builder.make_new_exr($1
                     | postfix-expr                              { $$ = $1; }
                     ;
 postfix-expr        : postfix-expr OP_LPAREN expr-list-opt OP_RPAREN            { $$ = builder.setloc(builder.make_call_expr($1, $3), @$);      }
-//                    | name-type    post-name-type OP_LPAREN expr-list-opt OP_RPAREN            { $$ = builder.setloc(builder.make_ctor_expr($1, $3), @$);      }
+                    | name-type    OP_LPAREN expr-list-opt OP_RPAREN            { $$ = builder.setloc(builder.make_ctor_expr($1, $3), @$);      }
                     | postfix-expr OP_LBRACKET expr-list OP_RBRACKET            { $$ = builder.setloc(builder.make_index_expr($1, $3), @$);     }
                     | postfix-expr OP_DOT      unused-id                        { $$ = builder.setloc(builder.make_memberref_expr($1, $3), @$); }
                     | name-type    OP_DOUBLE_COLON TOK_EXPR                     { xi_clear_static_type_member(); $$ = $3; }

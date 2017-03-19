@@ -153,8 +153,7 @@ ast_type* __ast_builder_impl::get_declaration_type(ast_decl* decl) noexcept {
         }
     }
     //TODO: error unhandled
-    assert(false);
-    return nullptr;
+    throw std::runtime_error(__FILE__ ":" + std::to_string(__LINE__) + " Unhandled " + std::string(decl->get_tree_type_name()) + "\n");
 }
 
 ast_namespace_decl* __ast_builder_impl::define_namespace(const char*name) noexcept {
@@ -478,7 +477,7 @@ ast_expr* __ast_builder_impl::make_declref_expr(ast_decl* decl) {
 
 ast_expr* __ast_builder_impl::make_memberref_expr(ast_expr* obj, uint32_t member) {
     assert(obj->type->is<ast_record_type>());
-    return new ast_memberref(obj->as<ast_record_type>()->field_types[member], obj, member);
+    return new ast_memberref(obj->type->as<ast_record_type>()->field_types[member], obj, member);
 }
 
 ast_expr* __ast_builder_impl::make_deref_expr(ast_expr* e) const {
@@ -531,7 +530,16 @@ ast_expr* __ast_builder_impl::make_lower_call_expr(ast_expr* fexpr, list<ast_exp
     }
 
     ast_type* t = fexpr->type->as<ast_function_type>()->return_type;
-    return new ast_invoke(t, fexpr, new_args);
+    if(fexpr->is<ast_declref>() && fexpr->as<ast_declref>()->declaration->is<ast_function_decl>()) {
+        return new ast_call(t, fexpr->as<ast_declref>()->declaration, new_args);
+    }
+    else {
+        return new ast_invoke(t, fexpr, new_args);
+    }
+}
+
+ast_expr* __ast_builder_impl::make_stmt_expr(list<ast_stmt>* stmts, ast_expr* expr) const noexcept {
+    return new ast_stmt_expr(expr->type, stmts, expr);
 }
 
 uint32_t __ast_builder_impl::foldu32(ast_expr* e) {
@@ -650,6 +658,18 @@ static inline bool __sametype(const __ast_builder_impl& builder, const ast_array
            (uint32_t) lhs->size == (uint32_t) rhs->size;
 }
 
+static inline bool __sametype(const __ast_builder_impl& builder, const ast_record_type* lhs, const ast_record_type* rhs) {
+    if(lhs->field_types->size() != rhs->field_types->size()) {
+        return false;
+    }
+    for(uint32_t i = 0; i < lhs->field_types->size(); i++) {
+        if(!builder.sametype(lhs->field_types[i], rhs->field_types[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static inline bool __sametype(const __ast_builder_impl& builder, const ast_pointer_type* lhs, const ast_pointer_type* rhs) {
     return builder.sametype(lhs->element_type, rhs->element_type);
 }
@@ -658,7 +678,7 @@ static inline bool __sametype(const __ast_builder_impl& builder, const ast_funct
     if(builder.sametype(lhs->return_type, rhs->return_type)) {
         if(lhs->parameter_types->size() == rhs->parameter_types->size()) {
             for(uint32_t i = 0; i < lhs->parameter_types->size(); i++) {
-                if(!builder.sametype((*lhs->parameter_types)[i], (*rhs->parameter_types)[i])) {
+                if(!builder.sametype(lhs->parameter_types[i], rhs->parameter_types[i])) {
                     return false;
                 }
             }
@@ -682,6 +702,8 @@ bool __ast_builder_impl::sametype(ast_type* lhs, ast_type* rhs) const {
             return __sametype(*this, lhs->as<ast_pointer_type>(), rhs->as<ast_pointer_type>());
         case tree_type_id::ast_array_type:
             return __sametype(*this, lhs->as<ast_array_type>(), rhs->as<ast_array_type>());
+        case tree_type_id::ast_record_type:
+            return __sametype(*this, lhs->as<ast_record_type>(), rhs->as<ast_record_type>());
         case tree_type_id::ast_function_type:
             return __sametype(*this, lhs->as<ast_function_type>(), rhs->as<ast_function_type>());
         }
@@ -864,6 +886,52 @@ ast_expr* __ast_builder_impl::cast_to(ast_record_type* rtype, ast_expr* expr) co
     throw std::runtime_error("I'm lazy\n");
 }
 
+bool __ast_builder_impl::widens(ast_type* from_type, ast_type* to_type) const {
+    switch(from_type->get_tree_type()) {
+    case tree_type_id::ast_integer_type:
+        {
+            uint32_t    bw_from = from_type->as<ast_integer_type>()->bitwidth;
+            uint32_t    bw_to;
+            bool        isu_from = from_type->as<ast_integer_type>()->is_unsigned;
+            bool        isu_to;
+            if(to_type->is<ast_integer_type>()) {
+                bw_to = to_type->as<ast_integer_type>()->bitwidth;
+                isu_to = to_type->as<ast_integer_type>()->is_unsigned;
+            }
+            else if(to_type->is<ast_real_type>()) {
+                bw_to = to_type->as<ast_real_type>()->bitwidth;
+                isu_to = false;
+            }
+            else {
+                break;
+            }
+
+            if(isu_from) {
+                return bw_from <= bw_to;
+            }
+            else {
+                return (bw_from <= bw_to) && (!isu_to);
+            }
+        }
+    case tree_type_id::ast_real_type:
+        {
+            if(to_type->is<ast_integer_type>()) {
+                return false;
+            }
+            else if(to_type->is<ast_real_type>()) {
+                uint32_t bw_from = from_type->as<ast_real_type>()->bitwidth;
+                uint32_t bw_to   = to_type->as<ast_real_type>()->bitwidth;
+                return bw_from <= bw_to;
+            }
+            else {
+                break;
+            }
+        }
+    }
+    throw std::runtime_error("unhandled " + std::string(from_type->get_tree_type_name()) + " -> " +
+                                            std::string(to_type->get_tree_type_name())   + " in __ast_builder_impl::widens\n");
+}
+
 ast_expr* __ast_builder_impl::widen(ast_type* typedest, ast_expr* expr) const {
     switch(typedest->get_tree_type()) {
     case tree_type_id::ast_integer_type:        return this->cast_to(typedest->as<ast_integer_type>(), expr);
@@ -871,6 +939,14 @@ ast_expr* __ast_builder_impl::widen(ast_type* typedest, ast_expr* expr) const {
     case tree_type_id::ast_pointer_type:        return this->cast_to(typedest->as<ast_pointer_type>(), expr);
     }
     throw std::runtime_error("unhandled " + std::string(typedest->get_tree_type_name()) + " in __ast_builder_impl::widen\n");
+}
+
+bool __ast_builder_impl::is_ptrof(ast_type* ptype, ast_type* el) {
+    return ptype->is<ast_pointer_type>() && this->sametype(ptype->as<ast_pointer_type>()->element_type, el);
+}
+
+bool __ast_builder_impl::is_arrayof(ast_type* atype, ast_type* el) {
+    return atype->is<ast_array_type>() && this->sametype(atype->as<ast_array_type>()->element_type, el);
 }
 
 ptr<ast_context> __ast_builder_impl::get_context() noexcept {

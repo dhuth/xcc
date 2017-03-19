@@ -28,6 +28,7 @@ public:
         this->add(&xi_lower_walker::lower_cast_expr);
         this->add(&xi_lower_walker::lower_invoke_expr);
         this->add(&xi_lower_walker::lower_index_expr);
+        this->add(&xi_lower_walker::lower_bound_memberref_expr);
 
         this->add(&xi_lower_walker::lower_block_stmt);
         this->add(&xi_lower_walker::lower_assign_stmt);
@@ -57,6 +58,7 @@ private:
     ast_expr*                                       lower_cast_expr(ast_cast*);
     ast_expr*                                       lower_invoke_expr(ast_invoke*);
     ast_expr*                                       lower_index_expr(xi_index_expr*);
+    ast_expr*                                       lower_bound_memberref_expr(xi_bound_memberref_expr*);
 
     void                                            begin_block(ast_block_stmt*);
     void                                            end_block(ast_block_stmt*);
@@ -65,7 +67,7 @@ private:
     ast_stmt*                                       lower_assign_stmt(xi_assign_stmt*);
 
     xi_builder&                                                         _xi_builder;
-    ast_builder<>&                                                      _ast_builder;
+    xi_builder::base_builder_t&                                         _ast_builder;
 };
 
 }

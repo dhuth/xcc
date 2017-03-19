@@ -43,7 +43,7 @@ inline void advance_column(source_location& loc, uint32_t len) {
 
 inline void advance_line(source_location& loc) {
     loc.line_number++;
-    loc.column_number = 1;
+    loc.column_number = 0;
 }
 
 inline void set_line(source_location& loc, uint32_t line_number) {

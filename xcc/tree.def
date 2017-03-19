@@ -39,7 +39,9 @@ tree_type(ast_declref,                  ast_expr)
 tree_type(ast_memberref,                ast_expr)
 tree_type(ast_deref,                    ast_expr)
 tree_type(ast_addressof,                ast_expr)
-tree_type(ast_invoke,                   ast_expr)
+tree_type(ast_invoke,                   ast_expr)               // call a function pointer
+tree_type(ast_call,                     ast_expr)               // call a function
+tree_type(ast_stmt_expr,                ast_expr)
 
 
 

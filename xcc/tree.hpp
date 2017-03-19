@@ -583,6 +583,11 @@ public:
         return (T)this->_value;
     }
 
+    template<typename T, typename std::enable_if<std::is_convertible<TValue, T>::value, int>::type = 0>
+    inline operator const T&() const noexcept {
+        return (const T&)this->_value;
+    }
+
     inline const TValue& operator=(const TValue& v) {
         this->_value = v;
         return v;
@@ -762,8 +767,8 @@ public:
               _use_include(false) {
         //...
     }
-
     virtual ~__dispatch_tree_walker_base() = default;
+
 
     template<typename TTreeType,
              __is_tree_type<TTreeType> = 0>
@@ -787,7 +792,10 @@ public:
              typename TClassType,
              typename std::enable_if<std::is_base_of<__dispatch_tree_walker_base<TBaseType, TParamTypes...>, TClassType>::value, int>::type = 0,
              __is_tree_type<TTreeType> = 0>
-    using walk_method_t = void(TClassType::*)(TTreeType*, TParamTypes...);
+    using visit_method_t = void(TClassType::*)(TTreeType*, TParamTypes...);
+
+
+
 
     template<typename TTreeType>
     inline void add(visit_func_t<TTreeType> func) {
@@ -797,8 +805,7 @@ public:
         this->_functions[__get_tree_type_id<TTreeType>()] = wfunc;
     }
 
-    template<typename TReturnType,
-             typename TTreeType>
+    template<typename TReturnType, typename TTreeType>
     inline void add(translate_func_t<TReturnType, TTreeType> func) {
         auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
             *retv = dynamic_cast<__tree_base*>(
@@ -807,9 +814,7 @@ public:
         this->_functions[__get_tree_type_id<TTreeType>()] = wfunc;
     }
 
-    template<typename TReturnType,
-             typename TTreeType,
-             typename TClassType>
+    template<typename TReturnType, typename TTreeType, typename TClassType>
     inline void add(translate_method_t<TReturnType, TTreeType, TClassType> mtd) {
         auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
             *retv = dynamic_cast<__tree_base*>(
@@ -818,15 +823,13 @@ public:
         this->_functions[__get_tree_type_id<TTreeType>()] = wfunc;
     }
 
-    template<typename TTreeType,
-             typename TClassType>
-    inline void add(walk_method_t<TTreeType, TClassType> mtd) {
+    template<typename TTreeType, typename TClassType>
+    inline void add(visit_method_t<TTreeType, TClassType> mtd) {
         auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
             (dynamic_cast<TClassType*>(this)->*mtd)(node->as<TTreeType>(), args...);
         };
         this->_functions[__get_tree_type_id<TTreeType>()] = wfunc;
     }
-
 
     virtual void begin(tree_type_id, TBaseType*, TParamTypes...)     { }
     virtual void end(tree_type_id,   TBaseType*, TParamTypes...)     { }
@@ -936,7 +939,7 @@ protected:
 };
 
 template<typename TBaseType, typename... TParamTypes>
-struct dispatch_preorder_tree_walker : __dispatch_tree_walker_base<TBaseType, TParamTypes...> {
+struct dispatch_preorder_tree_walker : public __dispatch_tree_walker_base<TBaseType, TParamTypes...> {
 public:
 
     virtual ~dispatch_preorder_tree_walker() = default;
@@ -951,7 +954,7 @@ protected:
 };
 
 template<typename TBaseType, typename... TParamTypes>
-struct dispatch_postorder_tree_walker : __dispatch_tree_walker_base<TBaseType, TParamTypes...> {
+struct dispatch_postorder_tree_walker : public __dispatch_tree_walker_base<TBaseType, TParamTypes...> {
 public:
 
     virtual ~dispatch_postorder_tree_walker() = default;
@@ -976,6 +979,10 @@ using property = typename __property_type_selector<T>::type;
 
 template<typename T>
 using list = typename __list_type_selector<T>::type;
+
+
+template<typename TElement> typename list<TElement>::iterator begin(ptr<__tree_list_tree<TElement>>& l) { return l->begin(); }
+template<typename TElement> typename list<TElement>::iterator end(ptr<__tree_list_tree<TElement>>& l)   { return l->end(); }
 
 }
 

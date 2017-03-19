@@ -13,14 +13,38 @@
 #include "frontend.hpp"
 #include "xi_tree.hpp"
 #include "ast_builder.hpp"
+#include "xi_mangler.hpp"
 
 namespace xcc {
 
 struct xi_lower_walker;
 struct ircode_context;
 
-struct xi_builder final : public ast_builder<> {
+struct member_search_parameters {
+
+    inline member_search_parameters(const char* name, bool search_instance, bool search_static)
+            : name(name),
+              search_instance(search_instance),
+              search_static(search_static),
+              found(new list<xi_member_decl>()) {
+        //...
+    }
+
+    std::string                                                         name;
+    std::vector<xi_type_decl*>                                          searched;
+    ptr<list<xi_member_decl>>                                           found;
+
+    bool                                                                search_static;
+    bool                                                                search_instance;
+};
+
+void find_members(xi_type_decl*, member_search_parameters&);
+void find_members(xi_struct_decl*, member_search_parameters&);
+
+struct xi_builder final : public ast_builder<itanium_cxxabi_mangler> {
 public:
+
+    typedef ast_builder<itanium_cxxabi_mangler>     base_builder_t;
 
     xi_builder(translation_unit&);
     virtual ~xi_builder() = default;
@@ -41,11 +65,14 @@ public:
     xi_member_decl*                                 define_field(ast_type*, const char*, bool is_static);
     xi_member_decl*                                 define_field(ast_type*, const char*, ast_expr*, bool is_static);
 
-    void                                            set_type_widens(ast_type*, ast_type*);
-
+    // parsing
     ast_decl*                                       find_member(ast_namespace_decl* decl, const char* name);
     ast_decl*                                       find_member(xi_type_decl* decl, const char* name);
     xi_type_decl*                                   find_type_decl(const char*);
+
+    // for static checking
+    ptr<list<xi_member_decl>>                       find_instance_members(xi_type_decl* decl, const char* name);
+    ptr<list<xi_member_decl>>                       find_static_members(xi_type_decl* decl, const char* anem);
 
     ast_expr*                                       make_default_initializer(ast_type* tp);
 
@@ -54,20 +81,28 @@ public:
     ast_expr*                                       make_op(xi_operator op, list<ast_expr>*);
     ast_expr*                                       make_deref_expr(ast_expr*) const override final;
     ast_expr*                                       make_memberref_expr(ast_expr*, const char*);
-    ast_expr*                                       make_fieldref_expr(ast_expr*, xi_field_decl*);
     ast_expr*                                       make_memberref_expr(ast_type*, const char*);
-    ast_expr*                                       make_fieldref_expr(ast_type*, xi_field_decl*);
+    ast_expr*                                       make_declref_expr(ast_decl*);
     ast_expr*                                       make_cast_expr(ast_type*, ast_expr*) const override final;
     ast_expr*                                       make_index_expr(ast_expr*, list<ast_expr>*);
     ast_expr*                                       make_call_expr(ast_expr*, list<ast_expr>*) const override final;
+    ast_expr*                                       make_ctor_expr(ast_type*, list<ast_expr>*);
 
     ast_stmt*                                       make_return_stmt(ast_type*, ast_expr*) const noexcept override final;
     ast_stmt*                                       make_assign_stmt(xi_operator, ast_expr*, ast_expr*) const noexcept;
     ast_stmt*                                       make_for_stmt(ast_local_decl*, ast_expr*, ast_stmt*) const noexcept;
 
-    ast_expr*                                       widen(ast_type*, ast_expr*) const override final;
+    ast_expr*                                       make_instance_memberref_expr(xi_type_decl*, ast_expr*, const char* name, const source_span& span);
+    ast_expr*                                       make_static_memberref_expr(xi_type_decl*, const char* name, const source_span& span);
+
+    bool                                            widens(ast_type*, ast_type*) const override final;
+    ast_expr*                                       widen(ast_type*, ast_expr*, uint32_t&) const;
     bool                                            sametype(ast_type*, ast_type*) const override final;
     ast_expr*                                       narrow(ast_type*, ast_expr*) const;
+
+    inline bool                                     isrefof(ast_type*, ast_type*);
+
+    ast_decl*                                       find_declaration(const char* name) noexcept final override;
 
     void                                            push_function_and_body(xi_function_decl*);
     void                                            push_function(xi_function_decl*);
@@ -116,22 +151,13 @@ private:
     std::map<ast_type*, ptr<xi_ref_type>>                               _all_reftypes;
     std::map<xi_type_decl*, ptr<xi_object_type>>                        _all_objecttypes;
 
-    std::map<ast_type*, std::vector<ast_type*>>                         _type_rules_widens;
-
 };
+
+bool xi_builder::isrefof(ast_type* t, ast_type* el) {
+    return t->is<xi_ref_type>() && this->sametype(t->as<xi_ref_type>()->element_type, el);
+}
 
 bool same_function_by_signature(xi_builder& builder, xi_function_decl* lfunc, xi_function_decl* rfunc, bool check_return_type);
-
-struct member_search_parameters {
-    std::string                                                         name;
-    std::vector<xi_type_decl*>                                          searched;
-    ptr<list<xi_member_decl>>                                           found;
-
-    bool                                                                search_static;
-    bool                                                                search_instance;
-};
-
-//...
 
 }
 

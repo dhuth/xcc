@@ -74,11 +74,28 @@ ast_expr* xi_lower_walker::lower_zero_initializer_expr(xi_zero_initializer_expr*
 }
 
 ast_expr* xi_lower_walker::lower_cast_expr(ast_cast* e) {
+    switch(e->type->get_tree_type()) {
+    case tree_type_id::ast_array_type:
+        if(this->_ast_builder.sametype(e->type, e->expr->type)) {
+            return e->expr;
+        }
+    }
     return this->_ast_builder.make_lower_cast_expr(e->type, e->expr);
 }
 
 ast_expr* xi_lower_walker::lower_invoke_expr(ast_invoke* e) {
-    return this->_ast_builder.make_lower_call_expr(e->funcexpr, e->arguments);
+    return e;
+    //    return this->_ast_builder.make_lower_call_expr(e->funcexpr, e->arguments);
+}
+
+ast_expr* xi_lower_walker::lower_bound_memberref_expr(xi_bound_memberref_expr* e) {
+    xi_member_decl* member = e->member;
+    switch(member->get_tree_type()) {
+    case tree_type_id::xi_field_decl:
+        auto f = member->as<xi_field_decl>();
+        return this->_ast_builder.make_memberref_expr(e->objexpr, (uint32_t) f->field_index);
+    }
+    throw std::runtime_error("[" __FILE__ ":" + std::to_string(__LINE__) + "]: " + std::string(member->get_tree_type_name()) + " was unhandled\n");
 }
 
 ast_expr* xi_lower_walker::lower_index_expr(xi_index_expr* expr) {

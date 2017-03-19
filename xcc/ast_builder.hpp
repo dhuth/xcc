@@ -20,8 +20,12 @@ namespace xcc {
 struct translation_unit;
 struct ircode_context;
 
-typedef dispatch_visitor<std::string>                                   ast_name_mangler_t;
 typedef dispatch_visitor<ast_expr>                                      ast_folder_t;
+
+struct ast_name_mangler_t : public dispatch_visitor<std::string> {
+    virtual std::string         operator()(ast_tree* t) = 0;
+    virtual std::string         operator()(std::string prefix, ast_tree* t) = 0;
+};
 
 struct ast_default_name_mangler : public ast_name_mangler_t {
 public:
@@ -39,9 +43,10 @@ public:
         this->addmethod(&ast_default_name_mangler::mangle_function_type);
         this->addmethod(&ast_default_name_mangler::mangle_record_type);
     }
+    virtual ~ast_default_name_mangler() = default;
 
-    std::string                operator()(ast_tree* t);
-    std::string                operator()(std::string prefix, ast_tree* t);
+    virtual std::string         operator()(ast_tree* t);
+    virtual std::string         operator()(std::string prefix, ast_tree* t);
 
 private:
 
@@ -84,10 +89,10 @@ public:
     virtual ~__ast_builder_impl() noexcept = default;
 
     template<typename TTreeType, typename std::enable_if<std::is_base_of<ast_tree, TTreeType>::value, int>::type = 0>
-    TTreeType* setloc(TTreeType* t, source_span& loc) { t->source_location = loc; return t; }
+    TTreeType* setloc(TTreeType* t, const source_span& loc) { t->source_location = loc; return t; }
 
     template<typename TTreeType, typename std::enable_if<std::is_base_of<ast_tree, TTreeType>::value, int>::type = 0>
-    TTreeType* setloc(TTreeType* t, source_span& minloc, source_span& maxloc) {
+    TTreeType* setloc(TTreeType* t, source_span& minloc, const source_span& maxloc) {
         t->source_location->first = minloc.first;
         t->source_location->last  = maxloc.last;
         return t;
@@ -139,6 +144,7 @@ public:
     virtual ast_expr*                           make_index_expr(ast_expr*, ast_expr*)                               const;
     virtual ast_expr*                           make_call_expr(ast_expr*, list<ast_expr>*)                          const;
             ast_expr*                           make_lower_call_expr(ast_expr*, list<ast_expr>*)                    const;
+    virtual ast_expr*                           make_stmt_expr(list<ast_stmt>* stmts, ast_expr*)                    const noexcept;
 
     // Statments
     virtual ast_stmt*                           make_nop_stmt()                                                     const noexcept;
@@ -163,7 +169,11 @@ public:
             ast_name_mangler_t&                 get_mangled_name;
     virtual bool                                sametype(ast_type*, ast_type*)                                      const;
     virtual ast_type*                           maxtype(ast_type*, ast_type*)                                       const;
+    virtual bool                                widens(ast_type*, ast_type*)                                        const;
     virtual ast_expr*                           widen(ast_type*, ast_expr*)                                         const;
+
+    virtual bool                                is_ptrof(ast_type*, ast_type*);
+    virtual bool                                is_arrayof(ast_type*, ast_type*);
 
 protected:
 

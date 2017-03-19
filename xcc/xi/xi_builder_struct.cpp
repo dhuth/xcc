@@ -58,7 +58,7 @@ xi_struct_decl* xi_builder::define_global_struct(const char* name) {
         return new_decl;
     }
     else {
-        assert(decl->basetypes->size() == 0); //TODO: this should be a parse-type exception
+        assert(decl->basetypes->size() == 0); //TODO: this should be a parse-time exception
         //...
     }
     return decl;
@@ -119,8 +119,14 @@ void xi_builder::push_member(xi_destructor_decl* decl) {
 }
 
 void xi_finalize_types_pass::finalize_struct(xi_struct_decl* decl) {
+    // -----------
+    // 1. Set name
+    // -----------
+
+    decl->parent_namespace = this->current_namespace;
+
     // -------------------------
-    // 1. Set supertype & mixins
+    // 2. Set supertype & mixins
     // -------------------------
 
     for(auto tp: decl->basetypes) {
@@ -138,7 +144,7 @@ void xi_finalize_types_pass::finalize_struct(xi_struct_decl* decl) {
     }
 
     // --------------------------------
-    // 2. Generate instance record type
+    // 3. Generate instance record type
     // --------------------------------
 
     uint32_t instance_idx = 0;
@@ -161,7 +167,7 @@ void xi_finalize_types_pass::finalize_struct(xi_struct_decl* decl) {
     decl->instance_record_type = this->builder.get_record_type(instance_record_type_list);
 
     // -------------------------
-    // 3. Organize static fields
+    // 4. Organize static fields
     // -------------------------
 
     uint32_t static_idx = 0;
@@ -180,11 +186,30 @@ void xi_finalize_types_pass::finalize_struct(xi_struct_decl* decl) {
     decl->static_field_count = static_idx;
     decl->static_record_type = this->builder.get_record_type(static_record_type_list);
 
-    // -------------------------------------------
-    // 4. TODO: check for constructor / destructor
-    // -------------------------------------------
-
     //...
+}
+
+void find_members(xi_struct_decl* decl, member_search_parameters& params) {
+    if(std::find(params.searched.begin(), params.searched.end(), decl) != params.searched.end()) {
+        params.searched.push_back(decl);
+
+        //TODO: visibility
+        for(auto m: decl->members) {
+            if((std::string) m->name == params.name) {
+                params.found->append(m);
+            }
+        }
+
+        for(auto bt: decl->basetypes) {
+            if(bt->is<xi_object_type>()) {
+                xi_type_decl* base_decl = bt->as<xi_object_type>()->declaration;
+                find_members(base_decl, params);
+            }
+            else {
+                //TODO: this should never happen (?)
+            }
+        }
+    }
 }
 
 

@@ -30,10 +30,13 @@ public:
         : xi_postorder_pass(builder) {
 
         this->add(&xi_bottom_up_typecheck_pass::check_named_memberref_expr);
+        this->add(&xi_bottom_up_typecheck_pass::check_static_named_memberref_expr);
         this->add(&xi_bottom_up_typecheck_pass::check_op_expr);
         this->add(&xi_bottom_up_typecheck_pass::check_index_expr);
         this->add(&xi_bottom_up_typecheck_pass::check_invoke_expr);
+        this->add(&xi_bottom_up_typecheck_pass::check_call_expr);
     }
+    virtual ~xi_bottom_up_typecheck_pass() = default;
 
     virtual void postvisit(tree_type_id, ast_tree*) override final;
 
@@ -42,6 +45,7 @@ public:
     ast_expr* check_index_expr(xi_index_expr*);
     ast_expr* check_op_expr(xi_op_expr*);
     ast_expr* check_invoke_expr(ast_invoke*);
+    ast_expr* check_call_expr(ast_call*);
 };
 
 struct xi_typecheck_pass {

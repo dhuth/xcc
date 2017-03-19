@@ -20,12 +20,13 @@ public:
             : xi_postorder_pass(builder) {
         this->add(&xi_finalize_types_pass::finalize_struct);
 
-        this->include({tree_type_id::ast_decl, tree_type_id::ast_type});
+        //this->include({tree_type_id::ast_decl, tree_type_id::ast_type});
     }
 
     void finalize_struct(xi_struct_decl*);
     void finalize_class(xi_class_decl*);
     void finalize_mixin(xi_mixin_decl*);
+
 };
 
 

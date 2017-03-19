@@ -69,8 +69,9 @@ bool same_function_by_signature(xi_builder& builder, xi_function_decl* lfunc, xi
                 return false;
             }
         }
+        return true;
     }
-    return true;
+    return false;
 }
 
 xi_function_decl* xi_builder::define_global_function(ast_type* rtype, const char* name, list<xi_parameter_decl>* parameters) {
@@ -79,6 +80,9 @@ xi_function_decl* xi_builder::define_global_function(ast_type* rtype, const char
 
     for(auto ofunc: others) {
         if(same_function_by_signature(*this, func, ofunc, true)) {
+            for(uint32_t i = 0; i < func->parameters->size(); i++) {
+                ofunc->parameters[i]->name = func->parameters[i]->name;
+            }
             delete func;
             return ofunc;
         }
@@ -103,6 +107,8 @@ void xi_builder::pop_function_and_body() {
     this->pop();    // pop function
 }
 
+
+
 ast_parameter_decl* xi_builder::lower_parameter(xi_parameter_decl* pdecl) {
     if(!pdecl->generated_parameter) {
         auto gparam = new ast_parameter_decl(pdecl->name, this->lower(pdecl->type));
@@ -118,13 +124,15 @@ ast_function_decl* xi_builder::lower_function(xi_function_decl* func) {
         return func->generated_function;
     }
 
+    std::string generated_name = this->get_mangled_name(func);
+
     auto lower_parameters = map<ast_parameter_decl, xi_parameter_decl>(func->parameters, [&](xi_parameter_decl* pdecl) -> ast_parameter_decl* {
         auto gparam = this->lower_parameter(pdecl);
         return gparam;
     });
     auto gfunc = new ast_function_decl(func->name, this->lower(func->return_type), lower_parameters, nullptr);
     if(!func->is_c_extern) {
-        gfunc->generated_name       = this->get_mangled_name.visit(gfunc);
+        gfunc->generated_name       = generated_name;
         gfunc->is_extern            = func->is_extern;
         gfunc->is_extern_visible    = func->is_extern_visible;
         gfunc->is_c_extern          = func->is_c_extern;

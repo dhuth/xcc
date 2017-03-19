@@ -79,15 +79,6 @@ public:
 
 };
 
-struct xi_name_decl : public extend_tree<tree_type_id::xi_name_decl, ast_decl> {
-public:
-
-    inline xi_name_decl(const char* name)
-            : base_type(name) {
-        //...
-    }
-};
-
 struct xi_infered_type : public extend_tree<tree_type_id::xi_infered_type, ast_type> {
 public:
 
@@ -110,22 +101,37 @@ public:
 
 };
 
+struct xi_group_type : public extend_tree<tree_type_id::xi_group_type, ast_type> {
+public:
+
+    inline xi_group_type(list<ast_type>* types)
+            : base_type(),
+              types(this, types) {
+        //...
+    }
+
+    property<list<ast_type>>                        types;
+};
+
 struct xi_member_decl : public extend_tree<tree_type_id::xi_member_decl, ast_decl> {
 public:
 
-    inline xi_member_decl(tree_type_id passing_id, const char* name, xi_type_decl* parent_decl)
+    inline xi_member_decl(tree_type_id passing_id, const char* name, xi_type_decl* parent_decl, ast_namespace_decl* parent_namespace)
             : base_type(passing_id, name),
-              parent_decl(parent_decl) {
+              parent_decl(parent_decl),
+              parent_namespace(parent_namespace) {
         //...
     }
 
     inline xi_member_decl(tree_type_id passing_id, const char* name)
             : base_type(passing_id, name),
-              parent_decl(nullptr) {
+              parent_decl(nullptr),
+              parent_namespace(nullptr) {
         //...
     }
 
     xi_type_decl*                                   parent_decl;
+    ast_namespace_decl*                             parent_namespace;
 
 };
 
@@ -133,7 +139,7 @@ struct xi_type_decl : public extend_tree<tree_type_id::xi_type_decl, xi_member_d
 public:
 
     inline xi_type_decl(tree_type_id passing_id, const char* name, list<ast_type>* basetypes)
-            : base_type(passing_id, name, nullptr),
+            : base_type(passing_id, name, nullptr, nullptr),
               basetypes(this, basetypes),
               mixins(this, nullptr),
               members(this, new list<xi_member_decl>()),
@@ -339,6 +345,18 @@ public:
 
 };
 
+struct xi_group_decl : public extend_tree<tree_type_id::xi_group_decl, ast_decl> {
+public:
+
+    inline xi_group_decl(const char* name, list<ast_decl>* declarations)
+            : base_type(name),
+              declarations(this, declarations) {
+        //...
+    }
+
+    property<list<ast_decl>>                                    declarations;
+};
+
 struct xi_op_expr : public extend_tree<tree_type_id::xi_op_expr, ast_expr> {
 public:
 
@@ -409,17 +427,43 @@ public:
     property<std::string>                           member_name;
 };
 
-struct xi_function_group_expr : public extend_tree<tree_type_id::xi_function_group_expr, ast_expr> {
+struct xi_bound_memberref_expr : public extend_tree<tree_type_id::xi_bound_memberref_expr, ast_expr> {
 public:
 
-    inline xi_function_group_expr()
-            : base_type(nullptr),
-              functions(this, new list<ast_decl>()) {
+    inline xi_bound_memberref_expr(ast_type* type, ast_expr* objexpr, xi_member_decl* member)
+            : base_type(type),
+              objexpr(this, objexpr),
+              member(this, member) {
         //...
     }
 
-    property<list<ast_decl>>                        functions;
+    property<ast_expr>                              objexpr;
+    property<xi_member_decl>                        member;
 
+};
+
+struct xi_static_memberref_expr : public extend_tree<tree_type_id::xi_static_memberref_expr, ast_expr> {
+public:
+
+    inline xi_static_memberref_expr(ast_type* type, xi_member_decl* member)
+            : base_type(type),
+              member(this, member) {
+        //...
+    }
+    property<xi_member_decl>                        member;
+
+};
+
+struct xi_group_expr : public extend_tree<tree_type_id::xi_group_expr, ast_expr> {
+public:
+
+    inline xi_group_expr(list<ast_expr>* expressions)
+            : base_type(nullptr),
+              expressions(this, expressions) {
+        //...
+    }
+
+    property<list<ast_expr>>                        expressions;
 };
 
 struct xi_assign_stmt : public extend_tree<tree_type_id::xi_assign_stmt, ast_stmt> {

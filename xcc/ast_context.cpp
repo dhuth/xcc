@@ -38,6 +38,7 @@ void ast_context::findall(ptr<list<ast_decl>> olist, const char* name, bool sear
 ast_namespace_context::ast_namespace_context(ast_context* p, ast_namespace_decl* ns) : ast_context(p), _ns(ns), _is_global(p == nullptr) { }
 
 void ast_namespace_context::insert(const char* name, ast_decl* decl) {
+    decl->parent_namespace = this->_ns;
     this->_ns->declarations->append(decl);
 }
 

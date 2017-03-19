@@ -6,149 +6,29 @@
  */
 
 #include <vector>
+#include <limits>
 #include "xi_pass_typecheck.hpp"
 #include "xi_builder.hpp"
 
 namespace xcc {
 
-#define FIND_MEMBER_ARGS_DECL(T)        T*                              tp,                 \
-                                        std::string                     name,               \
-                                        std::vector<xi_type_decl*>&     searched,           \
-                                        ptr<list<xi_member_decl>>       found,              \
-                                        bool                            search_instance,    \
-                                        bool                            search_static       \
-
-#define FIND_MEMBER_ARGS_PASS(tp, T)    tp->as<T>(),                                        \
-                                        name,                                               \
-                                        searched,                                           \
-                                        found,                                              \
-                                        search_instance,                                    \
-                                        search_static
-
-static void find_members(FIND_MEMBER_ARGS_DECL(xi_struct_decl));
-static void find_members(FIND_MEMBER_ARGS_DECL(xi_class_decl));
-static void find_members(FIND_MEMBER_ARGS_DECL(xi_mixin_decl));
-
-static void find_members(FIND_MEMBER_ARGS_DECL(xi_type_decl)) {
-    if(std::find(searched.begin(), searched.end(), tp) != searched.end()) {
-        return;
-    }
-    searched.push_back(tp);
-
-    if(tp->is<xi_struct_decl>()) return find_members(FIND_MEMBER_ARGS_PASS(tp, xi_struct_decl));
-    if(tp->is<xi_mixin_decl>())  return find_members(FIND_MEMBER_ARGS_PASS(tp, xi_mixin_decl));
-    if(tp->is<xi_class_decl>())  return find_members(FIND_MEMBER_ARGS_PASS(tp, xi_class_decl));
-
-    throw std::runtime_error("Unhandeld " + std::string(tp->get_tree_type_name()) + " in find_members\n");
-}
-
-static void find_members(FIND_MEMBER_ARGS_DECL(xi_struct_decl)) {
-    //TODO: mixins
-    for(auto m: tp->members) {
-        if(((std::string) m->name) == name) {
-            switch(m->get_tree_type()) {
-            case tree_type_id::xi_field_decl:
-                {
-                    auto f = m->as<xi_field_decl>();
-                    if((f->is_static  && search_static) ||
-                       (!f->is_static && search_instance)) {
-                        found->append(f);
-                    }
-                }
-                break;
-            case tree_type_id::xi_method_decl:
-            case tree_type_id::xi_constructor_decl:
-            case tree_type_id::xi_destructor_decl:
-                {
-                    auto t = m->as<xi_method_decl>();
-                    if((t->is_static  && search_static) ||
-                       (!t->is_static && search_instance)) {
-                        found->append(t);
-                    }
-                }
-                break;
-            }
-        }
-    }
-    if(tp->supertype) {
-        find_members(FIND_MEMBER_ARGS_PASS(tp->supertype, xi_type_decl));
-    }
-}
-
-static void find_members(FIND_MEMBER_ARGS_DECL(xi_mixin_decl)) {
-    throw std::runtime_error("Not implemented\n");
-}
-
-static void find_members(FIND_MEMBER_ARGS_DECL(xi_class_decl)) {
-    find_members(FIND_MEMBER_ARGS_PASS(tp, xi_struct_decl));
-    throw std::runtime_error("Not implemented\n");
-}
-
-static ptr<list<xi_member_decl>> find_members(xi_type_decl* tp, std::string name, bool search_instance, bool search_static) {
-    std::vector<xi_type_decl*>      searched;
-    ptr<list<xi_member_decl>>       found       = new list<xi_member_decl>();
-
-    find_members(tp, name, searched, found, search_instance, search_static);
-    return found;
-}
-
-static ptr<list<xi_member_decl>> find_instance_members(xi_type_decl* tp, std::string name) {
-    return find_members(tp, name, true, false);
-}
-
 void xi_bottom_up_typecheck_pass::postvisit(tree_type_id id, ast_tree* t) {
     if(t->is<ast_expr>()) {
-        ast_type* tp = t->as<ast_expr>()->type;
-        if(tp == nullptr) {
-            throw std::runtime_error("Type not set for " + std::string(t->get_tree_type_name()) + "\n");
-        }
+        assert(t->as<ast_expr>()->type != nullptr);
     }
 }
 
-static ast_expr* find_named_member(xi_builder& builder, xi_type_decl* decl, ast_expr* expr, const char* name) {
-    //TODO: consider visibility
-    //TODO: consider method overloading
-    ptr<list<xi_member_decl>> member_list = find_instance_members(decl, name);
-    //...
-    if(member_list->size() == 0) {
-        //TODO: a common error
-        throw std::runtime_error("not implemented yet");
+static ast_type* remove_const(xi_builder& builder, ast_type* t) {
+    if(t->is<xi_const_type>()) {
+        ast_type* nt = t->as<xi_const_type>()->type;
+        return remove_const(builder, nt);
     }
-    else if(member_list->size() == 1) {
-        xi_member_decl* m = (*member_list)[0];
-        switch(m->get_tree_type()) {
-        case tree_type_id::xi_field_decl:
-            auto f = m->as<xi_field_decl>();
-            return builder.make_fieldref_expr(expr, f);
-            break;
-        }
-        throw std::runtime_error("Unhandled " + std::string(m->get_tree_type_name()) + " in " + std::string(__FILE__) + ":" + std::to_string(__LINE__));
+    if(t->is<xi_ref_type>()) {
+        ast_type* nt = t->as<xi_ref_type>()->element_type;
+        ast_type* newt = remove_const(builder, nt);
+        return builder.get_ref_type(newt);
     }
-    else {
-        //TODO: return a member group type
-        throw std::runtime_error("not implemented yet");
-    }
-
-}
-
-static ast_expr* find_named_member(xi_builder& builder, ast_type* otype, ast_expr* expr, const char* name) {
-    switch(otype->get_tree_type()) {
-    case tree_type_id::xi_object_type:
-        {
-            xi_type_decl* decl = otype->as<xi_object_type>()->declaration;
-            return find_named_member(builder, decl, expr, name);
-        }
-    case tree_type_id::xi_const_type:
-        {
-            ast_type* eltype = otype->as<xi_const_type>()->type;
-            ast_expr* rexpr  = find_named_member(builder, eltype, expr, name);
-            rexpr->type = builder.get_const_type(rexpr->type);
-            return rexpr;
-        }
-    case tree_type_id::xi_ref_type:
-        break;
-    }
-    throw std::runtime_error("Uhandled object type " + std::string(otype->get_tree_type_name()) + " in xi_bottom_up_typecheck_pass::check_xi_named_memberref_expr\n");
+    return t;
 }
 
 static ast_expr* remove_const(xi_builder& builder, ast_type* t, ast_expr* e) {
@@ -163,6 +43,14 @@ static ast_expr* remove_ref(xi_builder& builder, ast_type* t, ast_expr* e) {
     if(t->is<xi_ref_type>()) {
         ast_type* nt = t->as<xi_ref_type>()->element_type;
         return builder.make_deref_expr(e);
+    }
+    if(t->is<xi_const_type>()) {
+        ast_type* nt = t->as<xi_const_type>()->type;
+        auto newexpr = remove_ref(builder, nt, e);
+        if(!newexpr->type->is<xi_const_type>()) {
+            newexpr->type = builder.get_const_type(newexpr->type);
+        }
+        return newexpr;
     }
     return e;
 }
@@ -188,17 +76,25 @@ static ast_expr* to_lower_rhs(xi_builder& builder, ast_expr* e) {
 }
 
 ast_expr* xi_bottom_up_typecheck_pass::check_named_memberref_expr(xi_named_memberref_expr* expr) {
-    ast_expr* obj_expr = remove_ref(this->builder, expr->objexpr);
-    ast_type* obj_type = obj_expr->type;
+    ast_expr* objexpr = remove_ref(this->builder, expr->objexpr);
+    xi_type_decl* decl = remove_const(this->builder, objexpr->type)->as<xi_object_type>()->declaration;
 
-    return find_named_member(this->builder, obj_type, obj_expr, expr->member_name->c_str());
+    auto memref = this->builder.make_instance_memberref_expr(decl, objexpr, expr->member_name->c_str(), (source_span&) expr->source_location);
+
+    //TODO: ...
+
+    if(objexpr->type->is<xi_const_type>()) {
+        return this->builder.make_cast_expr(this->builder.get_const_type(memref->type), memref);
+    }
+    return memref;
 }
 
 ast_expr* xi_bottom_up_typecheck_pass::check_static_named_memberref_expr(xi_static_named_memberref_expr* expr) {
-    assert(expr->type->is<xi_type_decl>());
+    assert(expr->objtype->is<xi_object_type>());
 
-    expr->type->as<xi_type_decl>();
-    //return find_unbound_named_member(this->builder, )
+    xi_type_decl* decl = expr->objtype->as<xi_object_type>()->declaration;
+
+    return this->builder.make_static_memberref_expr(decl, expr->member_name->c_str(), (source_span&) expr->source_location);
 }
 
 static ast_expr* get_binary_op(xi_builder& builder, xi_operator op, ast_expr* lhs, ast_expr* rhs) {
@@ -290,6 +186,89 @@ ast_expr* xi_bottom_up_typecheck_pass::check_index_expr(xi_index_expr* expr) {
         throw std::runtime_error("Not implemented yet\n");
     }
 
+    return expr;
+}
+
+static ast_expr* check_invoke_overload(xi_builder& builder, ast_expr* funcexpr, list<ast_expr>* arguments, uint32_t& effort, bool& is_valid) {
+    ast_type*               funcexpr_type     = funcexpr->type;
+    ast_function_type*      functype          = nullptr;
+
+    if(funcexpr_type->is<ast_function_type>()) {
+        functype      = funcexpr->type->as<ast_function_type>();
+        funcexpr      = builder.make_addressof_expr(funcexpr);
+        funcexpr_type = builder.get_pointer_type(funcexpr_type);
+    }
+    else {
+        if(!(funcexpr_type->is<ast_pointer_type>() &&
+             funcexpr_type->as<ast_pointer_type>()->element_type->is<ast_function_type>())) {
+            throw std::runtime_error("This should be a user error");
+        }
+        functype      = funcexpr->type->as<ast_pointer_type>()->element_type->as<ast_function_type>();
+        //funcexpr      = builder.make_deref_expr(funcexpr);
+    }
+
+    if(arguments->size() != functype->parameter_types->size()) {
+        is_valid = false;
+        return nullptr;
+    }
+
+    ptr<list<ast_expr>> new_args = new list<ast_expr>();
+    for(uint32_t i = 0; i < arguments->size(); i++) {
+        ast_expr* aexpr = (*arguments)[i];
+        ast_type* atype = (*arguments)[i]->type;
+        ast_type* ptype = functype->parameter_types[i];
+
+        if(builder.sametype(atype, ptype)) {
+            new_args->append(aexpr);
+        }
+        else if(builder.widens(atype, ptype)) {
+            uint32_t weffort = 0;
+            new_args->append(builder.widen(ptype, aexpr, weffort));
+            effort += weffort;
+        }
+        else {
+            is_valid = false;
+            return nullptr;
+        }
+    }
+
+    return new ast_invoke(functype->return_type, funcexpr, new_args);
+}
+
+ast_expr* xi_bottom_up_typecheck_pass::check_invoke_expr(ast_invoke* expr) {
+
+    //TODO: ...
+    ast_expr* new_expr = nullptr;
+
+    uint32_t    effort      = 0;
+    bool        is_valid    = true;
+
+    if(expr->funcexpr->is<xi_group_expr>()) {
+        uint32_t min_effort = std::numeric_limits<uint32_t>::max();
+        for(auto fexpr: expr->funcexpr->as<xi_group_expr>()->expressions) {
+            is_valid = true;
+            effort   = 0;
+            if(fexpr->type->is<ast_function_type>() ||
+                    (fexpr->type->is<ast_pointer_type>() &&
+                     fexpr->type->as<ast_pointer_type>()->element_type->is<ast_function_type>())) {
+                auto next_expr = check_invoke_overload(this->builder, fexpr, expr->arguments, effort, is_valid);
+                if(is_valid && effort < min_effort) {
+                    min_effort = effort;
+                    new_expr   = next_expr;
+                }
+            }
+        }
+    }
+    else {
+        new_expr = check_invoke_overload(this->builder, expr->funcexpr, expr->arguments, effort, is_valid);
+    }
+    this->builder.copyloc(new_expr, expr);
+    return new_expr;
+}
+
+ast_expr* xi_bottom_up_typecheck_pass::check_call_expr(ast_call* expr) {
+    assert(false);
+    //TODO: ...
     return expr;
 }
 

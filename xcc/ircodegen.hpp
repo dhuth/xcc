@@ -70,6 +70,8 @@ public:
         this->addmethod(&ircode_expr_generator::generate_deref);
         this->addmethod(&ircode_expr_generator::generate_addressof);
         this->addmethod(&ircode_expr_generator::generate_invoke);
+        this->addmethod(&ircode_expr_generator::generate_call);
+        this->addmethod(&ircode_expr_generator::generate_stmt_expr);
     }
 
     inline llvm::Value* operator()(ast_expr* expr) { return this->visit(expr); }
@@ -89,6 +91,8 @@ private:
     llvm::Value*                                    generate_memberref(ast_memberref*);
     llvm::Value*                                    generate_addressof(ast_addressof*);
     llvm::Value*                                    generate_invoke(ast_invoke*);
+    llvm::Value*                                    generate_call(ast_call*);
+    llvm::Value*                                    generate_stmt_expr(ast_stmt_expr*);
 
     ircode_context&                                                     context;
 };
@@ -135,6 +139,7 @@ public:
 
     void generate(translation_unit& tu, const char* outfile);
     void generate_decl(ast_decl* decl);
+    void generate_stmtlist(list<ast_stmt>* stmts);
 
     llvm::LLVMContext                                                   llvm_context;
     llvm::IRBuilder<>                                                   ir_builder;

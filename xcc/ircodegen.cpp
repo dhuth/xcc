@@ -236,7 +236,7 @@ llvm::Value* ircode_expr_generator::generate_memberref(ast_memberref* e) {
 }
 
 llvm::Value* ircode_expr_generator::generate_addressof(ast_addressof* e) {
-    return context.generate_address(e);
+    return context.generate_address(e->expr);
     /*switch(e->expr->get_tree_type()) {
     case tree_type_id::ast_declref:
         return context.find(e->expr->as<ast_declref>()->declaration);
@@ -249,25 +249,28 @@ llvm::Value* ircode_expr_generator::generate_addressof(ast_addressof* e) {
 
 llvm::Value* ircode_expr_generator::generate_invoke(ast_invoke* e) {
     llvm::Value* func = nullptr;
-    if(e->funcexpr->is<ast_declref>()) {
-        func = context.generate_address(e->funcexpr);
-        /*auto declref = e->funcexpr->as<ast_declref>();
-        if(declref->type->is<ast_function_type>()) {
-            func = context.find(declref->declaration);
-        }
-        else {
-            func = this->visit(e->funcexpr);
-        }*/
-    }
-    else {
-        func = this->visit(e->funcexpr);
-    }
+    func = this->visit(e->funcexpr);
 
     std::vector<llvm::Value*> args;
     for(auto a: e->arguments) {
         args.push_back(this->visit(a));
     }
+
     return context.ir_builder.CreateCall(func, llvm::ArrayRef<llvm::Value*>(args));
+}
+
+llvm::Value* ircode_expr_generator::generate_call(ast_call* e) {
+    llvm::Value* func = context.find(e->funcdecl);
+    std::vector<llvm::Value*> args;
+    for(auto a: e->arguments) {
+        args.push_back(this->visit(a));
+    }
+    return context.ir_builder.CreateCall(func, llvm::ArrayRef<llvm::Value*>(args));
+}
+
+llvm::Value* ircode_expr_generator::generate_stmt_expr(ast_stmt_expr* expr) {
+    context.generate_stmtlist(expr->statements);
+    return this->visit(expr->expr);
 }
 
 
@@ -402,6 +405,7 @@ void ircode_context::generate_local_decl(ast_local_decl* decl) {
 
 void ircode_context::generate_function_body(ast_function_decl* decl) {
     auto fvalue = static_cast<llvm::Function*>(this->find(decl));
+    if(decl->is_extern) return;
 
     this->begin_scope();
     this->_header_bb        = llvm::BasicBlock::Create(this->llvm_context, "header", fvalue);
@@ -436,6 +440,12 @@ void ircode_context::generate_function_body(ast_function_decl* decl) {
     if(llvm::verifyFunction(*fvalue, &llvm::outs())) {
         //TODO: better error handling
         std::exit(1);
+    }
+}
+
+void ircode_context::generate_stmtlist(list<ast_stmt>* stmts) {
+    for(auto stmt: stmts) {
+        this->generate_stmt(stmt, nullptr, nullptr);
     }
 }
 

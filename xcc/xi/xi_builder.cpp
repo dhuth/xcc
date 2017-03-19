@@ -15,7 +15,7 @@
 namespace xcc {
 
 xi_builder::xi_builder(translation_unit& tu)
-    : ast_builder<>(tu),
+    : base_builder_t(tu),
       _lower_walker(new xi_lower_walker(*this)),
       _the_infered_type(new xi_infered_type()) {
     //TODO: settup builtin type rules
@@ -77,9 +77,19 @@ ast_type* xi_builder::get_declaration_type(ast_decl* decl) noexcept {
         {
             return this->get_object_type(decl->as<xi_type_decl>());
         }
+    case tree_type_id::xi_field_decl:
+        {
+            return decl->as<xi_field_decl>()->type;
+        }
+    case tree_type_id::xi_group_decl:
+        {
+            return new xi_group_type(map<ast_type, ast_decl>(decl->as<xi_group_decl>()->declarations, [&](ast_decl* d){
+                return this->get_declaration_type(d);
+            }));
+        }
     }
 
-    return ast_builder<>::get_declaration_type(decl);
+    return base_builder_t::get_declaration_type(decl);
 }
 
 ast_decl* xi_builder::find_member(ast_namespace_decl* decl, const char* name) {
@@ -103,6 +113,34 @@ xi_type_decl* xi_builder::find_type_decl(const char* name) {
         }
     }
     return nullptr;
+}
+
+
+void find_members(xi_type_decl* decl, member_search_parameters& p) {
+    if(std::find(p.searched.begin(), p.searched.end(), decl) == p.searched.end()) {
+        p.searched.push_back(decl);
+        switch(decl->get_tree_type()) {
+        case tree_type_id::xi_struct_decl:
+            find_members(decl->as<xi_struct_decl>(), p);
+            break;
+        default:
+            throw std::runtime_error("at " __FILE__ " : " + std::to_string(__LINE__) + " Unhandled type: " + decl->get_tree_type_name());
+        }
+    }
+}
+
+ptr<list<xi_member_decl>> xi_builder::find_instance_members(xi_type_decl* decl, const char* name) {
+    member_search_parameters params(name, true, false);
+
+    find_members(decl, params);
+    return params.found;
+}
+
+ptr<list<xi_member_decl>> xi_builder::find_static_members(xi_type_decl* decl, const char* name) {
+    member_search_parameters params(name, true, true);
+
+    find_members(decl, params);
+    return params.found;
 }
 
 ast_expr* xi_builder::make_default_initializer(ast_type* tp) {
@@ -132,23 +170,28 @@ ast_expr* xi_builder::make_deref_expr(ast_expr* expr) const {
     if(expr->type->is<xi_ref_type>()) {
         return new ast_deref(expr->type->as<xi_ref_type>()->element_type, expr);
     }
-    return ast_builder<>::make_deref_expr(expr);
+    return base_builder_t::make_deref_expr(expr);
 }
 
 ast_expr* xi_builder::make_memberref_expr(ast_expr* mexpr, const char* name) {
     return new xi_named_memberref_expr(mexpr, name);
-}
-
-ast_expr* xi_builder::make_fieldref_expr(ast_expr* objexpr, xi_field_decl* field) {
-    return new ast_memberref(field->type, objexpr, field->field_index);
+    //xi_member_decl* decl = this->find_instance_member(mexpr->type, name);
+    //return new xi_bound_member(mexpr, decl);
 }
 
 ast_expr* xi_builder::make_memberref_expr(ast_type* type, const char* name) {
     return new xi_static_named_memberref_expr(type, name);
 }
 
-ast_expr* xi_builder::make_fieldref_expr(ast_type* objexpr, xi_field_decl* field) {
-    throw std::runtime_error(__FILE__ ":" + std::to_string(__LINE__) + ": Not implemented");
+ast_expr* xi_builder::make_declref_expr(ast_decl* decl) {
+    if(decl->is<xi_group_decl>()) {
+        auto gexpr = new xi_group_expr(map<ast_expr, ast_decl>(
+                    decl->as<xi_group_decl>()->declarations,
+                    [&](ast_decl* d) { return this->make_declref_expr(d); }));
+        gexpr->type = this->get_declaration_type(decl);
+        return gexpr;
+    }
+    return base_builder_t::make_declref_expr(decl);
 }
 
 ast_expr* xi_builder::make_cast_expr(ast_type* type, ast_expr* expr) const {
@@ -166,6 +209,57 @@ ast_expr* xi_builder::make_call_expr(ast_expr* fexpr, list<ast_expr>* args) cons
     return xcc::copyloc(new ast_invoke(nullptr, fexpr, args), fexpr);
 }
 
+ast_expr* xi_builder::make_ctor_expr(ast_type* tp, list<ast_expr>* args) {
+    //
+    // 1. find __init__ funcion (TODO: function group)
+    //
+
+    auto funcdels   = box(filter<xi_function_decl>(this->find_all_declarations("__init__")));
+    auto ctordecls  = box(new list<ast_decl>());
+    for(auto f: funcdels) {
+        xi_parameter_decl* selfparam = f->parameters[0];
+        if(this->isrefof(selfparam->type, tp)) {
+            ctordecls->append(f);
+        }
+    }
+
+    //
+    // 2. make ctor declaration reference
+    //
+
+    ast_expr* funcexpr = nullptr;
+    if(ctordecls->size() == 0) {
+        // TODO: is this an error?
+        // there are no constructors
+        assert(false);
+    }
+    else if(ctordecls->size() == 1) {
+        funcexpr = this->make_declref_expr((*ctordecls)[0]);
+    }
+    else {
+        funcexpr = this->make_declref_expr(new xi_group_decl("__init__", ctordecls));
+    }
+
+    //
+    // 3. make temp
+    //
+
+    auto tmp              = this->define_local_variable(tp);
+    ast_expr* tmp_expr    = this->make_declref_expr(tmp);
+    auto      invoke_args = new list<ast_expr>(tmp_expr);
+    for(auto e: args) {
+        invoke_args->append(e);
+    }
+
+    //
+    // 4. make stmt expression
+    //
+    ast_expr* invoke_expr = this->make_call_expr(funcexpr, invoke_args);
+    ast_stmt* invoke_stmt = this->make_expr_stmt(invoke_expr);
+
+    return this->make_stmt_expr(new list<ast_stmt>(invoke_stmt), tmp_expr);
+}
+
 ast_stmt* xi_builder::make_return_stmt(ast_type* rt, ast_expr* expr) const noexcept {
     assert(expr != nullptr);
     return xcc::copyloc(new ast_return_stmt(this->make_cast_expr(rt, expr)), expr);
@@ -181,8 +275,91 @@ ast_stmt* xi_builder::make_for_stmt(ast_local_decl* decl, ast_expr* iterexpr, as
     return new xi_foriter_stmt(decl, iterexpr, body);
 }
 
-ast_expr* xi_builder::widen(ast_type* desttype, ast_expr* expr) const {
-    return ast_builder<>::widen(desttype, expr);
+//TODO: visibility
+ast_expr* xi_builder::make_instance_memberref_expr(xi_type_decl* decl, ast_expr* objexpr, const char* name, const source_span& span) {
+    auto members = this->find_instance_members(decl, name);
+
+    if(members->size() == 0) {
+        //TODO: error
+        throw std::runtime_error("WHAT");
+    }
+    else if(members->size() == 1) {
+        auto m    = (*members)[0];
+        auto type = this->get_declaration_type(m);
+        return this->setloc(new xi_bound_memberref_expr(type, objexpr, m), span);
+    }
+    else {
+        throw std::runtime_error("WHAT");
+    }
+}
+
+//TODO: visibility
+ast_expr* xi_builder::make_static_memberref_expr(xi_type_decl* decl, const char* name, const source_span& span) {
+    auto members = this->find_static_members(decl, name);
+
+    if(members->size() == 0) {
+        throw std::runtime_error("WHAT");
+    }
+    else if(members->size() == 1) {
+        auto m    = (*members)[0];
+        auto type = this->get_declaration_type(m);
+        return this->setloc(new xi_static_memberref_expr(type, m), span);
+    }
+    else {
+        throw std::runtime_error("WAHT");
+    }
+}
+
+
+
+bool xi_builder::widens(ast_type* ftype, ast_type* ttype) const {
+    if(ftype == ttype) return true;
+#   define WIDEN_CASE(ft, tt, f, t, s)\
+    if(ftype->is<ft>() && ttype->is<tt>()) {\
+        auto f = ftype->as<ft>();\
+        auto t = ttype->as<tt>();\
+        s\
+    }
+
+    WIDEN_CASE(xi_object_type,      xi_ref_type,    obj_t,  ref_t,      return widens(obj_t, ref_t->element_type);)
+    WIDEN_CASE(ast_integer_type,    ast_real_type,  it,     ft,         return true;)
+    WIDEN_CASE(ast_type,            xi_const_type,  t,      con_t,      return widens(t, con_t->type);)
+
+    return base_builder_t::widens(ftype, ttype);
+#   undef WIDEN_CASE
+}
+
+ast_expr* xi_builder::widen(ast_type* ttype, ast_expr* expr, uint32_t& effort) const {
+#   define WIDEN_CASE(ft, tt, f, t, s)\
+    if(expr->type->is<ft>() && ttype->is<tt>()) {\
+        auto f = expr->type->as<ft>();\
+        auto t = ttype->as<tt>();\
+        s;\
+    }
+
+    WIDEN_CASE(xi_object_type, xi_ref_type, obj_t, ref_t,
+            auto newexpr = new ast_addressof(ref_t, expr);
+            this->copyloc(newexpr, expr);
+            return newexpr;
+    )
+    WIDEN_CASE(ast_type, xi_const_type, t, con_t,
+            auto newexpr = new ast_cast(con_t, ast_op::none, expr);
+            this->copyloc(newexpr, this->widen(con_t, expr, effort));
+            return newexpr;
+    )
+    WIDEN_CASE(ast_integer_type, ast_real_type, it, rt,
+            effort++;
+            return ast_builder::widen(rt, expr);
+    )
+    WIDEN_CASE(ast_real_type,    ast_real_type, ft, tt,
+            if((uint32_t) ft->bitwidth != (uint32_t) tt->bitwidth) {
+                effort++;
+                return ast_builder::widen(tt, expr);
+            }
+    )
+
+    effort = 0;
+    return base_builder_t::widen(ttype, expr);
 }
 
 bool xi_builder::sametype(ast_type* lhs, ast_type* rhs) const {
@@ -210,7 +387,35 @@ bool xi_builder::sametype(ast_type* lhs, ast_type* rhs) const {
         }
     }
 
-    return ast_builder<>::sametype(lhs, rhs);
+    return base_builder_t::sametype(lhs, rhs);
+}
+
+ast_decl* xi_builder::find_declaration(const char* name) noexcept {
+    auto alldecls = this->context->findall(name);
+
+    bool searching_functions = false;
+    auto found_functions = box(new list<ast_decl>());
+
+    for(auto decl: alldecls) {
+        if(!searching_functions) {
+            if(decl->is<xi_function_decl>()) {
+                searching_functions = true;
+            }
+            else {
+                return decl;
+            }
+        }
+        found_functions->append(decl);
+    }
+
+    if(found_functions->size() == 0) {
+        return nullptr;
+    }
+    else if(found_functions->size() == 1) {
+        return (*found_functions)[0];
+    }
+
+    return new xi_group_decl(name, found_functions);
 }
 
 void xi_builder::dump_parse() {
@@ -235,14 +440,6 @@ void xi_builder::dump_unit(std::ostream& ostr) {
     for(auto f: this->tu.global_function_declarations) {
         ast_printer::print(f, ostr);
     }
-}
-
-void xi_builder::set_type_widens(ast_type* from, ast_type* to) {
-    auto from_iter = this->_type_rules_widens.find(from);
-    if(from_iter == this->_type_rules_widens.end()) {
-        this->_type_rules_widens[from] = std::vector<ast_type*>();
-    }
-    this->_type_rules_widens[from].push_back(to);
 }
 
 ast_decl* xi_builder::lower(ast_decl* decl) {
@@ -275,11 +472,14 @@ void xi_builder::lower_pass() {
 void xi_builder::generate() {
     //TODO: do all xi passes
 
-    xi_finalize_types_pass finalize_types(*this);
-    finalize_types.visit(this->global_namespace);
+    //xi_finalize_types_pass finalize_types(*this);
+    //finalize_types.visit(this->global_namespace);
 
     xi_typecheck_pass typecheck_pass(*this);
     typecheck_pass.visit(this->global_namespace);
+
+    xi_finalize_types_pass finalize_types(*this);
+    finalize_types.visit(this->global_namespace);
 
     this->lower_pass();
 }
