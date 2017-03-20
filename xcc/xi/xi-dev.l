@@ -201,7 +201,7 @@ u64                                                 RETURN_TYPE(builder.get_inte
 f16                                                 RETURN_TYPE(builder.get_real_type(16))
 f32                                                 RETURN_TYPE(builder.get_real_type(32))
 f64                                                 RETURN_TYPE(builder.get_real_type(64))
-auto                                                RETURN_TYPE(builder.get_infered_type())
+var                                                 RETURN_TYPE(builder.get_infered_type())
 
 
         /* declaration scope keywords */

@@ -118,7 +118,6 @@
         KW_FOR                              "for"
         KW_IF                               "if"
         KW_IN                               "in"
-        KW_LOCAL                            "local"
         KW_RETURN                           "return"
         KW_WHILE                            "while"
         KW_YIELD                            "yield"
@@ -490,7 +489,6 @@ dim-expr
 stmt-list-opt
         : stmt                { builder.emit($1); } stmt-list-opt
         | local-stmt          { builder.emit($1); }
-        | KW_LOCAL local-stmt { builder.emit($2); }
         | %empty
         ;
 
