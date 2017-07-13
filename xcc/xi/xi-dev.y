@@ -118,6 +118,7 @@
         KW_FOR                              "for"
         KW_IF                               "if"
         KW_IN                               "in"
+        KW_LOCAL                            "local"
         KW_RETURN                           "return"
         KW_WHILE                            "while"
         KW_YIELD                            "yield"
