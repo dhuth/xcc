@@ -13,7 +13,8 @@ xcc_core_sources       += ast_context.cpp
 
 xcc_core_cppflags       = @llvm_cppflags@
 xcc_core_cxxflags       = -std=c++11 -pthread
-xcc_core_libs           = xi/libxi.a @llvm_libs@
+## TODO: automate inclusion of language static libraries
+xcc_core_libs           = @xcc_lang_libs@ @llvm_libs@ @llvm_syslibs@
 xcc_core_ldflags        = @llvm_ldflags@
 
 ## Special source files
