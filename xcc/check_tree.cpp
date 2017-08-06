@@ -19,6 +19,7 @@ public:
                 u32(32, true),
                 u64(64, true),
                 f32(32) {
+        void_tp.pin();
         i32.pin();
         u32.pin();
         u64.pin();
@@ -99,36 +100,36 @@ TEST_F(TreeTest, TreeList) {
 }
 
 TEST_F(TreeTest, TestMangle_Void) {
-    ASSERT_EQ(mangler(&void_tp), "void");
+    ASSERT_EQ(mangler(&void_tp), "v");
 }
 
 TEST_F(TreeTest, TestMangle_Int) {
-    ASSERT_EQ(mangler(&u32), "u32");
-    ASSERT_EQ(mangler(&i32), "i32");
+    ASSERT_EQ(mangler(&u32), "j");
+    ASSERT_EQ(mangler(&i32), "i");
 }
 
 TEST_F(TreeTest, TestMangle_Float) {
-    ASSERT_EQ(mangler(&f32), "f32");
+    ASSERT_EQ(mangler(&f32), "f");
 }
 
 TEST_F(TreeTest, TestMamgler_Array) {
     ast_array_type arr_tp(&f32, 6);
-    ASSERT_EQ(mangler(&arr_tp), "f32a_6_");
+    ASSERT_EQ(mangler(&arr_tp), "A6_f");
 }
 
 TEST_F(TreeTest, TestMangler_Pointer) {
     ast_pointer_type ptr_tp(&u64);
-    ASSERT_EQ(mangler(&ptr_tp), "u64p");
+    ASSERT_EQ(mangler(&ptr_tp), "Pm");
 }
 
 TEST_F(TreeTest, TestMangler_Function) {
     ast_function_type func_tp(&i32, new list<ast_type>({&f32, new ast_pointer_type(&u64)}));
-    ASSERT_EQ(mangler(&func_tp), "i32ff32_u64p__");
+    ASSERT_EQ(mangler(&func_tp), "FifPmE");
 }
 
 TEST_F(TreeTest, TestMangler_FunctionDecl) {
-    ast_function_decl foo("foo", &u32, new list<ast_parameter_decl>({new ast_parameter_decl("x", &u32)}), nullptr);
-    ASSERT_EQ(mangler(&foo), "___fooFu32__");
+    ast_function_decl foo("foo", &void_tp, new list<ast_parameter_decl>({new ast_parameter_decl("x", &u32)}), nullptr);
+    ASSERT_EQ(mangler(&foo), "_ZfooFvjE");
 }
 
 }

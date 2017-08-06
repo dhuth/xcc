@@ -13,7 +13,6 @@ xcc_core_sources       += ast_context.cpp
 
 xcc_core_cppflags       = @llvm_cppflags@
 xcc_core_cxxflags       = -std=c++11 -pthread
-## TODO: automate inclusion of language static libraries
 xcc_core_libs           = @xcc_lang_libs@ @llvm_libs@ @llvm_syslibs@
 xcc_core_ldflags        = @llvm_ldflags@
 
@@ -36,8 +35,8 @@ check_PROGRAMS         += check_ast
 TESTS                   = $(check_PROGRAMS)
 
 check_libs              = $(xcc_core_libs) -lgtest
-check_ldflags           = $(xcc_core_ldflags)
-check_cppflags			= $(xcc_core_cppflags)
+check_ldflags           = $(xcc_core_ldflags) -L@gtest_libdir@
+check_cppflags			= $(xcc_core_cppflags) -I@gtest_include@
 check_cxxflags          = $(xcc_core_cxxflags) -pthread
 
 check_tree_SOURCES      = check_tree.cpp $(xcc_core_sources)

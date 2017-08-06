@@ -152,7 +152,7 @@ public:
         //...
     }
 
-    property<list<ast_decl>>                                    declarations;
+    property<list<ast_decl>>                                    declarations;   //!<
 };
 
 
@@ -576,9 +576,9 @@ enum class ast_op : uint32_t {
     fneg,                                                               //!< Floating point negation
     iadd,                                                               //!< Integer add
     fadd,                                                               //!< Floating point add
-    isub,                                                                //!< Integer subtract
+    isub,                                                               //!< Integer subtract
     fsub,                                                               //!< Floating point subtract
-    imul,                                                                //!< Integer multiply
+    imul,                                                               //!< Integer multiply
     fmul,                                                               //!< Floating point multiply
     udiv,                                                               //!< Unsigned integer divide
     idiv,                                                               //!< Signed integer divide
@@ -622,27 +622,27 @@ enum class ast_op : uint32_t {
     fcmp_false,                                                         //!< Floating point always false
     // High level operators
     __high_level,
-    add,
-    sub,
-    mul,
-    div,
-    mod,
-    neg,
-    shl,
-    shr,
-    eq,
-    ne,
-    le,
-    lt,
-    ge,
-    gt,
-    logical_and,
-    logical_or,
-    logical_not,
-    binary_and,
-    binary_or,
-    binary_xor,
-    binary_not,
+    add,                                                                //!< General add
+    sub,                                                                //!< General subtract
+    mul,                                                                //!< General multiply
+    div,                                                                //!< General divide
+    mod,                                                                //!< General modulo
+    neg,                                                                //!< General negate
+    shl,                                                                //!< General shift left
+    shr,                                                                //!< General shift right
+    eq,                                                                 //!< General equal
+    ne,                                                                 //!< General not equal
+    le,                                                                 //!< General less than or equal
+    lt,                                                                 //!< General less than
+    ge,                                                                 //!< General greater than or equal
+    gt,                                                                 //!< General greater
+    logical_and,                                                        //!< General logical and
+    logical_or,                                                         //!< General logical or
+    logical_not,                                                        //!< General logical not
+    binary_and,                                                         //!< General binary and
+    binary_or,                                                          //!< General binary or
+    binary_xor,                                                         //!< General binary xor
+    binary_not,                                                         //!< General binary not
 };
 
 inline bool is_highlevel_op(ast_op op) {
@@ -781,8 +781,8 @@ public:
         //...
     }
 
-    property<ast_expr>                                          objexpr;
-    property<uint32_t>                                          member_index;
+    property<ast_expr>                                          objexpr;        //!<
+    property<uint32_t>                                          member_index;   //!<
 
 };
 

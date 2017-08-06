@@ -9,24 +9,27 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_RANLIB
 
-dnl TODO: automate from *.lang files
-dnl         from m4_shell or something
-
-dnl env top_srcdir=$srcdir ./generate_front_ends.sh > $srcdir/xcc_lang_libs
-
 m4_esyscmd(env top_srcdir=. src_dir_expr=\$srcdir sh ./generate_front_ends.sh)
 
-AC_SUBST([llvm_prefix],             [])
-AC_SUBST([llvm_version],            [3.8])
-AC_SUBST([llvm_version_expr],       [-${llvm_version}])
-AC_SUBST([llvm_config],             [${llvm_prefix}llvm-config${llvm_version_expr}])
-AC_SUBST([CXXFLAGS],                ['-g2 -O0'])
+AC_SUBST([gtest_include],               [/home/derick/software/gtest/googletest/include])
+AC_SUBST([gtest_libdir],                [/home/derick/software/gtest/googletest/lib])
 
-AC_SUBST([llvm_libs],               [`$llvm_config --libs core engine scalaropts`])
-AC_SUBST([llvm_syslibs],            [`$llvm_config --system-libs`])
-AC_SUBST([llvm_cppflags],           [`$llvm_config --cppflags`])
-AC_SUBST([llvm_libdir],             [`$llvm_config --libdir`])
-AC_SUBST([llvm_ldflags],            [`$llvm_config --ldflags`])
+AC_SUBST([llvm_prefix],                 [])
+AC_SUBST([llvm_version],                [3.8])
+AC_SUBST([llvm_version_expr],           [-${llvm_version}])
+AC_SUBST([llvm_config],                 [${llvm_prefix}llvm-config${llvm_version_expr}])
+AC_SUBST([CXXFLAGS],                    ['-g2 -O0'])
+
+AC_SUBST([llvm_libs],                   [`$llvm_config --libs core engine scalaropts`])
+AC_SUBST([llvm_syslibs],                [`$llvm_config --system-libs`])
+AC_SUBST([llvm_cppflags],               [`$llvm_config --cppflags`])
+AC_SUBST([llvm_libdir],                 [`$llvm_config --libdir`])
+AC_SUBST([llvm_ldflags],                [`$llvm_config --ldflags`])
+
+AC_ARG_ENABLE([dev-trace-managed-pointers], [], [], [])
+
+AS_IF([test "x$enable_dev_trace_managed_pointers" == xyes],
+    [AC_DEFINE([DEV_TRACE_MANAGED_PTRS], [], [Enable development tracing of managed pointers])])
 
 AC_CONFIG_HEADERS([xcc/config.h])
 

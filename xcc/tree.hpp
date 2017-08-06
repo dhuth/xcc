@@ -16,10 +16,7 @@
 #include <initializer_list>
 #include <functional>
 #include <map>
-//#include <memory>
 #include <type_traits>
-//#include <tuple>
-//#include <list>
 #include <vector>
 
 #include "managed_ptr.hpp"
@@ -116,7 +113,6 @@ struct tree_type {
     tree_type_id                                                id;
     tree_type_id                                                base_id;
     const char*                                                 name;
-    __tree_base*(*shallow_clone_func)(__tree_base*);
 
     inline static constexpr size_t count() noexcept { return (size_t)tree_type_id::__type_count; }
     inline static           bool   is_base_of(const tree_type_id bt, const tree_type_id dt) noexcept {
@@ -206,24 +202,19 @@ protected:
     template<tree_type_id Id>
     friend __tree_base* __shallow_clone_tree(__tree_base* src);
 
+    template<tree_type_id Id>
+    friend __tree_base* __deep_clone_tree(__tree_base* src);
+
     inline size_t append_child(__tree_base* v) noexcept {
         size_t idx = this->_child_nodes.size();
         this->_child_nodes.push_back(ptr<__tree_base>(v));
         return idx;
     }
 
-    virtual __tree_base* __shallow_clone() { throw std::runtime_error("Not implemented"); }
-
     const tree_type_id                                          _type;
     std::vector<ptr<__tree_base>>                               _child_nodes;
 
 };
-
-template<typename TTreeType>
-inline TTreeType* shallow_clone(TTreeType* t) {
-    return __all_tree_types[(uint64_t) t->get_tree_type()].shallow_clone_func(t)->template as<TTreeType>();
-}
-
 
 template<tree_type_id VType, typename TBase = __tree_base, __is_tree_type<TBase> = 0>
 struct __extend_tree : public TBase {
@@ -293,10 +284,6 @@ public:
     }
 
 protected:
-
-    virtual __tree_base* __shallow_clone() {
-        return new __tree_list_value(this->_list);
-    }
 
     std::vector<TElement>                                               _list;
 
@@ -392,14 +379,6 @@ public:
     inline typename std::vector<ptr<__tree_base>>::size_type size() const noexcept {
         return this->_child_nodes.size();
     }
-
-protected:
-
-    virtual __tree_base* __shallow_clone() {
-        return new __tree_list_tree<TElement>(this->_child_nodes);
-    }
-
-
 };
 
 template<typename T> inline typename __tree_list_tree<T>::      iterator begin(__tree_list_tree<T>* lptr)       noexcept { return lptr->begin(); }

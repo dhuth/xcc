@@ -75,6 +75,7 @@ Makefile
 /xcc/all_tree_types.def.hpp
 /xcc/all_frontends.def.hpp
 /xcc/all_frontend_compilers.def.hpp
+/xcc/all_tree_headers.def.hpp
 /xcc/check_tree
 /xcc/check_ast
 /xcc/xcc
