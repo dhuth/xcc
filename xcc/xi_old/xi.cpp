@@ -9,16 +9,16 @@
 #include "config.h"
 #endif
 
-#include <xi_internal.hpp>
+#include <xi_old/xi_internal.hpp>
 #include <cstdio>
 
 #include <iostream>
 #include <fstream>
 
-#include "xi-parser.hpp"
-#include "xi-lex.hpp"
-#include "xi.hpp"
-#include "xi_internal.hpp"
+#include <xi_old/xi-parser.hpp>
+#include <xi_old/xi-lex.hpp>
+#include <xi_old/xi.hpp>
+#include <xi_old/xi_internal.hpp>
 
 #include "ircodegen.hpp"
 

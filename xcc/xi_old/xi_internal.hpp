@@ -8,9 +8,9 @@
 #ifndef XI_XI_INTERNAL_HPP_
 #define XI_XI_INTERNAL_HPP_
 
+#include "../xi_old/xi_builder.hpp"
+#include "../xi_old/xi_tree.hpp"
 #include "frontend.hpp"
-#include "xi_tree.hpp"
-#include "xi_builder.hpp"
 
 typedef xcc::xi_builder                                                 xi_builder_t;
 

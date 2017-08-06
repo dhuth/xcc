@@ -5,10 +5,10 @@
  *      Author: derick
  */
 
+#include <xi_old/xi_builder.hpp>
+#include <xi_old/xi_builder_struct.hpp>
+#include <xi_old/xi_pass_finalize_types.hpp>
 #include <algorithm>
-#include "xi_builder.hpp"
-#include "xi_builder_struct.hpp"
-#include "xi_pass_finalize_types.hpp"
 
 namespace xcc {
 

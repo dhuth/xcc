@@ -5,7 +5,7 @@
  *      Author: derick
  */
 
-#include "xi_lower.hpp"
+#include <xi_old/xi_lower.hpp>
 
 
 namespace xcc {

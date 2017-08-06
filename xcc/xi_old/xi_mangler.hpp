@@ -8,7 +8,7 @@
 #ifndef XI_XI_MANGLER_HPP_
 #define XI_XI_MANGLER_HPP_
 
-#include "xi_tree.hpp"
+#include "../xi_old/xi_tree.hpp"
 #include "ast_builder.hpp"
 
 //itanium-cxx-abi.github.io/cxx-abi/abi.html

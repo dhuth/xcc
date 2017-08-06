@@ -5,12 +5,10 @@
  *      Author: derick
  */
 
-#include "xi_builder.hpp"
-#include "xi_lower.hpp"
-
-// passes
-#include "xi_pass_finalize_types.hpp"
-#include "xi_pass_typecheck.hpp"
+#include <xi_old/xi_builder.hpp>
+#include <xi_old/xi_lower.hpp>
+#include <xi_old/xi_pass_finalize_types.hpp>
+#include <xi_old/xi_pass_typecheck.hpp>
 
 namespace xcc {
 

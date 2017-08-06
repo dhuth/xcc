@@ -6,7 +6,7 @@
  */
 
 
-#include "xi_internal.hpp"
+#include <xi_old/xi_internal.hpp>
 
 namespace xcc {
 std::string to_string(xcc::xi_operator op) {

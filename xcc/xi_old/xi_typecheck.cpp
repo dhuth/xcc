@@ -5,10 +5,10 @@
  *      Author: derick
  */
 
+#include <xi_old/xi_builder.hpp>
+#include <xi_old/xi_pass_typecheck.hpp>
 #include <vector>
 #include <limits>
-#include "xi_pass_typecheck.hpp"
-#include "xi_builder.hpp"
 
 namespace xcc {
 

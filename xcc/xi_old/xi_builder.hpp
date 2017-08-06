@@ -10,10 +10,11 @@
 
 #include <functional>
 #include <unordered_map>
+
+#include "../xi_old/xi_mangler.hpp"
+#include "../xi_old/xi_tree.hpp"
 #include "frontend.hpp"
-#include "xi_tree.hpp"
 #include "ast_builder.hpp"
-#include "xi_mangler.hpp"
 
 namespace xcc {
 

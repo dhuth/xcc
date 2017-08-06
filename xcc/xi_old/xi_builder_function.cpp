@@ -5,9 +5,9 @@
  *      Author: derick
  */
 
-#include "xi_builder.hpp"
-#include "xi_builder_function.hpp"
-#include "xi_lower.hpp"
+#include <xi_old/xi_builder.hpp>
+#include <xi_old/xi_builder_function.hpp>
+#include <xi_old/xi_lower.hpp>
 
 namespace xcc {
 

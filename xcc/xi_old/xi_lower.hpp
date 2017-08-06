@@ -8,7 +8,7 @@
 #ifndef XI_XI_LOWER_HPP_
 #define XI_XI_LOWER_HPP_
 
-#include "xi_builder.hpp"
+#include "../xi_old/xi_builder.hpp"
 
 namespace xcc {
 

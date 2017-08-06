@@ -8,7 +8,7 @@
 #ifndef XI_XI_BUILDER_STRUCT_HPP_
 #define XI_XI_BUILDER_STRUCT_HPP_
 
-#include "xi_tree.hpp"
+#include "../xi_old/xi_tree.hpp"
 #include "ast_context.hpp"
 
 namespace xcc {

@@ -8,7 +8,7 @@
 #ifndef XI_XI_PASS_FINALIZE_TYPES_HPP_
 #define XI_XI_PASS_FINALIZE_TYPES_HPP_
 
-#include "xi_pass.hpp"
+#include "../xi_old/xi_pass.hpp"
 
 namespace xcc {
 

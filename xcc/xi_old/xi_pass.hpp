@@ -9,7 +9,8 @@
 #define XI_XI_PASS_HPP_
 
 #include <stack>
-#include "xi_tree.hpp"
+
+#include "../xi_old/xi_tree.hpp"
 
 namespace xcc {
 

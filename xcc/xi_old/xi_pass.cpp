@@ -6,8 +6,8 @@
  */
 
 
-#include "xi_pass.hpp"
-#include "xi_builder.hpp"
+#include <xi_old/xi_builder.hpp>
+#include <xi_old/xi_pass.hpp>
 
 namespace xcc {
 

@@ -8,8 +8,8 @@
 #ifndef XI_XI_PASS_TYPECHECK_HPP_
 #define XI_XI_PASS_TYPECHECK_HPP_
 
-#include "xi_tree.hpp"
-#include "xi_pass.hpp"
+#include "../xi_old/xi_pass.hpp"
+#include "../xi_old/xi_tree.hpp"
 
 namespace xcc {
 
