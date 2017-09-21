@@ -16,7 +16,7 @@
 
 namespace xcc {
 
-__ast_builder_impl::__ast_builder_impl(translation_unit& tu, ast_name_mangler_t* mangler) noexcept
+__ast_builder_impl::__ast_builder_impl(translation_unit& tu, ast_name_mangler* mangler) noexcept
             : _mangler_ptr(mangler),
               get_mangled_name(*mangler),
               tu(tu),
@@ -30,27 +30,6 @@ __ast_builder_impl::__ast_builder_impl(translation_unit& tu, ast_name_mangler_t*
 
     this->context = new ast_namespace_context(nullptr, this->global_namespace);
     this->create_default_types();
-}
-
-void __ast_builder_impl::copyloc(ast_tree* dest, ast_tree* src) const noexcept {
-    if(dest != nullptr && src != nullptr) {
-        dest->source_location = src->source_location;
-    }
-}
-
-void __ast_builder_impl::copyloc(ast_tree* dest, ast_tree* minsrc, ast_tree* maxsrc) const noexcept {
-    if(dest != nullptr) {
-        if(minsrc == nullptr) {
-            this->copyloc(dest, maxsrc);
-        }
-        else if(maxsrc == nullptr) {
-            this->copyloc(dest, minsrc);
-        }
-        else {
-            dest->source_location->first = minsrc->source_location->first;
-            dest->source_location->last  = maxsrc->source_location->last;
-        }
-    }
 }
 
 void __ast_builder_impl::create_default_types() noexcept {
@@ -641,6 +620,7 @@ ast_stmt* __ast_builder_impl::make_for_stmt(ast_stmt* init_stmt, ast_expr* cond,
 
 void __ast_builder_impl::emit(ast_stmt* stmt) noexcept {
     auto ctxt = dynamic_cast<ast_block_context*>(unbox(this->context));
+    assert(ctxt != nullptr);
     ctxt->emit(stmt);
 }
 

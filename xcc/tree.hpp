@@ -279,6 +279,10 @@ public:
         this->_list.push_back(el);
     }
 
+    inline void append(TElement&& el) noexcept {
+        this->_list.push_back(el);
+    }
+
     inline typename std::vector<TElement>::size_type size() const noexcept {
         return this->_list.size();
     }
@@ -385,6 +389,26 @@ template<typename T> inline typename __tree_list_tree<T>::      iterator begin(_
 template<typename T> inline typename __tree_list_tree<T>::      iterator end(__tree_list_tree<T>* lptr)         noexcept { return lptr->end();   }
 template<typename T> inline typename __tree_list_tree<T>::const_iterator begin(const __tree_list_tree<T>* lptr) noexcept { return lptr->begin(); }
 template<typename T> inline typename __tree_list_tree<T>::const_iterator end(const __tree_list_tree<T>* lptr)   noexcept { return lptr->end();   }
+
+template<typename TType>
+inline __tree_list_tree<TType>* copy(__tree_list_tree<TType>* lptr) {
+    auto dest_list = new __tree_list_tree<TType>();
+    for(auto itr = begin(lptr); itr != end(lptr); itr++) {
+        auto el = *itr;
+        dest_list->append(el);
+    }
+    return dest_list;
+}
+
+template<typename TType>
+inline __tree_list_value<TType>* copy(__tree_list_value<TType>* lptr) {
+    auto dest_list = new __tree_list_value<TType>();
+    for(auto itr = begin(lptr); itr != end(lptr); itr++) {
+        auto el = *itr;
+        dest_list->append(el);
+    }
+    return dest_list;
+}
 
 template<typename TToType,
          typename TFromType>
@@ -526,6 +550,15 @@ public:
     inline typename list_t::const_iterator end()   const noexcept { return dynamic_cast<list_t*>(this->__get())->end();   }
 
 };
+
+template<typename TType>
+inline typename __list_type_selector<TType>::type* copy(__tree_property_list<TType>& prop) {
+    auto dest_list = new typename __list_type_selector<TType>::type();
+    for(auto itr = prop.begin(); itr != prop.end(); ++itr) {
+        dest_list->append(*itr);
+    }
+    return dest_list;
+}
 
 template<typename TToType,
          typename TFromType>

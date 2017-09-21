@@ -14,9 +14,10 @@
 #include <iostream>
 #include <fstream>
 
-#include <xi/xi-parser.hpp>
-#include <xi/xi-lex.hpp>
-#include <xi/xi.hpp>
+#include "xi_builder.hpp"
+#include "xi-parser.hpp"
+#include "xi-lex.hpp"
+#include "xi.hpp"
 
 #include "ircodegen.hpp"
 
@@ -25,23 +26,14 @@ namespace xcc {
 int ximain(const char* input_filename, const char* output_filename, std::vector<std::string>& args) {
     translation_unit            unit;
 
-    //xi_init_printer();
+    //TODO: read input args
 
+    xi_builder builder(unit);
     xiin = fopen(input_filename, "r");
 
-    //if(xi_param_dump_parse) {
-    //    std::ofstream s(xi_param_dump_parse_filename);
-    //    builder.dump_parse(s);
-    //}
+    xiparse(builder);
 
     ircode_context ctx(input_filename);
-    //builder.generate();
-
-    //if(xi_param_dump_unit) {
-    //    std::ofstream s(xi_param_dump_unit_filename);
-    //    builder.dump_unit(s);
-    //}
-
     ctx.generate(unit, output_filename);
 
     return 0;

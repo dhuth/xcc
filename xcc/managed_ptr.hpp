@@ -37,6 +37,9 @@ void __watch_pointer(void* p);
 
 #else
 
+#define trace_msg(...)          /* nothing */
+#define trace_ptr_msg(...)      /* nothing */
+
 #endif
 
 struct __ptr_impl {

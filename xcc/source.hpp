@@ -9,11 +9,12 @@
 #define SOURCE_HPP_
 
 #include <cstdint>
+#include <string>
 
 namespace xcc {
 
 struct source_location {
-    char*                                           filename;
+    std::string                                     filename;
     uint32_t                                        line_number;
     uint32_t                                        column_number;
 
@@ -30,7 +31,7 @@ inline void init_source_span(source_span& span, source_location& from) {
     span.last  = from;
 }
 
-inline void set_source_span_from_cpp(source_span& span, char* filename, uint32_t line_number) {
+inline void set_source_span_from_cpp(source_span& span, std::string filename, uint32_t line_number) {
     span.first.filename    = filename;
     span.first.line_number = line_number;
     span.last.filename     = filename;

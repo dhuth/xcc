@@ -22,12 +22,12 @@ struct ircode_context;
 
 typedef dispatch_visitor<ast_expr>                                      ast_folder_t;
 
-struct ast_name_mangler_t : public dispatch_visitor<std::string> {
+struct ast_name_mangler : public dispatch_visitor<std::string> {
     virtual std::string         operator()(ast_tree* t) = 0;
     virtual std::string         operator()(std::string prefix, ast_tree* t) = 0;
 };
 
-struct ast_default_name_mangler : public ast_name_mangler_t {
+struct ast_default_name_mangler : public ast_name_mangler {
 public:
 
     inline ast_default_name_mangler() noexcept {
@@ -64,41 +64,11 @@ private:
 
 };
 
-template<typename TDestTreeType,
-         typename TSrcTreeType,
-         typename std::enable_if<std::is_base_of<ast_tree, TDestTreeType>::value, int>::type = 0,
-         typename std::enable_if<std::is_base_of<ast_tree, TSrcTreeType>::value, int>::type = 0>
-TDestTreeType* copyloc(TDestTreeType* t, TSrcTreeType* ft) noexcept { t->source_location = ft->source_location; return t; }
-
-template<typename TDestTreeType,
-         typename TSrcMinTreeType,
-         typename TSrcMaxTreeType,
-         typename std::enable_if<std::is_base_of<ast_tree, TDestTreeType>::value, int>::type = 0,
-         typename std::enable_if<std::is_base_of<ast_tree, TSrcMinTreeType>::value, int>::type = 0,
-         typename std::enable_if<std::is_base_of<ast_tree, TSrcMaxTreeType>::value, int>::type = 0>
-TDestTreeType* copyloc(TDestTreeType *t, TSrcMinTreeType* fmin, TSrcMaxTreeType* fmax) noexcept {
-    t->source_location->first   = fmin->source_location->first;
-    t->source_location->last    = fmax->source_location->last;
-    return t;
-}
-
 struct __ast_builder_impl {
 public:
 
-    __ast_builder_impl(translation_unit& tu, ast_name_mangler_t* mangler) noexcept;
+    __ast_builder_impl(translation_unit& tu, ast_name_mangler* mangler) noexcept;
     virtual ~__ast_builder_impl() noexcept = default;
-
-    template<typename TTreeType, typename std::enable_if<std::is_base_of<ast_tree, TTreeType>::value, int>::type = 0>
-    TTreeType* setloc(TTreeType* t, const source_span& loc) { t->source_location = loc; return t; }
-
-    template<typename TTreeType, typename std::enable_if<std::is_base_of<ast_tree, TTreeType>::value, int>::type = 0>
-    TTreeType* setloc(TTreeType* t, source_span& minloc, const source_span& maxloc) {
-        t->source_location->first = minloc.first;
-        t->source_location->last  = maxloc.last;
-        return t;
-    }
-            void                                copyloc(ast_tree* dest, ast_tree* src) const noexcept;
-            void                                copyloc(ast_tree* dest, ast_tree* minsrc, ast_tree* maxsrc) const noexcept;
 
             ast_void_type*                      get_void_type()                                                     const noexcept;
             ast_integer_type*                   get_integer_type(uint32_t bitwidth, bool is_unsigned)               const noexcept;
@@ -166,7 +136,7 @@ public:
     virtual ast_expr*                           fold(ast_expr* e);
 
     // Anylasis
-            ast_name_mangler_t&                 get_mangled_name;
+            ast_name_mangler&                 get_mangled_name;
     virtual bool                                sametype(ast_type*, ast_type*)                                      const;
     virtual ast_type*                           maxtype(ast_type*, ast_type*)                                       const;
     virtual bool                                widens(ast_type*, ast_type*)                                        const;
@@ -316,12 +286,12 @@ private:
     std::unordered_map<typelistkey_t, ptr<ast_record_type>, typelist_hasher, sametypelist_predicate>
                                                                         _record_types;
 
-    ast_name_mangler_t*                                                 _mangler_ptr;
+    ast_name_mangler*                                                 _mangler_ptr;
 
 };
 
 template<typename TMangler = ast_default_name_mangler,
-         typename std::enable_if<std::is_base_of<ast_name_mangler_t, TMangler>::value, int>::type = 0>
+         typename std::enable_if<std::is_base_of<ast_name_mangler, TMangler>::value, int>::type = 0>
 struct ast_builder : public __ast_builder_impl {
 public:
 

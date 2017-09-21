@@ -73,12 +73,10 @@ public:
     inline ast_decl(tree_type_id id, std::string name) noexcept
             : base_type(id),
               name(this, name),
-              generated_name(this, ""),
-              parent_namespace(nullptr) {
+              generated_name(this, "") {
         //...
     }
 
-    ast_namespace_decl*                                         parent_namespace;   //!< namespace where declaration was made
     property<std::string>                                       name;               //!< declaration name
     property<std::string>                                       generated_name;     //!< mangled declaration name
 
@@ -153,6 +151,7 @@ public:
     }
 
     property<list<ast_decl>>                                    declarations;   //!<
+
 };
 
 
@@ -201,6 +200,7 @@ public:
     }
 
     property<ast_type>                                          type; //!<
+
 };
 
 
@@ -235,6 +235,7 @@ public:
 
     property<ast_type>                                          type;           //!<
     property<ast_expr>                                          init_value;     //!<
+
 };
 
 
@@ -1238,6 +1239,66 @@ private:
     void formatted_print(const char* fmt, std::ostream& s, std::vector<pwfunc_t>& pfunc);
 
 };
+
+
+template<typename T,
+         typename std::enable_if<std::is_base_of<ast_tree, T>::value, int>::type = 0>
+inline T* setloc(T* t, source_span& loc) noexcept {
+    if(t != nullptr) {
+        t->source_location = loc;
+    }
+    return t;
+}
+
+template<typename T,
+         typename std::enable_if<std::is_base_of<ast_tree, T>::value, int>::type = 0>
+inline T* setloc(T* t, std::string filename, uint32_t line, uint32_t col, uint32_t width) noexcept {
+    if(t != nullptr) {
+        t->source_location = {
+                { filename, line, col },
+                { filename, line, col + width }
+        };
+    }
+    return t;
+}
+
+template<typename TDestTreeType,
+         typename TSrcTreeType,
+         typename std::enable_if<std::is_base_of<ast_tree, TDestTreeType>::value, int>::type = 0,
+         typename std::enable_if<std::is_base_of<ast_tree, TSrcTreeType>::value, int>::type = 0>
+TDestTreeType* copyloc(TDestTreeType* t, TSrcTreeType* ft) noexcept { t->source_location = ft->source_location; return t; }
+
+template<typename TDestTreeType,
+         typename TSrcMinTreeType,
+         typename TSrcMaxTreeType,
+         typename std::enable_if<std::is_base_of<ast_tree, TDestTreeType>::value, int>::type = 0,
+         typename std::enable_if<std::is_base_of<ast_tree, TSrcMinTreeType>::value, int>::type = 0,
+         typename std::enable_if<std::is_base_of<ast_tree, TSrcMaxTreeType>::value, int>::type = 0>
+TDestTreeType* copyloc(TDestTreeType *t, TSrcMinTreeType* fmin, TSrcMaxTreeType* fmax) noexcept {
+    t->source_location->first   = fmin->source_location->first;
+    t->source_location->last    = fmax->source_location->last;
+    return t;
+}
+
+
+
+typedef std::hash<ast_type*>                                ast_type_hasher;
+
+struct ast_type_comparer {
+public:
+
+    ast_type_comparer() = default;
+    virtual ~ast_type_comparer() = default;
+
+    virtual bool operator()(ast_type* const&, ast_type* const&) const noexcept;
+
+private:
+
+    bool same_typelist(list<ast_type>* lhs, list<ast_type>* rhs) const noexcept;
+
+};
+
+
 
 }
 

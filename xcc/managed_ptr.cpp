@@ -33,7 +33,6 @@ bool __is_watched(void* p) {
 void __watch_pointer(void* p) {
     __watched_pointers.push_back((uintptr_t) p);
 }
-
 #endif
 
 void dump_managed_ptr_list(std::ostream& s) {
