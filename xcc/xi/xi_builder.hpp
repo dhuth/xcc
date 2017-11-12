@@ -14,14 +14,26 @@
 
 namespace xcc {
 
-struct xi_builder : public ast_builder<> {
+struct xi_builder : public ast_builder<ast_default_name_mangler,
+                                       xi_type_comparer,
+                                       xi_type_hasher> {
 public:
 
-    inline xi_builder(translation_unit& tu) noexcept : ast_builder<>(tu) {
-        //...
+    inline xi_builder(translation_unit& tu) noexcept
+            : ast_builder<ast_default_name_mangler, xi_type_comparer, xi_type_hasher>(tu),
+              _the_auto_type(new xi_auto_type()),
+              _const_types(0, *this->_type_hasher_ptr, *this->_type_comparer_ptr),
+              _reference_types(0, *this->_type_hasher_ptr, *this->_type_comparer_ptr),
+              _object_types(0, *this->_type_hasher_ptr, *this->_type_comparer_ptr),
+              _tuple_types(0, *this->_type_hasher_ptr, *this->_type_comparer_ptr){
+        // do nothing ...
     }
 
-    xi_reference_type*                          get_reference_type(ast_type* type)                                                                            noexcept;
+    ast_type*                                   get_const_type(ast_type* type)                                                                                noexcept;
+    ast_type*                                   get_auto_type()                                                                                         const noexcept;
+    ast_type*                                   get_reference_type(ast_type* type)                                                                            noexcept;
+    ast_type*                                   get_object_type(xi_decl* decl)                                                                                noexcept;
+    ast_type*                                   get_tuple_type(list<ast_type>* types)                                                                         noexcept;
 
     xi_function_decl*                           define_global_function(std::string name, list<xi_parameter_decl>* parameters, ast_type* return_type)          noexcept;
     xi_parameter_decl*                          define_parameter(ast_type* type, std::string name)                                                            noexcept;
@@ -39,6 +51,11 @@ public:
 
 private:
 
+    ptr<xi_auto_type>                           _the_auto_type;
+    ast_typeset                                 _const_types;
+    ast_typeset                                 _reference_types;
+    ast_typeset                                 _object_types;
+    ast_typeset                                 _tuple_types;
 
 };
 

@@ -23,7 +23,7 @@ bool ast_type_comparer::same_typelist(list<ast_type>* lhs, list<ast_type>* rhs) 
     return true;
 }
 
-bool ast_type_comparer::operator()(ast_type* const& lhs, ast_type* const& rhs) const noexcept {
+bool ast_type_comparer::operator()(ast_type* const& lhs, ast_type* const& rhs) const {
     if(!(lhs->get_tree_type() != rhs->get_tree_type())) {
         return false;
     }
@@ -86,6 +86,50 @@ bool ast_type_comparer::operator()(ast_type* const& lhs, ast_type* const& rhs) c
     default:
         throw std::runtime_error(std::string("ast.cpp: ast_type_comparer::operator(): ") +
                 "unsuported type " + lhs->get_tree_type_name());
+    }
+}
+
+size_t ast_type_hasher::hash_typelist(list<ast_type>* list) const noexcept {
+    size_t h = 0;
+    for(auto t: *list) {
+        h += this->operator()(t);
+    }
+    return h;
+}
+
+size_t ast_type_hasher::operator()(ast_type* const& tp) const {
+    switch(tp->type_id) {
+    case tree_type_id::ast_void_type:
+        return (size_t) tree_type_id::ast_void_type;
+    case tree_type_id::ast_integer_type:
+        return
+                ((size_t) tree_type_id::ast_integer_type) << 8 |
+                ((size_t) tp->as<ast_integer_type>()->bitwidth) << 1 |
+                ((bool)   tp->as<ast_integer_type>()->is_unsigned) ? 1 : 0;
+    case tree_type_id::ast_real_type:
+        return
+                ((size_t) tree_type_id::ast_real_type) << 8 |
+                ((size_t) tp->as<ast_real_type>()->bitwidth) ;
+    case tree_type_id::ast_pointer_type:
+        return
+                ((size_t) tree_type_id::ast_pointer_type) << 8 |
+                this->operator()(tp->as<ast_pointer_type>()->element_type);
+    case tree_type_id::ast_array_type:
+        return
+                ((size_t) tree_type_id::ast_array_type) << 8 |
+                this->operator()(tp->as<ast_array_type>()->element_type);
+    case tree_type_id::ast_record_type:
+        return
+                ((size_t) tree_type_id::ast_record_type) << 8 |
+                this->hash_typelist(tp->as<ast_record_type>()->field_types);
+    case tree_type_id::ast_function_type:
+        return
+                ((size_t) tree_type_id::ast_function_type) << 8 |
+                this->operator()(tp->as<ast_function_type>()->return_type) << 16 |
+                this->hash_typelist(tp->as<ast_function_type>()->parameter_types);
+    default:
+        throw std::runtime_error(std::string("ast.cpp: ast_type_hasher::operator(): ") +
+                "unsuported type " + tp->get_tree_type_name());
     }
 }
 

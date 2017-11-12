@@ -67,8 +67,12 @@ private:
 struct __ast_builder_impl {
 public:
 
-    __ast_builder_impl(translation_unit& tu, ast_name_mangler* mangler) noexcept;
-    virtual ~__ast_builder_impl() noexcept = default;
+    __ast_builder_impl(
+            translation_unit& tu,
+            ast_name_mangler* mangler,
+            ast_type_comparer* type_comparer,
+            ast_type_hasher* type_hasher) noexcept;
+    virtual ~__ast_builder_impl() noexcept;
 
             ast_void_type*                      get_void_type()                                                     const noexcept;
             ast_integer_type*                   get_integer_type(uint32_t bitwidth, bool is_unsigned)               const noexcept;
@@ -136,7 +140,7 @@ public:
     virtual ast_expr*                           fold(ast_expr* e);
 
     // Anylasis
-            ast_name_mangler&                 get_mangled_name;
+            ast_name_mangler&                   get_mangled_name;
     virtual bool                                sametype(ast_type*, ast_type*)                                      const;
     virtual ast_type*                           maxtype(ast_type*, ast_type*)                                       const;
     virtual bool                                widens(ast_type*, ast_type*)                                        const;
@@ -166,6 +170,9 @@ protected:
     translation_unit&                                                   tu;
     ptr<ast_namespace_decl>                                             global_namespace;
 
+    ast_type_comparer*                                                  _type_comparer_ptr;
+    ast_type_hasher*                                                    _type_hasher_ptr;
+
 public:
 
             ptr<ast_context>                    get_context()                                                             noexcept;
@@ -188,83 +195,6 @@ private:
             ast_expr*                           cast_to(ast_pointer_type*, ast_expr*)                               const;
             ast_expr*                           cast_to(ast_record_type*, ast_expr*)                                const;
 
-    struct sametype_predicate {
-        __ast_builder_impl&                                             builder;
-
-        inline sametype_predicate(__ast_builder_impl& builder): builder(builder) { }
-
-        inline bool operator()(ast_type* const& lhs, ast_type* const& rhs) const {
-            return builder.sametype(lhs, rhs);
-        }
-    };
-
-    struct sametypelist_predicate {
-        __ast_builder_impl&                                             builder;
-
-        inline sametypelist_predicate(__ast_builder_impl& builder): builder(builder) { }
-        inline bool operator()(ptr<list<ast_type>> const& lhs, ptr<list<ast_type>> const& rhs) const {
-            if(lhs->size() != rhs->size()) return false;
-            for(uint32_t i = 0; i < lhs->size(); i++) {
-                if(!builder.sametype((*unbox(lhs))[i], (*unbox(rhs))[i])) {
-                    return false;
-                }
-            }
-            return true;
-        }
-    };
-
-    typedef ptr<list<ast_type>>                                         typelistkey_t;
-    typedef std::tuple<ast_type*, ptr<list<ast_type>>>                  functypekey_t;
-
-    struct samefunctype_predicate {
-        __ast_builder_impl&                                             builder;
-
-        inline samefunctype_predicate(__ast_builder_impl& builder): builder(builder) { }
-
-        inline bool operator()(functypekey_t const& lhs, functypekey_t const& rhs) const {
-            auto lhs_rt = std::get<0>(lhs);
-            auto rhs_rt = std::get<0>(rhs);
-            auto lhs_params = std::get<1>(lhs);
-            auto rhs_params = std::get<1>(rhs);
-
-            auto lhs_func = new ast_function_type(std::get<0>(lhs), std::get<1>(lhs));
-            auto rhs_func = new ast_function_type(std::get<0>(rhs), std::get<1>(rhs));
-
-            return builder.sametype(lhs_func, rhs_func);
-        }
-    };
-
-    struct typelist_hasher {
-        __ast_builder_impl&                                             builder;
-
-        inline typelist_hasher(__ast_builder_impl& builder): builder(builder) { }
-
-        inline size_t operator()(const typelistkey_t& k) const {
-            std::hash<ast_type*> hasher;
-            if(k->size() == 0) return 0;
-            auto h = hasher(nullptr);
-            for(auto t: unbox(k)) {
-                h = (h << 5) | hasher(t);
-            }
-            return h;
-        }
-    };
-
-    struct functype_hasher {
-        __ast_builder_impl&                                             builder;
-
-        inline functype_hasher(__ast_builder_impl& builder): builder(builder) { }
-
-        inline size_t operator()(const functypekey_t& k) const {
-            std::hash<ast_type*> hasher;
-            auto h = hasher(std::get<0>(k));
-            for(auto p: unbox(std::get<1>(k))) {
-                h = (h << 5) | hasher(p);
-            }
-            return h;
-        }
-    };
-
     ptr<ast_void_type>                                                  _the_void_type;
     ptr<ast_pointer_type>                                               _the_void_ptr_type;
     ptr<ast_integer_type>                                               _the_boolean_type;
@@ -278,24 +208,29 @@ private:
     std::map<uint32_t, ptr<ast_integer_type>>                           _unsigned_integer_types;
     std::map<uint32_t, ptr<ast_integer_type>>                           _signed_integer_types;
     std::map<uint32_t, ptr<ast_real_type>>                              _real_types;
-    std::unordered_map<ast_type*, ptr<ast_pointer_type>, std::hash<ast_type*>, sametype_predicate>
-                                                                        _pointer_types;
-    std::unordered_map<functypekey_t, ptr<ast_function_type>, functype_hasher, samefunctype_predicate>
-                                                                        _function_types;
-    std::map<std::tuple<ast_type*, uint32_t>, ptr<ast_array_type>>      _array_types;
-    std::unordered_map<typelistkey_t, ptr<ast_record_type>, typelist_hasher, sametypelist_predicate>
-                                                                        _record_types;
 
-    ast_name_mangler*                                                 _mangler_ptr;
+    ast_typeset                                                         _pointer_types;
+    ast_typeset                                                         _function_types;
+    ast_typeset                                                         _array_types;
+    ast_typeset                                                         _record_types;
+
+    ast_name_mangler*                                                   _mangler_ptr;
 
 };
 
-template<typename TMangler = ast_default_name_mangler,
+template<typename TMangler              = ast_default_name_mangler,
+         typename TTypeComparer         = ast_type_comparer,
+         typename TTypeHasher           = ast_type_hasher,
          typename std::enable_if<std::is_base_of<ast_name_mangler, TMangler>::value, int>::type = 0>
 struct ast_builder : public __ast_builder_impl {
 public:
 
-    ast_builder(translation_unit& tu) noexcept : __ast_builder_impl(tu, new TMangler()) { }
+    ast_builder(translation_unit& tu) noexcept
+            : __ast_builder_impl(
+                    tu,
+                    new TMangler(),
+                    new TTypeComparer(),
+                    new TTypeHasher()) { }
     virtual ~ast_builder() noexcept = default;
 
 };

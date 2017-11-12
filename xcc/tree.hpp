@@ -199,12 +199,6 @@ protected:
     template<typename TBaseType, typename... TParamTypes>
     friend struct __dispatch_tree_walker_base;
 
-    template<tree_type_id Id>
-    friend __tree_base* __shallow_clone_tree(__tree_base* src);
-
-    template<tree_type_id Id>
-    friend __tree_base* __deep_clone_tree(__tree_base* src);
-
     inline size_t append_child(__tree_base* v) noexcept {
         size_t idx = this->_child_nodes.size();
         this->_child_nodes.push_back(ptr<__tree_base>(v));

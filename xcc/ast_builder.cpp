@@ -16,20 +16,33 @@
 
 namespace xcc {
 
-__ast_builder_impl::__ast_builder_impl(translation_unit& tu, ast_name_mangler* mangler) noexcept
+__ast_builder_impl::__ast_builder_impl(
+        translation_unit& tu,
+        ast_name_mangler* mangler,
+        ast_type_comparer* type_comparer,
+        ast_type_hasher* type_hasher) noexcept
             : _mangler_ptr(mangler),
+              _type_comparer_ptr(type_comparer),
+              _type_hasher_ptr(type_hasher),
               get_mangled_name(*mangler),
               tu(tu),
               global_namespace(new ast_namespace_decl("global")),
-              _pointer_types(0, std::hash<ast_type*>(), sametype_predicate(*this)),
-              _function_types(0, functype_hasher(*this), samefunctype_predicate(*this)),
-              _record_types(0, typelist_hasher(*this), sametypelist_predicate(*this)),
               _the_nop_stmt(new ast_nop_stmt()),
               _the_break_stmt(new ast_break_stmt()),
-              _the_continue_stmt(new ast_continue_stmt()) {
+              _the_continue_stmt(new ast_continue_stmt()),
+              _pointer_types(0, *type_hasher, *type_comparer),
+              _array_types(0, *type_hasher, *type_comparer),
+              _function_types(0, *type_hasher, *type_comparer),
+              _record_types(0, *type_hasher, *type_comparer) {
 
     this->context = new ast_namespace_context(nullptr, this->global_namespace);
     this->create_default_types();
+}
+
+__ast_builder_impl::~__ast_builder_impl() noexcept {
+    delete this->_type_comparer_ptr;
+    delete this->_type_hasher_ptr;
+    delete this->_mangler_ptr;
 }
 
 void __ast_builder_impl::create_default_types() noexcept {
@@ -73,34 +86,47 @@ ast_real_type* __ast_builder_impl::get_real_type(uint32_t bitwidth) const noexce
 }
 
 ast_pointer_type* __ast_builder_impl::get_pointer_type(ast_type* eltype) noexcept {
-    auto key = eltype;
-    if(this->_pointer_types.find(key) == this->_pointer_types.end()) {
-        this->_pointer_types[key] = new ast_pointer_type(eltype);
+    auto newtype = new ast_pointer_type(eltype);
+    if(this->_pointer_types.find(newtype) == this->_pointer_types.end()) {
+        this->_pointer_types[newtype] = newtype;
+        return newtype;
     }
-    return this->_pointer_types[key];
+    else {
+        return this->_pointer_types[newtype];
+    }
 }
 
 ast_array_type* __ast_builder_impl::get_array_type(ast_type* eltype, uint32_t size) noexcept {
-    auto key = std::make_tuple(eltype, size);
-    if(this->_array_types.find(key) == this->_array_types.end()) {
-        this->_array_types[key] = new ast_array_type(eltype, size);
+    auto newtype = new ast_array_type(eltype, size);
+    if(this->_array_types.find(newtype) == this->_array_types.end()) {
+        this->_array_types[newtype] = newtype;
+        return newtype;
     }
-    return this->_array_types[key];
+    else {
+        return this->_array_types[newtype];
+    }
 }
 
 ast_function_type* __ast_builder_impl::get_function_type(ast_type* rtype, ptr<list<ast_type>> params) noexcept {
-    auto key = functypekey_t(rtype, unbox(params));
-    if(this->_function_types.find(key) == this->_function_types.end()) {
-        this->_function_types[key] = new ast_function_type(rtype, params);
+    auto newtype = new ast_function_type(rtype, params);
+    if(this->_function_types.find(newtype) == this->_function_types.end()) {
+        this->_function_types[newtype] = newtype;
+        return newtype;
     }
-    return this->_function_types[key];
+    else {
+        return this->_function_types[newtype];
+    }
 }
 
 ast_record_type* __ast_builder_impl::get_record_type(ptr<list<ast_type>> types) noexcept {
-    if(this->_record_types.find(types) == this->_record_types.end()) {
-        this->_record_types[types] = new ast_record_type(types);
+    auto newtype = new ast_record_type(types);
+    if(this->_record_types.find(newtype) == this->_record_types.end()) {
+        this->_record_types[newtype] = newtype;
+        return newtype;
     }
-    return this->_record_types[types];
+    else {
+        return this->_record_types[newtype];
+    }
 }
 
 ast_type* __ast_builder_impl::get_string_type(uint32_t length) noexcept {
@@ -131,7 +157,6 @@ ast_type* __ast_builder_impl::get_declaration_type(ast_decl* decl) noexcept {
             return this->get_function_type(rtype, box(plist));
         }
     }
-    //TODO: error unhandled
     throw std::runtime_error(__FILE__ ":" + std::to_string(__LINE__) + " Unhandled " + std::string(decl->get_tree_type_name()) + "\n");
 }
 
@@ -486,8 +511,6 @@ ast_expr* __ast_builder_impl::make_lower_addressof_expr(ast_expr* e) {
 ast_expr* __ast_builder_impl::make_index_expr(ast_expr* arrexpr, ast_expr* idxexpr) const {
     assert(idxexpr->type->is<ast_integer_type>());
 
-    //TODO: pointer arithetic
-
     ast_type* t = arrexpr->type->as<ast_array_type>()->element_type;
     return new ast_index(t, arrexpr, idxexpr);
 }
@@ -596,17 +619,14 @@ ast_stmt* __ast_builder_impl::make_return_stmt(ast_type* t, ast_expr* expr) cons
 }
 
 ast_stmt* __ast_builder_impl::make_if_stmt(ast_expr* cond, ast_stmt* tstmt, ast_stmt* fstmt) const noexcept {
-    //TODO: constant condition check ???
     return new ast_if_stmt(this->make_cast_expr(this->_the_boolean_type, cond), tstmt, fstmt);
 }
 
 ast_stmt* __ast_builder_impl::make_while_stmt(ast_expr* cond, ast_stmt* stmt) const noexcept {
-    //TODO: constant condition check ???
     return new ast_while_stmt(this->make_cast_expr(this->_the_boolean_type, cond), stmt);
 }
 
 ast_stmt* __ast_builder_impl::make_for_stmt(ast_stmt* init_stmt, ast_expr* cond, ast_stmt* each, ast_stmt* body) const noexcept {
-    //TODO: constant condition check ???
     if(init_stmt->is<ast_decl_stmt>()) {
         ast_local_decl* decl = init_stmt->as<ast_decl_stmt>()->decl;
         return new ast_block_stmt(

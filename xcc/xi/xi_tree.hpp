@@ -95,19 +95,6 @@ struct xi_reference_type : public extend_tree<tree_type_id::xi_reference_type, x
 };
 
 
-struct xi_pointer_type : public extend_tree<tree_type_id::xi_pointer_type, xi_type> {
-
-    inline xi_pointer_type(ast_type* type) noexcept
-            : base_type(),
-              type(this, type) {
-        /* do nothing */
-    }
-
-    property<ast_type>                                              type;
-
-};
-
-
 struct xi_object_type : public extend_tree<tree_type_id::xi_object_type, xi_type> {
 
     inline xi_object_type(xi_decl* decl) noexcept
@@ -259,16 +246,6 @@ struct xi_class_decl : public extend_tree<tree_type_id::xi_class_decl, xi_struct
             ast_type* parent,
             list<xi_member_decl>* members) noexcept
                     : base_type(name, parent, members) {
-        /* do nothing */
-    }
-
-};
-
-
-struct xi_trait_decl : public extend_tree<tree_type_id::xi_trait_decl, xi_type_decl> {
-
-    inline xi_trait_decl(std::string name, ast_type* parent) noexcept
-            : base_type(name, parent) {
         /* do nothing */
     }
 
@@ -442,6 +419,25 @@ struct xi_member_expr : public extend_tree<tree_type_id::xi_member_expr, xi_expr
 
 };
 
+struct xi_type_comparer final : public ast_type_comparer {
+public:
+
+    inline xi_type_comparer() = default;
+    virtual ~xi_type_comparer() = default;
+
+    virtual bool operator()(ast_type* const&, ast_type* const&) const;
+
+};
+
+struct xi_type_hasher final : public ast_type_hasher {
+public:
+
+    inline xi_type_hasher() = default;
+    virtual ~xi_type_hasher() = default;
+
+    virtual size_t operator()(ast_type* const&) const;
+
+};
 
 }
 #endif

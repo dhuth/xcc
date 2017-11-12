@@ -13,6 +13,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <unordered_set>
 
 #include <llvm/ADT/APSInt.h>
 #include <llvm/ADT/APFloat.h>
@@ -1134,6 +1135,10 @@ const char* to_string(xcc::ast_op op);
 
 }
 
+
+
+
+
 namespace std {
 inline const char* to_string(xcc::ast_op op) { return xcc::to_string(op); }
 }
@@ -1281,24 +1286,38 @@ TDestTreeType* copyloc(TDestTreeType *t, TSrcMinTreeType* fmin, TSrcMaxTreeType*
 }
 
 
-
-typedef std::hash<ast_type*>                                ast_type_hasher;
-
 struct ast_type_comparer {
 public:
 
     ast_type_comparer() = default;
     virtual ~ast_type_comparer() = default;
 
-    virtual bool operator()(ast_type* const&, ast_type* const&) const noexcept;
+    virtual bool operator()(ast_type* const&, ast_type* const&) const;
 
-private:
+protected:
 
     bool same_typelist(list<ast_type>* lhs, list<ast_type>* rhs) const noexcept;
 
 };
 
+struct ast_type_hasher {
+public:
 
+    ast_type_hasher() = default;
+    virtual ~ast_type_hasher() = default;
+
+    virtual size_t operator()(ast_type* const&) const;
+
+protected:
+
+    size_t hash_typelist(list<ast_type>*) const noexcept;
+
+};
+
+typedef std::unordered_map<ast_type*,
+                           ptr<ast_type>,
+                           ast_type_hasher,
+                           ast_type_comparer>                           ast_typeset;
 
 }
 

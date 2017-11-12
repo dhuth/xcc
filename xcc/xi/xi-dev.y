@@ -3,7 +3,6 @@
 %define     api.pure
 %define     parse.trace
 %define     parse.error                             verbose
-%glr-parser
 
 %locations
 
@@ -171,7 +170,7 @@ void xi_lex_searchspace_clear();
         xcc::list<xcc::xi_parameter_decl>*  parameter_list;
         
         operator_t                          op;
-        const char*                         text;
+        char*                               text;
 }
 
 %type   <text>                              TOK_IDENTIFIER
@@ -385,7 +384,7 @@ function-parameter-list-opt
         |   %empty                                                                                  { $$ = new xcc::list<xcc::xi_parameter_decl>(); }
         ;
 function-parameter-list
-        :   function-parameter-list OP_COMA function-parameter                                      { $1->append($3); $$ = $1; }
+        :   function-parameter-list OP_COMA function-parameter                                      { $$ = new xcc::list<xcc::xi_parameter_decl>($1, $3); }
         |   function-parameter                                                                      { $$ = new xcc::list<xcc::xi_parameter_decl>($1); }
         ;
 function-parameter
@@ -435,11 +434,11 @@ type-list-opt
         |   %empty                                                                                  { $$ = new type_list_t(); }
         ;
 type-list
-        :   type-list OP_COMA type                                                                  { $1->append($3); $$ = $1; }
+        :   type-list OP_COMA type                                                                  { $$ = new type_list_t($1, $3); }
         |   type                                                                                    { $$ = new type_list_t($1); }
         ;
 type-list-p1
-        :   type-list OP_COMA type                                                                  { $1->append($3); $$ = $1; }
+        :   type-list OP_COMA type                                                                  { $$ = new type_list_t($1, $3); }
         ;
 
 /* ---------- *
@@ -585,11 +584,11 @@ expr-list-opt
                     | %empty                                                                        { $$ = new expr_list_t(); }
                     ;
 expr-list
-                    : expr-list OP_COMA expr                                                        { $1->append($3); $$ = $1; }
+                    : expr-list OP_COMA expr                                                        { $$ = new expr_list_t($1, $3); }
                     | expr                                                                          { $$ = new expr_list_t($1); }
                     ;
 expr-list-p1
-                    : expr-list OP_COMA expr                                                        { $1->append($3); $$ = $1; }
+                    : expr-list OP_COMA expr                                                        { $$ = new expr_list_t($1, $3); }
                     ;
 
 
@@ -666,11 +665,11 @@ unused-id-list-opt
         |   %empty                                                                                  { $$ = new id_list_t(); }
         ;
 unused-id-list
-        :   unused-id-list OP_COMA unused-id                                                        { $1->append($3); $$ = $1; }
+        :   unused-id-list OP_COMA unused-id                                                        { $$ = new id_list_t($1, $3); }
         |   unused-id                                                                               { $$ = new id_list_t($1); }
         ;
 unused-id-list-p1
-        :   unused-id-list OP_COMA unused-id                                                        { $1->append($3); $$ = $1; }
+        :   unused-id-list OP_COMA unused-id                                                        { $$ = new id_list_t($1, $3); }
         ;
 
 %%
