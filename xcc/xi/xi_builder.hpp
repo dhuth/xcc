@@ -34,20 +34,24 @@ public:
     ast_type*                                   get_reference_type(ast_type* type)                                                                            noexcept;
     ast_type*                                   get_object_type(xi_decl* decl)                                                                                noexcept;
     ast_type*                                   get_tuple_type(list<ast_type>* types)                                                                         noexcept;
+    ast_type*                                   get_id_type(const char*)                                                                                const noexcept;
 
-    xi_function_decl*                           define_global_function(std::string name, list<xi_parameter_decl>* parameters, ast_type* return_type)          noexcept;
-    xi_parameter_decl*                          define_parameter(ast_type* type, std::string name)                                                            noexcept;
-    xi_parameter_decl*                          define_parameter(ast_type* type)                                                                              noexcept;
-    void                                        define_xi_local_inplace(std::string, ast_type*, ast_expr*, const source_span&)                                noexcept;
-    void                                        define_xi_local_inplace(list<std::string>*, list<ast_type>*, list<ast_expr>*, const source_span&)             noexcept;
+    xi_function_decl*                           make_function_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*)                         const noexcept;
+    xi_parameter_decl*                          make_parameter_decl(const char*, ast_type*)                                                             const noexcept;
 
-    ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, ast_expr*, const source_span&)                                   const noexcept;
-    ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, ast_expr*, ast_expr*, const source_span&)                        const noexcept;
-    ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, list<ast_expr>*, const source_span&)                             const noexcept;
+    ast_expr*                                   make_id_expr(const char*)                                                                               const noexcept;
+    ast_expr*                                   make_member_id_expr(ast_expr*, const char*)                                                             const noexcept;
+    ast_expr*                                   make_deref_member_id_expr(ast_expr*, const char*)                                                       const noexcept;
+    ast_expr*                                   make_tuple_expr(list<ast_expr>*)                                                                        const noexcept;
+    ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, ast_expr*)                                                       const noexcept;
+    ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, ast_expr*, ast_expr*)                                            const noexcept;
+    ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, list<ast_expr>*)                                                 const noexcept;
+
+    ast_stmt*                                   make_return_stmt(ast_expr*)                                                                             const noexcept;
 
     void                                        push_function(xi_function_decl*)                                                                              noexcept;
-    void                                        push_function_and_body(xi_function_decl*)                                                                     noexcept;
-    void                                        pop_function_and_body()                                                                                       noexcept;
+
+    void                                        semantic_check();
 
 private:
 

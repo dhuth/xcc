@@ -20,7 +20,7 @@ namespace xcc {
 struct translation_unit;
 struct ircode_context;
 
-typedef dispatch_visitor<ast_expr>                                      ast_folder_t;
+typedef dispatch_visitor<ast_expr, ast_expr>                                    ast_folder_t;
 
 struct ast_name_mangler : public dispatch_visitor<std::string> {
     virtual std::string         operator()(ast_tree* t) = 0;
@@ -82,23 +82,16 @@ public:
             ast_array_type*                     get_array_type(ast_type* artype, uint32_t size)                           noexcept;
             ast_function_type*                  get_function_type(ast_type*, ptr<list<ast_type>>)                         noexcept;
             ast_record_type*                    get_record_type(ptr<list<ast_type>>)                                      noexcept;
-    virtual ast_type*                           get_string_type(uint32_t length)                                          noexcept;
-    virtual ast_type*                           get_char_type()                                                           noexcept;
 
     virtual ast_type*                           get_declaration_type(ast_decl*)                                           noexcept;
 
     // Declarations
-    virtual ast_typedef_decl*                   define_named_type(const char*, ast_type*)                                 noexcept;
-    virtual ast_namespace_decl*                 define_namespace(const char*)                                             noexcept;
-    virtual ast_variable_decl*                  define_global_variable(ast_type*, const char*)                            noexcept;
-    virtual ast_variable_decl*                  define_global_variable(ast_type*, const char*, ast_expr*)                 noexcept;
-    virtual ast_local_decl*                     define_local_variable(ast_type*, const char*)                             noexcept;
-    virtual ast_local_decl*                     define_local_variable(ast_type*)                                          noexcept;
+    virtual ast_decl*                           make_namespace_decl(const char*, list<ast_decl>*)                   const noexcept;
+    virtual ast_decl*                           make_local_decl(const char*, ast_type*, ast_expr*)                  const noexcept;
 
     // Constant values
     virtual ast_expr*                           make_integer(const char* txt, uint8_t radix)                        const noexcept;
     virtual ast_expr*                           make_real(const char* txt)                                          const noexcept;
-    virtual ast_expr*                           make_string(const char* txt, uint32_t from, uint32_t length)              noexcept;
 
     virtual ast_expr*                           make_true()                                                         const noexcept;
     virtual ast_expr*                           make_false()                                                        const noexcept;
@@ -125,14 +118,15 @@ public:
     virtual ast_stmt*                           make_expr_stmt(ast_expr*)                                           const noexcept;
     virtual ast_stmt*                           make_assign_stmt(ast_expr* lhs, ast_expr* rhs)                            noexcept;
             ast_stmt*                           make_lower_assign_stmt(ast_expr*, ast_expr*)                              noexcept;
-    virtual ast_stmt*                           make_block_stmt()                                                   const noexcept;
+    virtual ast_stmt*                           make_block_stmt(list<ast_stmt>*)                                    const noexcept;
+    virtual ast_stmt*                           make_block_stmt(ast_local_decl*, list<ast_stmt>*)                   const noexcept;
+    virtual ast_stmt*                           make_block_stmt(list<ast_local_decl>*, list<ast_stmt>*)             const noexcept;
     virtual ast_stmt*                           make_if_stmt(ast_expr*,ast_stmt*,ast_stmt*)                         const noexcept;
     virtual ast_stmt*                           make_while_stmt(ast_expr*,ast_stmt*)                                const noexcept;
     virtual ast_stmt*                           make_for_stmt(ast_stmt*,ast_expr*,ast_stmt*,ast_stmt*)              const noexcept;
     virtual ast_stmt*                           make_return_stmt(ast_type*, ast_expr*)                              const noexcept;
     virtual ast_stmt*                           make_break_stmt()                                                   const noexcept;
     virtual ast_stmt*                           make_continue_stmt()                                                const noexcept;
-            void                                emit(ast_stmt*)                                                           noexcept;
 
     // Utility
     virtual uint32_t                            foldu32(ast_expr* e);
@@ -145,9 +139,6 @@ public:
     virtual ast_type*                           maxtype(ast_type*, ast_type*)                                       const;
     virtual bool                                widens(ast_type*, ast_type*)                                        const;
     virtual ast_expr*                           widen(ast_type*, ast_expr*)                                         const;
-
-    virtual bool                                is_ptrof(ast_type*, ast_type*);
-    virtual bool                                is_arrayof(ast_type*, ast_type*);
 
 protected:
 
@@ -187,6 +178,8 @@ public:
     virtual ptr<list<ast_decl>>                 find_all_declarations(const char*)                                        noexcept;
 
     virtual void                                pop()                                                                     noexcept;
+
+            void                                insert_global(ast_decl*)                                                  noexcept;
 
 private:
 

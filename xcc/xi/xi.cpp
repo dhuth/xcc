@@ -31,7 +31,11 @@ int ximain(const char* input_filename, const char* output_filename, std::vector<
     xi_builder builder(unit);
     xiin = fopen(input_filename, "r");
 
-    xiparse(builder);
+    xi::parser(builder).parse();
+
+    // TODO: read library
+    builder.semantic_check();
+    // TODO: lower
 
     ircode_context ctx(input_filename);
     ctx.generate(unit, output_filename);

@@ -12,6 +12,11 @@ struct xi_type : public extend_tree<tree_type_id::xi_type, ast_type> {
         /* do nothing */
     }
 
+    inline xi_type(const xi_type& t) noexcept
+            : base_type((base_type&) t) {
+        /* do nothing */
+    }
+
 };
 
 
@@ -20,6 +25,12 @@ struct xi_decl : public extend_tree<tree_type_id::xi_decl, ast_decl> {
     inline xi_decl(tree_type_id id, std::string name) noexcept : base_type(id, name) {
         /* do nothing */
     }
+
+    inline xi_decl(const xi_decl& d) noexcept
+            : base_type((base_type&) d) {
+        /* do nothing */
+    }
+
 };
 
 
@@ -33,6 +44,11 @@ struct xi_expr : public extend_tree<tree_type_id::xi_expr, ast_expr> {
         /* do nothing */
     }
 
+    inline xi_expr(const xi_expr& e) noexcept
+            : base_type((base_type&) e) {
+        /* do nothing */
+    }
+
 };
 
 
@@ -42,6 +58,29 @@ struct xi_stmt : public extend_tree<tree_type_id::xi_stmt, ast_stmt> {
         /* do nothing */
     }
 
+    inline xi_stmt(const xi_stmt& s) noexcept
+            : base_type((base_type&) s) {
+        /* do nothing */
+    }
+
+};
+
+
+struct xi_id_type : public extend_tree<tree_type_id::xi_id_type, xi_type> {
+
+    inline xi_id_type(std::string name) noexcept
+            : base_type(),
+              name(this, name) {
+        /* do nothing */
+    }
+
+    inline xi_id_type(const xi_id_type& i) noexcept
+            : base_type((base_type&) i),
+              name(this, i.name) {
+        /* do nothing */
+    }
+
+    property<std::string>                                           name;
 };
 
 
@@ -50,6 +89,12 @@ struct xi_const_type : public extend_tree<tree_type_id::xi_const_type, xi_type> 
     inline xi_const_type(ast_type* type) noexcept
             : base_type(),
               type(this, type) {
+        /* do nothing */
+    }
+
+    inline xi_const_type(const xi_const_type& c) noexcept
+            : base_type((base_type&) c),
+              type(this, c.type) {
         /* do nothing */
     }
 
@@ -64,20 +109,33 @@ struct xi_auto_type : public extend_tree<tree_type_id::xi_auto_type, xi_type> {
             : base_type() {
         /* do nothing */
     }
+
+    inline xi_auto_type(const xi_auto_type& t) noexcept
+            : base_type((base_type&) t) {
+        /* do nothing */
+    }
+
 };
 
 
 struct xi_array_type : public extend_tree<tree_type_id::xi_array_type, xi_type> {
 
-    inline xi_array_type(ast_type* type, ast_expr* size)
+    inline xi_array_type(ast_type* type, list<ast_expr>* size)
             : base_type(),
               type(this, type),
               size(this, size) {
         /* do nothing */
     }
 
+    inline xi_array_type(const xi_array_type& a) noexcept
+            : base_type((base_type&) a),
+              type(this, a.type),
+              size(this, a.size) {
+        /* do nothing */
+    }
+
     property<ast_type>                                              type;
-    property<ast_expr>                                              size;
+    property<list<ast_expr>>                                        size;
 
 };
 
@@ -87,6 +145,12 @@ struct xi_reference_type : public extend_tree<tree_type_id::xi_reference_type, x
     inline xi_reference_type(ast_type* type) noexcept
             : base_type(),
               type(this, type) {
+        /* do nothing */
+    }
+
+    inline xi_reference_type(const xi_reference_type& r) noexcept
+            : base_type((base_type&) r),
+              type(this, r.type) {
         /* do nothing */
     }
 
@@ -103,6 +167,12 @@ struct xi_object_type : public extend_tree<tree_type_id::xi_object_type, xi_type
         /* do nothing */
     }
 
+    inline xi_object_type(const xi_object_type& t) noexcept
+            : base_type((base_type&) t),
+              declaration(this, t.declaration) {
+        /* do nothing */
+    }
+
     property<xi_decl>                                               declaration;
 
 };
@@ -116,6 +186,12 @@ struct xi_tuple_type : public extend_tree<tree_type_id::xi_tuple_type, xi_type> 
         /* do nothing */
     }
 
+    inline xi_tuple_type(const xi_tuple_type& t) noexcept
+            : base_type((base_type&) t),
+              types(this, t.types) {
+        /* do nothing */
+    }
+
     property<list<ast_type>>                                        types;
 
 };
@@ -126,6 +202,12 @@ struct xi_parameter_decl : public extend_tree<tree_type_id::xi_parameter_decl, x
     inline xi_parameter_decl(std::string name, ast_type* type) noexcept
             : base_type(name),
               type(this, type) {
+        /* do nothing */
+    }
+
+    inline xi_parameter_decl(const xi_parameter_decl& p) noexcept
+            : base_type((base_type&) p),
+              type(this, p.type) {
         /* do nothing */
     }
 
@@ -148,6 +230,14 @@ struct xi_function_decl : public extend_tree<tree_type_id::xi_function_decl, xi_
         /* do nothing */
     }
 
+    inline xi_function_decl(const xi_function_decl& f) noexcept
+            : base_type((base_type&) f),
+              return_type(this, f.return_type),
+              parameters(this, f.parameters),
+              body(this, f.body) {
+        /* do nothing */
+    }
+
     property<ast_type>                                              return_type;
     property<list<xi_parameter_decl>>                               parameters;
     property<ast_stmt>                                              body;
@@ -163,6 +253,12 @@ struct xi_member_decl : public extend_tree<tree_type_id::xi_member_decl, xi_decl
         /* do nothing */
     }
 
+    inline xi_member_decl(const xi_member_decl& m) noexcept
+            : base_type((base_type&) m),
+              parent(this, m.parent) {
+        /* do nothing */
+    }
+
     property<ast_type>                                              parent;
 
 };
@@ -173,6 +269,12 @@ struct xi_field_decl : public extend_tree<tree_type_id::xi_field_decl, xi_member
     inline xi_field_decl(std::string name, ast_type* parent, ast_type* type) noexcept
             : base_type(name, parent),
               type(this, type) {
+        /* do nothing */
+    }
+
+    inline xi_field_decl(const xi_field_decl& f) noexcept
+            : base_type((base_type&) f),
+              type(this, f.type) {
         /* do nothing */
     }
 
@@ -196,6 +298,14 @@ struct xi_method_decl : public extend_tree<tree_type_id::xi_method_decl, xi_memb
         /* do nothing */
     }
 
+    inline xi_method_decl(const xi_method_decl& m) noexcept
+            : base_type((base_type&) m),
+              return_type(this, m.return_type),
+              parameters(this, m.parameters),
+              body(this, m.body) {
+        /* do nothing */
+    }
+
     property<ast_type>                                              return_type;
     property<list<xi_parameter_decl>>                               parameters;
     property<ast_stmt>                                              body;
@@ -205,10 +315,19 @@ struct xi_method_decl : public extend_tree<tree_type_id::xi_method_decl, xi_memb
 
 struct xi_type_decl : public extend_tree<tree_type_id::xi_type_decl, xi_member_decl> {
 
-    inline xi_type_decl(tree_type_id id, std::string name, ast_type* parent) noexcept
-            : base_type(id, name, parent) {
+    inline xi_type_decl(tree_type_id id, std::string name, ast_type* parent, list<xi_member_decl>* members) noexcept
+            : base_type(id, name, parent),
+              members(this, members) {
         /* do nothing */
     }
+
+    inline xi_type_decl(const xi_type_decl& t) noexcept
+            : base_type((base_type&) t),
+              members(this, t.members) {
+        /* do nothing */
+    }
+
+    property<list<xi_member_decl>>                                  members;
 
 };
 
@@ -220,8 +339,7 @@ struct xi_struct_decl : public extend_tree<tree_type_id::xi_struct_decl, xi_type
             std::string name,
             ast_type* parent,
             list<xi_member_decl>* members) noexcept
-                    : base_type(id, name, parent),
-                      members(this, members) {
+                    : base_type(id, name, parent, members) {
         /* do nothing */
     }
 
@@ -229,12 +347,14 @@ struct xi_struct_decl : public extend_tree<tree_type_id::xi_struct_decl, xi_type
             std::string name,
             ast_type* parent,
             list<xi_member_decl>* members) noexcept
-                    : base_type(name, parent),
-                      members(this, members) {
+                    : base_type(name, parent, members) {
         /* do nothing */
     }
 
-    property<list<xi_member_decl>>                                  members;
+    inline xi_struct_decl(const xi_struct_decl& s) noexcept
+            : base_type((base_type&) s) {
+        /* do nothing */
+    }
 
 };
 
@@ -249,9 +369,15 @@ struct xi_class_decl : public extend_tree<tree_type_id::xi_class_decl, xi_struct
         /* do nothing */
     }
 
+    inline xi_class_decl(const xi_class_decl& c) noexcept
+            : base_type((base_type&) c) {
+        /* do nothing */
+    }
+
 };
 
 
+// ???????
 struct xi_const_expr : public extend_tree<tree_type_id::xi_const_expr, xi_expr> {
 
     inline xi_const_expr(ast_type* type) noexcept
@@ -259,6 +385,92 @@ struct xi_const_expr : public extend_tree<tree_type_id::xi_const_expr, xi_expr> 
         /* do nothing */
     }
 
+    inline xi_const_expr(const xi_const_expr& e) noexcept
+            : base_type((base_type&) e) {
+        /* do nothing */
+    }
+
+};
+
+
+struct xi_id_expr : public extend_tree<tree_type_id::xi_id_expr, xi_expr> {
+
+    inline xi_id_expr(std::string name) noexcept
+            : base_type(nullptr),
+              name(this, name) {
+        /* do nothing */
+    }
+
+    inline xi_id_expr(const xi_id_expr& e) noexcept
+            : base_type((base_type&) e),
+              name(this, e.name) {
+        /* do nothing */
+    }
+
+    property<std::string>                                           name;
+
+};
+
+
+struct xi_member_id_expr : public extend_tree<tree_type_id::xi_member_id_expr, xi_expr> {
+
+    inline xi_member_id_expr(ast_expr* expr, std::string name) noexcept
+            : base_type(nullptr),
+              expr(this, expr),
+              name(this, name) {
+        /* do nothing */
+    }
+
+    inline xi_member_id_expr(const xi_member_id_expr& m) noexcept
+            : base_type((base_type&) m),
+              expr(this, m.expr),
+              name(this, m.name) {
+        /* do nothing */
+    }
+
+    property<ast_expr>                                              expr;
+    property<std::string>                                           name;
+
+};
+
+
+struct xi_deref_member_id_expr : public extend_tree<tree_type_id::xi_deref_member_id_expr, xi_expr> {
+
+    inline xi_deref_member_id_expr(ast_expr* expr, std::string name) noexcept
+            : base_type(nullptr),
+              expr(this, expr),
+              name(this, name) {
+        /* do nothing */
+    }
+
+    inline xi_deref_member_id_expr(const xi_deref_member_id_expr& m) noexcept
+            : base_type((base_type&) m),
+              expr(this, m.expr),
+              name(this, m.name) {
+        /* do nothing */
+    }
+
+    property<ast_expr>                                              expr;
+    property<std::string>                                           name;
+
+};
+
+
+struct xi_declref_group_expr : public extend_tree<tree_type_id::xi_declref_group_expr, xi_expr> {
+
+    inline xi_declref_group_expr(list<ast_declref>* declrefs) noexcept
+            : base_type(nullptr),
+              declrefs(this, declrefs) {
+        /* do nothing */
+    }
+
+    inline xi_declref_group_expr(const xi_declref_group_expr& d) noexcept
+            : base_type((base_type&) d),
+              declrefs(this, d.declrefs) {
+        /* do nothing */
+    }
+
+    property<list<ast_declref>>                                     declrefs;
 };
 
 
@@ -359,10 +571,16 @@ struct xi_op_expr : public extend_tree<tree_type_id::xi_op_expr, xi_expr> {
         __set__                 =       27  | OP_SPECIAL,
         __alloc__               =       28  | OP_SPECIAL,
         __dealloc__             =       29  | OP_SPECIAL,
-        __move__                =       30  | OP_SPECIAL    | OP_ASSIGN,
-        __move_const__          =       31  | OP_SPECIAL    | OP_ASSIGN,
-        __copy__                =       32  | OP_SPECIAL    | OP_ASSIGN,
-        __copy_const__          =       33  | OP_SPECIAL    | OP_ASSIGN,
+
+        __assign__              =       30  | OP_SPECIAL    | OP_ASSIGN,
+
+        __move__                =       31  | OP_SPECIAL    | OP_ASSIGN,
+        __move_const__          =       32  | OP_SPECIAL    | OP_ASSIGN,
+        __copy__                =       33  | OP_SPECIAL    | OP_ASSIGN,
+        __copy_const__          =       34  | OP_SPECIAL    | OP_ASSIGN,
+
+        __deref__               =       35  | OP_SPECIAL    | OP_UNARY,
+        __address_of__          =       36  | OP_SPECIAL    | OP_UNARY,
 
     };
 
@@ -384,6 +602,13 @@ struct xi_op_expr : public extend_tree<tree_type_id::xi_op_expr, xi_expr> {
         /* do nothing */
     }
 
+    inline xi_op_expr(const xi_op_expr& e) noexcept
+            : base_type((base_type&) e),
+              op(this, e.op),
+              operands(this, e.operands) {
+        /* do nothing */
+    }
+
     property<xi_operator>                                           op;
     property<list<ast_expr>>                                        operands;
 
@@ -395,6 +620,12 @@ struct xi_tuple_expr : public extend_tree<tree_type_id::xi_tuple_expr, xi_expr> 
     inline xi_tuple_expr(list<ast_expr>* expressions) noexcept
             : base_type(nullptr),
               expressions(this, expressions) {
+        /* do nothing */
+    }
+
+    inline xi_tuple_expr(const xi_tuple_expr& e) noexcept
+            : base_type((base_type&) e),
+              expressions(this, e.expressions) {
         /* do nothing */
     }
 
@@ -410,6 +641,14 @@ struct xi_member_expr : public extend_tree<tree_type_id::xi_member_expr, xi_expr
               owner_type(this, owner_type),
               expression(this, expression),
               member(this, member) {
+        /* do nothing */
+    }
+
+    inline xi_member_expr(const xi_member_expr& e) noexcept
+            : base_type((base_type&) e),
+              owner_type(this, e.owner_type),
+              expression(this, e.expression),
+              member(this, e.member) {
         /* do nothing */
     }
 

@@ -86,55 +86,47 @@ ast_real_type* __ast_builder_impl::get_real_type(uint32_t bitwidth) const noexce
 }
 
 ast_pointer_type* __ast_builder_impl::get_pointer_type(ast_type* eltype) noexcept {
-    auto newtype = new ast_pointer_type(eltype);
+    auto newtype = box<ast_type>(new ast_pointer_type(eltype));
     if(this->_pointer_types.find(newtype) == this->_pointer_types.end()) {
         this->_pointer_types[newtype] = newtype;
-        return newtype;
+        return newtype->as<ast_pointer_type>();
     }
     else {
-        return this->_pointer_types[newtype];
+        return this->_pointer_types[newtype]->as<ast_pointer_type>();
     }
 }
 
 ast_array_type* __ast_builder_impl::get_array_type(ast_type* eltype, uint32_t size) noexcept {
-    auto newtype = new ast_array_type(eltype, size);
+    auto newtype = box<ast_type>(new ast_array_type(eltype, size));
     if(this->_array_types.find(newtype) == this->_array_types.end()) {
         this->_array_types[newtype] = newtype;
-        return newtype;
+        return newtype->as<ast_array_type>();
     }
     else {
-        return this->_array_types[newtype];
+        return this->_array_types[newtype]->as<ast_array_type>();
     }
 }
 
 ast_function_type* __ast_builder_impl::get_function_type(ast_type* rtype, ptr<list<ast_type>> params) noexcept {
-    auto newtype = new ast_function_type(rtype, params);
+    auto newtype = box<ast_type>(new ast_function_type(rtype, params));
     if(this->_function_types.find(newtype) == this->_function_types.end()) {
         this->_function_types[newtype] = newtype;
-        return newtype;
+        return newtype->as<ast_function_type>();
     }
     else {
-        return this->_function_types[newtype];
+        return this->_function_types[newtype]->as<ast_function_type>();
     }
 }
 
 ast_record_type* __ast_builder_impl::get_record_type(ptr<list<ast_type>> types) noexcept {
-    auto newtype = new ast_record_type(types);
+    auto newtype = box<ast_type>(new ast_record_type(types));
     if(this->_record_types.find(newtype) == this->_record_types.end()) {
         this->_record_types[newtype] = newtype;
-        return newtype;
+        return newtype->as<ast_record_type>();
     }
     else {
-        return this->_record_types[newtype];
+        return this->_record_types[newtype]->as<ast_record_type>();
     }
-}
-
-ast_type* __ast_builder_impl::get_string_type(uint32_t length) noexcept {
-    return this->get_array_type(this->get_char_type(), length);
-}
-
-ast_type* __ast_builder_impl::get_char_type() noexcept {
-    return this->get_integer_type(8, true);
 }
 
 ast_type* __ast_builder_impl::get_declaration_type(ast_decl* decl) noexcept {
@@ -160,16 +152,12 @@ ast_type* __ast_builder_impl::get_declaration_type(ast_decl* decl) noexcept {
     throw std::runtime_error(__FILE__ ":" + std::to_string(__LINE__) + " Unhandled " + std::string(decl->get_tree_type_name()) + "\n");
 }
 
-ast_namespace_decl* __ast_builder_impl::define_namespace(const char*name) noexcept {
-    auto decl = this->context->find(name, false);
-    if(decl != nullptr && decl->is<ast_namespace_decl>()) {
-        return decl->as<ast_namespace_decl>();
-    }
-    else {
-        auto new_ns = new ast_namespace_decl(name);
-        this->context->insert(name, new_ns);
-        return new_ns;
-    }
+ast_decl* __ast_builder_impl::make_namespace_decl(const char* name, list<ast_decl>* decls) const noexcept {
+    return new ast_namespace_decl(name, decls);
+}
+
+ast_decl* __ast_builder_impl::make_local_decl(const char* name, ast_type* type, ast_expr* expr) const noexcept {
+    return new ast_local_decl(name, type, expr);
 }
 
 ast_expr* __ast_builder_impl::make_integer(const char* txt, uint8_t radix) const noexcept {
@@ -191,13 +179,6 @@ ast_expr* __ast_builder_impl::make_real(const char* txt) const noexcept {
     llvm::APFloat value(std::atof(txt));
 
     return new ast_real(this->get_real_type(64), value);
-}
-
-ast_expr* __ast_builder_impl::make_string(const char* txt, uint32_t start, uint32_t length) noexcept {
-    char dest[length + 1];
-    std::strncpy(dest, &txt[start], length);
-    dest[length] = '\0';
-    return new ast_string(this->get_string_type(length + 1), std::string(dest));
 }
 
 ast_expr* __ast_builder_impl::make_true() const noexcept {
@@ -596,8 +577,16 @@ ast_stmt* __ast_builder_impl::make_lower_assign_stmt(ast_expr* lhs, ast_expr* rh
     return new ast_assign_stmt(dest, src);
 }
 
-ast_stmt* __ast_builder_impl::make_block_stmt() const noexcept {
-    return new ast_block_stmt();
+ast_stmt* __ast_builder_impl::make_block_stmt(list<ast_stmt>* stmts) const noexcept {
+    return new ast_block_stmt(new list<ast_local_decl>(), stmts);
+}
+
+ast_stmt* __ast_builder_impl::make_block_stmt(ast_local_decl* decl, list<ast_stmt>* stmts) const noexcept {
+    return new ast_block_stmt(new list<ast_local_decl>(decl), stmts);
+}
+
+ast_stmt* __ast_builder_impl::make_block_stmt(list<ast_local_decl>* decls, list<ast_stmt>* stmts) const noexcept {
+    return new ast_block_stmt(decls, stmts);
 }
 
 ast_stmt* __ast_builder_impl::make_break_stmt() const noexcept {
@@ -610,7 +599,6 @@ ast_stmt* __ast_builder_impl::make_continue_stmt() const noexcept {
 
 ast_stmt* __ast_builder_impl::make_return_stmt(ast_type* t, ast_expr* expr) const noexcept {
     if(!t->is<ast_void_type>()) {
-        //TODO: cast to return type
         return new ast_return_stmt(this->make_cast_expr(t, expr));
     }
     else {
@@ -638,78 +626,73 @@ ast_stmt* __ast_builder_impl::make_for_stmt(ast_stmt* init_stmt, ast_expr* cond,
     }
 }
 
-void __ast_builder_impl::emit(ast_stmt* stmt) noexcept {
-    auto ctxt = dynamic_cast<ast_block_context*>(unbox(this->context));
-    assert(ctxt != nullptr);
-    ctxt->emit(stmt);
-}
-
-static inline bool __sametype(const __ast_builder_impl& builder, const ast_integer_type* lhs, const ast_integer_type* rhs) {
-    return (uint32_t) lhs->bitwidth    == (uint32_t) rhs->bitwidth    &&
-           (bool)     lhs->is_unsigned == (bool)     rhs->is_unsigned;
-}
-
-static inline bool __sametype(const __ast_builder_impl& builder, const ast_real_type* lhs, const ast_real_type* rhs) {
-    return (uint32_t) lhs->bitwidth == (uint32_t) rhs->bitwidth;
-}
-
-static inline bool __sametype(const __ast_builder_impl& builder, const ast_array_type* lhs, const ast_array_type* rhs) {
-    return builder.sametype(lhs->element_type, rhs->element_type) &&
-           (uint32_t) lhs->size == (uint32_t) rhs->size;
-}
-
-static inline bool __sametype(const __ast_builder_impl& builder, const ast_record_type* lhs, const ast_record_type* rhs) {
-    if(lhs->field_types->size() != rhs->field_types->size()) {
-        return false;
-    }
-    for(uint32_t i = 0; i < lhs->field_types->size(); i++) {
-        if(!builder.sametype(lhs->field_types[i], rhs->field_types[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-
-static inline bool __sametype(const __ast_builder_impl& builder, const ast_pointer_type* lhs, const ast_pointer_type* rhs) {
-    return builder.sametype(lhs->element_type, rhs->element_type);
-}
-
-static inline bool __sametype(const __ast_builder_impl& builder, const ast_function_type* lhs, const ast_function_type* rhs) {
-    if(builder.sametype(lhs->return_type, rhs->return_type)) {
-        if(lhs->parameter_types->size() == rhs->parameter_types->size()) {
-            for(uint32_t i = 0; i < lhs->parameter_types->size(); i++) {
-                if(!builder.sametype(lhs->parameter_types[i], rhs->parameter_types[i])) {
-                    return false;
-                }
-            }
-            return true;
-        }
-    }
-    return false;
-}
+//static inline bool __sametype(const __ast_builder_impl& builder, const ast_integer_type* lhs, const ast_integer_type* rhs) {
+//    return (uint32_t) lhs->bitwidth    == (uint32_t) rhs->bitwidth    &&
+//           (bool)     lhs->is_unsigned == (bool)     rhs->is_unsigned;
+//}
+//
+//static inline bool __sametype(const __ast_builder_impl& builder, const ast_real_type* lhs, const ast_real_type* rhs) {
+//    return (uint32_t) lhs->bitwidth == (uint32_t) rhs->bitwidth;
+//}
+//
+//static inline bool __sametype(const __ast_builder_impl& builder, const ast_array_type* lhs, const ast_array_type* rhs) {
+//    return builder.sametype(lhs->element_type, rhs->element_type) &&
+//           (uint32_t) lhs->size == (uint32_t) rhs->size;
+//}
+//
+//static inline bool __sametype(const __ast_builder_impl& builder, const ast_record_type* lhs, const ast_record_type* rhs) {
+//    if(lhs->field_types->size() != rhs->field_types->size()) {
+//        return false;
+//    }
+//    for(uint32_t i = 0; i < lhs->field_types->size(); i++) {
+//        if(!builder.sametype(lhs->field_types[i], rhs->field_types[i])) {
+//            return false;
+//        }
+//    }
+//    return true;
+//}
+//
+//static inline bool __sametype(const __ast_builder_impl& builder, const ast_pointer_type* lhs, const ast_pointer_type* rhs) {
+//    return builder.sametype(lhs->element_type, rhs->element_type);
+//}
+//
+//static inline bool __sametype(const __ast_builder_impl& builder, const ast_function_type* lhs, const ast_function_type* rhs) {
+//    if(builder.sametype(lhs->return_type, rhs->return_type)) {
+//        if(lhs->parameter_types->size() == rhs->parameter_types->size()) {
+//            for(uint32_t i = 0; i < lhs->parameter_types->size(); i++) {
+//                if(!builder.sametype(lhs->parameter_types[i], rhs->parameter_types[i])) {
+//                    return false;
+//                }
+//            }
+//            return true;
+//        }
+//    }
+//    return false;
+//}
 
 bool __ast_builder_impl::sametype(ast_type* lhs, ast_type* rhs) const {
-    if(lhs == rhs) { return true; }
-    if(lhs->get_tree_type() == rhs->get_tree_type()) {
-        switch(lhs->get_tree_type()) {
-        case tree_type_id::ast_void_type:
-            return true;
-        case tree_type_id::ast_integer_type:
-            return __sametype(*this, lhs->as<ast_integer_type>(), rhs->as<ast_integer_type>());
-        case tree_type_id::ast_real_type:
-            return __sametype(*this, lhs->as<ast_real_type>(), rhs->as<ast_real_type>());
-        case tree_type_id::ast_pointer_type:
-            return __sametype(*this, lhs->as<ast_pointer_type>(), rhs->as<ast_pointer_type>());
-        case tree_type_id::ast_array_type:
-            return __sametype(*this, lhs->as<ast_array_type>(), rhs->as<ast_array_type>());
-        case tree_type_id::ast_record_type:
-            return __sametype(*this, lhs->as<ast_record_type>(), rhs->as<ast_record_type>());
-        case tree_type_id::ast_function_type:
-            return __sametype(*this, lhs->as<ast_function_type>(), rhs->as<ast_function_type>());
-        }
-        throw std::runtime_error("unhandled type " + std::to_string((int) lhs->get_tree_type()) + " in sametype\n");
-    }
-    return false;
+//    if(lhs == rhs) { return true; }
+//    if(lhs->get_tree_type() == rhs->get_tree_type()) {
+//        switch(lhs->get_tree_type()) {
+//        case tree_type_id::ast_void_type:
+//            return true;
+//        case tree_type_id::ast_integer_type:
+//            return __sametype(*this, lhs->as<ast_integer_type>(), rhs->as<ast_integer_type>());
+//        case tree_type_id::ast_real_type:
+//            return __sametype(*this, lhs->as<ast_real_type>(), rhs->as<ast_real_type>());
+//        case tree_type_id::ast_pointer_type:
+//            return __sametype(*this, lhs->as<ast_pointer_type>(), rhs->as<ast_pointer_type>());
+//        case tree_type_id::ast_array_type:
+//            return __sametype(*this, lhs->as<ast_array_type>(), rhs->as<ast_array_type>());
+//        case tree_type_id::ast_record_type:
+//            return __sametype(*this, lhs->as<ast_record_type>(), rhs->as<ast_record_type>());
+//        case tree_type_id::ast_function_type:
+//            return __sametype(*this, lhs->as<ast_function_type>(), rhs->as<ast_function_type>());
+//        }
+//        throw std::runtime_error("unhandled type " + std::to_string((int) lhs->get_tree_type()) + " in sametype\n");
+//    }
+//    return false;
+    return this->_type_comparer_ptr->operator()(lhs, rhs);
 }
 
 static ast_type* __maxtype(const __ast_builder_impl* builder, ast_integer_type* lhs, ast_type* rhs) {
@@ -941,14 +924,6 @@ ast_expr* __ast_builder_impl::widen(ast_type* typedest, ast_expr* expr) const {
     throw std::runtime_error("unhandled " + std::string(typedest->get_tree_type_name()) + " in __ast_builder_impl::widen\n");
 }
 
-bool __ast_builder_impl::is_ptrof(ast_type* ptype, ast_type* el) {
-    return ptype->is<ast_pointer_type>() && this->sametype(ptype->as<ast_pointer_type>()->element_type, el);
-}
-
-bool __ast_builder_impl::is_arrayof(ast_type* atype, ast_type* el) {
-    return atype->is<ast_array_type>() && this->sametype(atype->as<ast_array_type>()->element_type, el);
-}
-
 ptr<ast_context> __ast_builder_impl::get_context() noexcept {
     return this->context;
 }
@@ -971,18 +946,8 @@ void __ast_builder_impl::push_block(ast_block_stmt* block) noexcept {
 
 void __ast_builder_impl::pop() noexcept { this->pop_context(); }
 
-ast_typedef_decl* __ast_builder_impl::define_named_type(const char* name, ast_type* tp) noexcept {
-    return new ast_typedef_decl(name, tp);
-}
-
-ast_variable_decl* __ast_builder_impl::define_global_variable(ast_type* type, const char* name) noexcept {
-    auto var = new ast_variable_decl(name, type, this->make_zero(type));
-    var->is_extern = false;
-    var->is_extern_visible = true;
-
-    this->context->insert(name, var);
-    this->tu.append(var);
-    return var;
+void __ast_builder_impl::insert_global(ast_decl* decl) noexcept {
+    this->global_namespace->declarations->append(decl);
 }
 
 ast_type* __ast_builder_impl::get_return_type() noexcept { return this->context->get_return_type(); }
@@ -993,28 +958,6 @@ ast_decl* __ast_builder_impl::find_declaration(const char* name) noexcept {
 
 ptr<list<ast_decl>> __ast_builder_impl::find_all_declarations(const char* name) noexcept {
     return this->context->findall(name, true);
-}
-
-ast_variable_decl* __ast_builder_impl::define_global_variable(ast_type* type, const char* name, ast_expr* ivalue) noexcept {
-    auto var = new ast_variable_decl(name, type, ivalue);
-
-    this->context->insert(name, var);
-    this->tu.append(var);
-    return var;
-}
-
-ast_local_decl* __ast_builder_impl::define_local_variable(ast_type* type, const char* name) noexcept {
-    auto var = new ast_local_decl(name, type, nullptr);
-
-    this->context->insert(name, var);
-    return var;
-}
-
-ast_local_decl* __ast_builder_impl::define_local_variable(ast_type* type) noexcept {
-    auto var = new ast_local_decl("$annon", type, nullptr);
-
-    this->context->insert(var->name->c_str(), var);
-    return var;
 }
 
 }

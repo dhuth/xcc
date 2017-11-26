@@ -16,6 +16,14 @@ bool xi_type_comparer::operator()(ast_type* const& lhs, ast_type* const& rhs) co
     }
 
     switch(lhs->type_id) {
+    case tree_type_id::xi_id_type:
+        {
+            auto xilhs = lhs->as<xi_id_type>();
+            auto xirhs = rhs->as<xi_id_type>();
+
+            return
+                    ((std::string) xilhs->name) == ((std::string) xirhs->name);
+        }
     case tree_type_id::xi_const_type:
         {
             auto xilhs = lhs->as<xi_const_type>();
@@ -63,7 +71,7 @@ bool xi_type_comparer::operator()(ast_type* const& lhs, ast_type* const& rhs) co
             auto xirhs = rhs->as<xi_object_type>();
 
             return
-                    xilhs->declaration == xirhs->declaration;
+                    xilhs->declaration == xirhs->declaration; //TODO: should be smarter
         }
         break;
     default:
@@ -75,6 +83,8 @@ size_t xi_type_hasher::operator()(ast_type* const& tp) const {
     size_t prefix = (size_t) tp->get_tree_type() << 8;
 
     switch(tp->get_tree_type()) {
+    case tree_type_id::xi_id_type:
+        return prefix;
     case tree_type_id::xi_const_type:
         return prefix | this->operator()(tp->as<xi_const_type>()->type);
     case tree_type_id::xi_array_type:

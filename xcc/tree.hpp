@@ -219,10 +219,12 @@ public:
 
     template<typename... TArgs>
     inline __extend_tree(TArgs... args): TBase(VType, args...) { }
+
     template<typename... TArgs>
     inline __extend_tree(tree_type_id tp, TArgs... args): TBase(tp, args...) { }
 
-    inline __extend_tree(const __tree_base& other): TBase(other) { }
+    // copy constructor
+    inline __extend_tree(const base_type& other) : TBase(other) { }
 
 };
 
@@ -372,6 +374,14 @@ public:
 
     inline void append(element_t&& el) {
         this->_child_nodes.push_back(box((__tree_base*) el));
+    }
+
+    inline void prepend(element_t& el) {
+        this->_child_nodes.insert(this->_child_nodes.begin(), box((__tree_base*) el));
+    }
+
+    inline void prepend(element_t&& el) {
+        this->_child_nodes.insert(this->_child_nodes.begin(), box((__tree_base*) el));
     }
 
     inline typename std::vector<ptr<__tree_base>>::size_type size() const noexcept {

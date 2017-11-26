@@ -8,15 +8,15 @@
 #include "xi-parser.hpp"
 #include "source.hpp"
 
-#define     SHIFTLOC                                    xcc::advance_column(yyloc->last, strlen(yytext));
-#define     NEWLINE                                     xcc::advance_line(yyloc->last);
+#define     SHIFTLOC                                    yyloc->columns(strlen(yytext));
+#define     NEWLINE                                     yyloc->lines(1);
                                                         
 #define     IGNORE                                      SHIFTLOC
 
-#define     BEGIN_LOC                                   xcc::init_source_span(*yyloc, yyloc->last);
-#define     RETURN_VALUE(tp,name,valname,val)           { SHIFTLOC yylval->valname = val; return tp##_##name; }
-#define     RETURN_LOCATED_VALUE(tp,name,valname,val)   { SHIFTLOC yylval->valname = xcc::setloc(val, *yyloc); return tp##_##name; }
-#define     RETURN_VOID(tp,name)                        { SHIFTLOC return tp##_##name; }
+#define     BEGIN_LOC                                   yyloc->step();
+#define     RETURN_VALUE(tp,name,valname,val)           { SHIFTLOC yylval->valname = val; return xi::parser::token::tp##_##name; }
+#define     RETURN_LOCATED_VALUE(tp,name,valname,val)   { SHIFTLOC yylval->valname = xcc::setloc(val, *yyloc); return xi::parser::token::tp##_##name; }
+#define     RETURN_VOID(tp,name)                        { SHIFTLOC return xi::parser::token::tp##_##name; }
 
 #define     RETURN_LITERAL(tp,val)                      RETURN_VALUE(LITERAL,tp,expr,val)
 #define     RETURN_LOCATED_LITERAL(tp,val)              RETURN_LOCATED_VALUE(LITERAL,tp,expr,val)
@@ -50,7 +50,6 @@ DBL_STRING_LITERAL                                      ["]({DBL_STRING_CHAR}|{D
 
 
 %x                                                      XI_STATE_BLOCK_COMMENT
-%s                                                      XI_STATE_UNUSED_ID
 
 %%
 %{
@@ -71,141 +70,104 @@ DBL_STRING_LITERAL                                      ["]({DBL_STRING_CHAR}|{D
 
             /* Delimiters */
 
-\{                                                      RETURN_OP(LBRACE,       none)
-\}                                                      RETURN_OP(RBRACE,       none)
-\[                                                      RETURN_OP(LBRACKET,     none)
-\]                                                      RETURN_OP(RBRACKET,     none)
-\(                                                      RETURN_OP(LPAREN,       none)
-\)                                                      RETURN_OP(RPAREN,       none)
+\{                                                      RETURN_OP(LBRACE,               none)
+\}                                                      RETURN_OP(RBRACE,               none)
+\[                                                      RETURN_OP(LBRACKET,             none)
+\]                                                      RETURN_OP(RBRACKET,             none)
+\(                                                      RETURN_OP(LPAREN,               none)
+\)                                                      RETURN_OP(RPAREN,               none)
 
-\-\>                                                    RETURN_OP(ARROW,        none)
-\,                                                      RETURN_OP(COMA,         none)
-\:                                                      RETURN_OP(COLON,        none)
-\:\:                                                    RETURN_OP(DOUBLE_COLON, none)
-\;                                                      RETURN_OP(SEMICOLON,    none)
-\.                                                      RETURN_OP(DOT,          none)
+\-\>                                                    RETURN_OP(ARROW,                none)
+\,                                                      RETURN_OP(COMA,                 none)
+\:                                                      RETURN_OP(COLON,                none)
+\:\:                                                    RETURN_OP(DOUBLE_COLON,         none)
+\;                                                      RETURN_OP(SEMICOLON,            none)
+\.                                                      RETURN_OP(DOT,                  none)
 
+            /* operators */
 
+and                                                     RETURN_OP(LOGICAL_AND,          and)
+or                                                      RETURN_OP(LOGICAL_OR,           or)
+xor                                                     RETURN_OP(LOGICAL_XOR,          xor)
+not                                                     RETURN_OP(LOGICAL_NOT,          not)
 
-        /* operators */
+\+                                                      RETURN_OP(ADD,                  add)
+\-                                                      RETURN_OP(SUB,                  sub)
+\*                                                      RETURN_OP(MUL,                  mul)
+\/                                                      RETURN_OP(DIV,                  div)
+\%                                                      RETURN_OP(MOD,                  mod)
 
-\+                                                      RETURN_OP(ADD,          add)
-\-                                                      RETURN_OP(SUB,          sub)
-\*                                                      RETURN_OP(MUL,          mul)
-\/                                                      RETURN_OP(DIV,          div)
-\%                                                      RETURN_OP(MOD,          mod)
-\*\>                                                    RETURN_OP(SHR,          sr)
-\<\*                                                    RETURN_OP(SHL,          sl)
+sl                                                      RETURN_OP(SL,                   sl)
+sr                                                      RETURN_OP(SR,                   sr)
+\&                                                      RETURN_OP(BINARY_AND,           band)
+\|                                                      RETURN_OP(BINARY_OR,            bor)
+\^                                                      RETURN_OP(BINARY_XOR,           bxor)
+\~                                                      RETURN_OP(BINARY_NOT,           bnot)
 
-\=\=                                                    RETURN_OP(EQ,           eq)
-\!\=                                                    RETURN_OP(NE,           ne)
-\<                                                      RETURN_OP(LT,           lt)
-\>                                                      RETURN_OP(GT,           gt)
-\<\=                                                    RETURN_OP(LE,           le)
-\>\=                                                    RETURN_OP(GE,           ge)
+\<                                                      RETURN_OP(LT,                   lt)
+\<\=                                                    RETURN_OP(LE,                   le)
+\>                                                      RETURN_OP(GT,                   gt)
+\>\=                                                    RETURN_OP(GE,                   ge)
+\=\=                                                    RETURN_OP(EQ,                   eq)
+\!\=                                                    RETURN_OP(NE,                   ne)
 
-\&                                                      RETURN_OP(BAND,         band)
-\|                                                      RETURN_OP(BOR,          bor)
-\^                                                      RETURN_OP(BXOR,         bxor)
-\~                                                      RETURN_OP(BNOT,         bnot)
-and                                                     RETURN_OP(LAND,         and)
-or                                                      RETURN_OP(LOR,          or)
-xor                                                     RETURN_OP(LXOR,         xor)
-not                                                     RETURN_OP(LNOT,         not)
-
-\=                                                      RETURN_OP(ASSIGN,       move)
-\+\=                                                    RETURN_OP(ASSIGN_ADD,   iadd)
-\-\=                                                    RETURN_OP(ASSIGN_SUB,   isub)
-\*\=                                                    RETURN_OP(ASSIGN_MUL,   imul)
-\/\=                                                    RETURN_OP(ASSIGN_DIV,   idiv)
-\%\=                                                    RETURN_OP(ASSIGN_MOD,   imod)
-\-\>\=                                                  RETURN_OP(ASSIGN_SHR,   isr)
-\<\-\=                                                  RETURN_OP(ASSIGN_SHL,   isl)
-\&\=                                                    RETURN_OP(ASSIGN_BAND,  iband)
-\|\=                                                    RETURN_OP(ASSIGN_BOR,   ibor)
-and\=                                                   RETURN_OP(ASSIGN_LAND,  iand)
-or\=                                                    RETURN_OP(ASSIGN_LOR,   ior)
-
-\[[ \t\n]*\]                                            RETURN_OP(INDEX,        index)
-\([ \t\n]*\)                                            RETURN_OP(INVOKE,       invoke)
+\=                                                      RETURN_OP(ASSIGN,               assign)
+\+\=                                                    RETURN_OP(ASSIGN_ADD,           iadd)
+\-\=                                                    RETURN_OP(ASSIGN_SUB,           isub)
+\*\=                                                    RETURN_OP(ASSIGN_MUL,           imul)
+\/\=                                                    RETURN_OP(ASSIGN_DIV,           idiv)
+\%\=                                                    RETURN_OP(ASSIGN_MOD,           imod)
+sl\=                                                    RETURN_OP(ASSIGN_SL,            isl)
+sr\=                                                    RETURN_OP(ASSIGN_SR,            isr)
+\&\=                                                    RETURN_OP(ASSIGN_BINARY_AND,    iband)
+\|\=                                                    RETURN_OP(ASSIGN_BINARY_OR,     ibor)
+\^\=                                                    RETURN_OP(ASSIGN_BINARY_XOR,    ibxor)
+and\=                                                   RETURN_OP(ASSIGN_LOGICAL_AND,   iand)
+or\=                                                    RETURN_OP(ASSIGN_LOGICAL_OR,    ior)
+xor\=                                                   RETURN_OP(ASSIGN_LOGICAL_XOR,   ixor)
 
 
-        /* builtin types */
-void                                                    RETURN_TYPE(builder.get_void_type())
-bool                                                    RETURN_TYPE(builder.get_bool_type())
-i8                                                      RETURN_TYPE(builder.get_integer_type(8,  false))
-i16                                                     RETURN_TYPE(builder.get_integer_type(16, false))
-i32                                                     RETURN_TYPE(builder.get_integer_type(32, false))
-i64                                                     RETURN_TYPE(builder.get_integer_type(64, false))
-u8                                                      RETURN_TYPE(builder.get_integer_type(8,  true))
-u16                                                     RETURN_TYPE(builder.get_integer_type(16, true))
-u32                                                     RETURN_TYPE(builder.get_integer_type(32, true))
-u64                                                     RETURN_TYPE(builder.get_integer_type(64, true))
-f16                                                     RETURN_TYPE(builder.get_real_type(16))
-f32                                                     RETURN_TYPE(builder.get_real_type(32))
-f64                                                     RETURN_TYPE(builder.get_real_type(64))
-
-
-        /* declaration scope keywords */
+            /* top level keywords */
 
 const                                                   RETURN_KW(CONST)
-extern                                                  RETURN_KW(EXTERN)
-export[ \t]+cfunc                                       RETURN_KW(EXPORT_CFUNC)
 func                                                    RETURN_KW(FUNC)
-import[ \t]+cfunc                                       RETURN_KW(IMPORT_CFUNC)
-internal                                                RETURN_KW(INTERNAL)
 namespace                                               RETURN_KW(NAMESPACE)
-static                                                  RETURN_KW(STATIC)
-struct                                                  RETURN_KW(STRUCT)
-typedef                                                 RETURN_KW(TYPEDEF)
 
 
-        /* statement scope keywords*/
-        
-elif                                                    RETURN_KW(ELIF)
+            /* type keywords */
+            
+void                                                    RETURN_TYPE(builder.get_void_type())
+u8                                                      RETURN_TYPE(builder.get_integer_type(8,   true))
+u16                                                     RETURN_TYPE(builder.get_integer_type(16,  true))
+u32                                                     RETURN_TYPE(builder.get_integer_type(32,  true))
+u64                                                     RETURN_TYPE(builder.get_integer_type(64,  true))
+i8                                                      RETURN_TYPE(builder.get_integer_type(8,   false))
+i16                                                     RETURN_TYPE(builder.get_integer_type(16,  false))
+i32                                                     RETURN_TYPE(builder.get_integer_type(32,  false))
+i64                                                     RETURN_TYPE(builder.get_integer_type(64,  false))
+f32                                                     RETURN_TYPE(builder.get_real_type(32));
+f64                                                     RETURN_TYPE(builder.get_real_type(64));
+
+            /* statement keywords */
+
+break                                                   RETURN_KW(BREAK)
+continue                                                RETURN_KW(CONTINUE)
 else                                                    RETURN_KW(ELSE)
+elif                                                    RETURN_KW(ELIF)
 for                                                     RETURN_KW(FOR)
 if                                                      RETURN_KW(IF)
-in                                                      RETURN_KW(IN)
-local                                                   RETURN_KW(LOCAL)
 return                                                  RETURN_KW(RETURN)
 while                                                   RETURN_KW(WHILE)
+var                                                     RETURN_KW(VAR)
 
+            /* expression keywords */
+            /* literals */
 
-    /* expression scope keywords */
+{FLOATING_POINT_LITERAL}                                RETURN_LITERAL(REAL,    builder.make_real(yytext))
+{INTEGER_10_LITERAL}                                    RETURN_LITERAL(INTEGER, builder.make_integer(yytext, 10))
+{INTEGER_16_LITERAL}                                    RETURN_LITERAL(INTEGER, builder.make_integer(&yytext[2], 16))
+{IDENTIFIER}                                            RETURN_TOKEN(IDENTIFIER, text, yytext)
 
-iter                                                    RETURN_KW(ITER)
-range                                                   RETURN_KW(RANGE)
-sizeof                                                  RETURN_KW(SIZEOF)
-
-
-    /* constant literals */
-
-true                                                    RETURN_LITERAL(INTEGER, builder.make_true())
-false                                                   RETURN_LITERAL(INTEGER, builder.make_false())
-
-{INTEGER_10_LITERAL}                                    RETURN_LOCATED_LITERAL(INTEGER, builder.make_integer(yytext, 10))
-{INTEGER_16_LITERAL}                                    RETURN_LOCATED_LITERAL(INTEGER, builder.make_integer(&yytext[2], 16))
-{FLOATING_POINT_LITERAL}                                RETURN_LOCATED_LITERAL(FLOAT,   builder.make_real(yytext))
-{DBL_STRING_LITERAL}                                    RETURN_LOCATED_LITERAL(STRING,  builder.make_string(yytext, 1, strlen(yytext)-2))
-
-
-    /* identifiers */
-
-
-<XI_STATE_UNUSED_ID>{IDENTIFIER}                        RETURN_TOKEN(IDENTIFIER, text, yytext)
-
-{IDENTIFIER}                                            {
-                                                        }
-
-<<EOF>>                                                 return TOK_EOF;
+<<EOF>>                                                 return xi::parser::token::TOK_EOF;
 %%
 
-void xi_lex_state_push(int state) {
-    yy_push_state(state);
-}
-
-void xi_lex_state_pop(int state) {
-    assert(state == YY_START);
-    yy_pop_state();
-}

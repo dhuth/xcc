@@ -13,7 +13,7 @@
 
 #include <iostream>
 #include <sstream>
-#include <unordered_set>
+#include <unordered_map>
 
 #include <llvm/ADT/APSInt.h>
 #include <llvm/ADT/APFloat.h>
@@ -35,7 +35,16 @@ public:
     inline ast_tree(tree_type_id id) noexcept
             : base_type(id),
               source_location(this) {
-        //...
+        // do nothing
+    }
+
+    /**
+     * Passing cloning constructor for ast_tree
+     */
+    inline ast_tree(const ast_tree& t) noexcept
+            : base_type(t._type),
+              source_location(this, t.source_location) {
+        // do nothing
     }
 
     property<source_span>                           source_location;
@@ -53,8 +62,18 @@ public:
      * Passing constructor
      * \param id overriding tree type id
      */
-    inline ast_type(tree_type_id id) noexcept : base_type(id) {
+    inline ast_type(tree_type_id id) noexcept
+            : base_type(id) {
         //...
+    }
+
+
+    /**
+     * Passing constructor for cloning
+     */
+    inline ast_type(const ast_type& t) noexcept
+            : base_type((base_type&) t) {
+        // do nothing
     }
 
 };
@@ -76,6 +95,16 @@ public:
               name(this, name),
               generated_name(this, "") {
         //...
+    }
+
+    /**
+     * Passing constructor for cloning
+     */
+    inline ast_decl(const ast_decl& d) noexcept
+            : base_type((base_type&) d),
+              name(this, d.name),
+              generated_name(this, d.generated_name) {
+        // do nothing
     }
 
     property<std::string>                                       name;               //!< declaration name
@@ -105,10 +134,19 @@ public:
      * \param id overriding tree type id
      * \param type expression type
      */
-    inline ast_expr(tree_type_id id, ast_type* type)
+    inline ast_expr(tree_type_id id, ast_type* type) noexcept
             : base_type(id),
               type(this, type) {
         //...
+    }
+
+    /**
+     * Passing constructor for cloning
+     */
+    inline ast_expr(const ast_expr& e) noexcept
+            : base_type((base_type&) e),
+              type(this, e.type) {
+        // do nothing
     }
 
     property<ast_type>                                          type;   //!< Expression type
@@ -130,6 +168,14 @@ public:
         //...
     }
 
+    /**
+     * Passing constructor for cloning
+     */
+    inline ast_stmt(const ast_stmt& s) noexcept
+            : base_type((base_type&) s) {
+        // do nothing
+    }
+
 };
 
 
@@ -142,13 +188,19 @@ public:
     inline ast_namespace_decl(std::string name)
             : base_type(name),
               declarations(this, new list<ast_decl>()) {
-        //...
+        // do nothing
     }
 
     inline ast_namespace_decl(std::string name, list<ast_decl>* declarations)
             : base_type(name),
               declarations(this, declarations) {
-        //...
+        // do nothing
+    }
+
+    inline ast_namespace_decl(const ast_namespace_decl& n) noexcept
+            : base_type((base_type&) n),
+              declarations(this, n.declarations) {
+        // do nothing
     }
 
     property<list<ast_decl>>                                    declarations;   //!<
@@ -173,7 +225,19 @@ public:
               initial_value(this, initial_value),
               is_extern(this, false),
               is_extern_visible(this, true) {
-        //...
+        // do nothing
+    }
+
+    /**
+     * Passing constructor for cloning
+     */
+    inline ast_variable_decl(const ast_variable_decl& v) noexcept
+            : base_type((base_type&) v),
+              type(this, v.type),
+              initial_value(this, v.initial_value),
+              is_extern(this, v.is_extern),
+              is_extern_visible(this, v.is_extern_visible) {
+        // do nothing
     }
 
     property<ast_type>                                          type;               //!< variable type
@@ -197,7 +261,16 @@ public:
     inline ast_parameter_decl(std::string name, ast_type* type) noexcept
             : base_type(name),
               type(this, type) {
-        //...
+        // do nothing
+    }
+
+    /**
+     * Passing constructor for cloning
+     */
+    inline ast_parameter_decl(const ast_parameter_decl& p) noexcept
+            : base_type((base_type&) p),
+              type(this, p.type) {
+        // do nothing
     }
 
     property<ast_type>                                          type; //!<
@@ -234,6 +307,16 @@ public:
         //...
     }
 
+    /**
+     * Passing constructor for cloning
+     */
+    inline ast_local_decl(const ast_local_decl& d) noexcept
+            : base_type((base_type&) d),
+              type(this, d.type),
+              init_value(this, d.init_value) {
+        // do nothing
+    }
+
     property<ast_type>                                          type;           //!<
     property<ast_expr>                                          init_value;     //!<
 
@@ -260,7 +343,18 @@ public:
               is_extern(this, false),
               is_extern_visible(this, true),
               is_c_extern(this, false) {
-        //...
+        // do nothing
+    }
+
+    inline ast_function_decl(const ast_function_decl& f) noexcept
+            : base_type((base_type&) f),
+              return_type(this, f.return_type),
+              parameters(this, f.parameters),
+              body(this, f.body),
+              is_extern(this, f.is_extern),
+              is_extern_visible(this, f.is_extern_visible),
+              is_c_extern(this, f.is_c_extern) {
+        // do nothing
     }
 
     property<ast_type>                                          return_type;        //!<
@@ -286,7 +380,13 @@ public:
     inline ast_typedef_decl(std::string name, ast_type* type)
             : base_type(name),
               type(this, type) {
-        //...
+        // do nothing
+    }
+
+    inline ast_typedef_decl(const ast_typedef_decl& t) noexcept
+            : base_type((base_type&) t),
+              type(this, t.type) {
+        // do nothing
     }
 
     property<ast_type>                                          type;
@@ -307,6 +407,11 @@ public:
         //...
     }
 
+    inline ast_void_type(const ast_void_type& v) noexcept
+            : base_type((base_type&) v) {
+        // do nothing
+    }
+
 };
 
 
@@ -323,7 +428,14 @@ struct ast_integer_type final : public extend_tree<tree_type_id::ast_integer_typ
             : base_type(),
               bitwidth(this, bitwidth),
               is_unsigned(this, is_unsigned) {
-        //...
+        // do nothing
+    }
+
+    inline ast_integer_type(const ast_integer_type& i) noexcept
+            : base_type((base_type&) i),
+              bitwidth(this, i.bitwidth),
+              is_unsigned(this, i.is_unsigned) {
+        // do nothing
     }
 
     property<uint32_t>                                          bitwidth;       //!<
@@ -344,7 +456,13 @@ public:
     inline ast_real_type(uint32_t bitwidth) noexcept
             : base_type(),
               bitwidth(this, bitwidth) {
-        //...
+        // do nothing
+    }
+
+    inline ast_real_type(const ast_real_type& r) noexcept
+            : base_type((base_type&) r),
+              bitwidth(this, r.bitwidth) {
+        // do nothing
     }
 
     property<uint32_t>                                          bitwidth;   //!<
@@ -366,7 +484,14 @@ public:
             : base_type(),
               element_type(this, element_type),
               size(this, size) {
-        //...
+        // do nothing
+    }
+
+    inline ast_array_type(const ast_array_type& a) noexcept
+            : base_type((base_type&) a),
+              element_type(this, a.element_type),
+              size(this, a.size) {
+        // do nothing
     }
 
     property<ast_type>                                          element_type;   //!<
@@ -387,7 +512,13 @@ public:
     inline ast_pointer_type(ast_type* element_type) noexcept
             : base_type(),
               element_type(this, element_type) {
-        //...
+        // do nothing
+    }
+
+    inline ast_pointer_type(const ast_pointer_type& p) noexcept
+            : base_type((base_type&) p),
+              element_type(this, p.element_type) {
+        // do nothing
     }
 
     property<ast_type>                                          element_type;   //!<
@@ -409,7 +540,14 @@ public:
             : base_type(),
               return_type(this, return_type),
               parameter_types(this, parameter_types) {
-        //...
+        // do nothing
+    }
+
+    inline ast_function_type(const ast_function_type& f) noexcept
+            : base_type((base_type&) f),
+              return_type(this, f.return_type),
+              parameter_types(this, f.parameter_types) {
+        // do nothing
     }
 
     property<ast_type>                                          return_type;        //!<
@@ -431,7 +569,7 @@ public:
             : base_type(),
               field_types(this, new list<ast_type>()),
               is_packed(this, is_packed){
-        //...
+        // do nothing
     }
 
     /**
@@ -442,7 +580,14 @@ public:
             : base_type(),
               field_types(this, types),
               is_packed(this, is_packed) {
-        //...
+        // do nothing
+    }
+
+    inline ast_record_type(const ast_record_type& r) noexcept
+            : base_type((base_type&) r),
+              field_types(this, r.field_types),
+              is_packed(this, r.is_packed) {
+        // do nothing
     }
 
     property<list<ast_type>>                                    field_types;    //!<
@@ -464,7 +609,13 @@ public:
     inline ast_integer(ast_type* itype, llvm::APSInt value) noexcept
             : base_type(itype),
               value(this, value) {
-        //...
+        // do nothing
+    }
+
+    inline ast_integer(const ast_integer& i) noexcept
+            : base_type((base_type&) i),
+              value(this, i.value) {
+        // do nothing
     }
 
     property<llvm::APSInt>                                      value;  //!<
@@ -485,7 +636,13 @@ public:
     inline ast_real(ast_type* ftype, llvm::APFloat value)
             : base_type(ftype),
               value(this, value) {
-        //...
+        // do nothing
+    }
+
+    inline ast_real(const ast_real& r) noexcept
+            : base_type((base_type&) r),
+              value(this, r.value) {
+        // do nothing
     }
 
     property<llvm::APFloat>                                     value;  //!<
@@ -506,7 +663,13 @@ public:
     inline ast_string(ast_type* stype, std::string value)
             : base_type(stype),
               value(this, value) {
-        //...
+        // do nothing
+    }
+
+    inline ast_string(const ast_string& s) noexcept
+            : base_type((base_type&) s),
+              value(this, s.value) {
+        // do nothing
     }
 
     property<std::string>                                       value; //!<
@@ -527,7 +690,13 @@ public:
     inline ast_array(ast_type* atype, list<ast_expr>* values)
             : base_type(atype),
               values(this, values) {
-        //...
+        // do nothing
+    }
+
+    inline ast_array(const ast_array& a) noexcept
+            : base_type((base_type&) a),
+              values(this, a.values) {
+        // do nothing
     }
 
     property<list<ast_expr>>                                    values; //!<
@@ -548,7 +717,13 @@ public:
     inline ast_record(ast_type* rtype, list<ast_expr>* values)
             : base_type(rtype),
               values(this, values) {
-        //...
+        // do nothing
+    }
+
+    inline ast_record(const ast_record& r) noexcept
+            : base_type((base_type&) r),
+              values(this, r.values) {
+        // do nothing
     }
 
     property<list<ast_expr>>                                    values; //!<
@@ -666,7 +841,14 @@ public:
             : base_type(type),
               op(this, op),
               expr(this, expr) {
-        //...
+        // do nothing
+    }
+
+    inline ast_cast(const ast_cast& c) noexcept
+            : base_type((base_type&) c),
+              op(this, c.op),
+              expr(this, c.expr) {
+        // do nothing
     }
 
     property<ast_op>                                            op;     //!< The low level casting operator
@@ -692,7 +874,15 @@ public:
               op(this, op),
               lhs(this, lhs),
               rhs(this, rhs) {
-        //...
+        // do nothing
+    }
+
+    inline ast_binary_op(const ast_binary_op& b) noexcept
+            : base_type((base_type&) b),
+              op(this, b.op),
+              lhs(this, b.lhs),
+              rhs(this, b.rhs) {
+        // do nothing
     }
 
     property<ast_op>                                            op;     //!<
@@ -717,7 +907,14 @@ public:
             : base_type(type),
               op(this, op),
               expr(this, expr) {
-        //...
+        // do nothing
+    }
+
+    inline ast_unary_op(const ast_unary_op& u) noexcept
+            : base_type((base_type&) u),
+              op(this, u.op),
+              expr(this, u.expr) {
+        // do nothing
     }
 
     property<ast_op>                                            op;     //!<
@@ -741,7 +938,14 @@ public:
             : base_type(type),
               arr_expr(this, expr),
               index_expr(this, index) {
-        //...
+        // do nothing
+    }
+
+    inline ast_index(const ast_index& i) noexcept
+            : base_type((base_type&) i),
+              arr_expr(this, i.arr_expr),
+              index_expr(this, i.index_expr) {
+        // do nothing
     }
 
     property<ast_expr>                                          arr_expr;   //!<
@@ -766,6 +970,12 @@ public:
         //...
     }
 
+    inline ast_declref(const ast_declref& r) noexcept
+            : base_type((base_type&) r),
+              declaration(this, r.declaration) {
+        // do nothing
+    }
+
     property<ast_decl>                                          declaration;   //!<
 };
 
@@ -780,7 +990,14 @@ public:
             : base_type(type),
               objexpr(this, objexpr),
               member_index(this, member) {
-        //...
+        // do nothing
+    }
+
+    inline ast_memberref(const ast_memberref& r) noexcept
+            : base_type((base_type&) r),
+              objexpr(this, r.objexpr),
+              member_index(this, r.member_index) {
+        // do nothing
     }
 
     property<ast_expr>                                          objexpr;        //!<
@@ -803,7 +1020,13 @@ public:
     inline ast_deref(ast_type* type, ast_expr* expr) noexcept
             : base_type(type),
               expr(this, expr) {
-        //...
+        // do nothing
+    }
+
+    inline ast_deref(const ast_deref& r) noexcept
+            : base_type((base_type&) r),
+              expr(this, r.expr) {
+        // do nothing
     }
 
     property<ast_expr>                                          expr;   //!<
@@ -824,7 +1047,13 @@ public:
     inline ast_addressof(ast_type* type, ast_expr* expr) noexcept
             : base_type(type),
               expr(this, expr) {
-        //...
+        // do nothing
+    }
+
+    inline ast_addressof(const ast_addressof& a) noexcept
+            : base_type((base_type&) a),
+              expr(this, a.expr) {
+        // do nothing
     }
 
     property<ast_expr>                                          expr;   //!<
@@ -847,7 +1076,14 @@ public:
             : base_type(type),
               funcexpr(this, funcexpr),
               arguments(this, arguments) {
-        //...
+        // do nothing
+    }
+
+    inline ast_invoke(const ast_invoke& i) noexcept
+            : base_type((base_type&) i),
+              funcexpr(this, i.funcexpr),
+              arguments(this, i.arguments) {
+        // do nothing
     }
 
     property<ast_expr>                                          funcexpr;   //!<
@@ -871,7 +1107,14 @@ public:
             : base_type(type),
               funcdecl(this, funcdecl),
               arguments(this, arguments) {
-        //...
+        // do nothing
+    }
+
+    inline ast_call(const ast_call& c) noexcept
+            : base_type((base_type&) c),
+              funcdecl(this, c.funcdecl),
+              arguments(this, c.arguments) {
+        // do nothing
     }
 
     property<ast_decl>                                          funcdecl;   //!<
@@ -895,7 +1138,14 @@ public:
             : base_type(type),
               statements(this, statements),
               expr(this, expr) {
-        //...
+        // do nothing
+    }
+
+    inline ast_stmt_expr(const ast_stmt_expr& s) noexcept
+            : base_type((base_type&) s),
+              statements(this, s.statements),
+              expr(this, s.expr) {
+        // do nothing
     }
 
     property<list<ast_stmt>>                                    statements; //!<
@@ -914,6 +1164,12 @@ public:
      *
      */
     inline ast_nop_stmt() noexcept : base_type() { }
+
+    inline ast_nop_stmt(const ast_nop_stmt& s) noexcept
+            : base_type((base_type&) s) {
+        // do nothing
+    }
+
 };
 
 
@@ -929,7 +1185,13 @@ public:
     inline ast_expr_stmt(ast_expr* expr) noexcept
             : base_type(),
               expr(this, expr) {
-        //...
+        // do nothing
+    }
+
+    inline ast_expr_stmt(const ast_expr_stmt& s) noexcept
+            : base_type((base_type&) s),
+              expr(this, s.expr) {
+        // do nothing
     }
 
     property<ast_expr>                                          expr;   //!<
@@ -951,7 +1213,14 @@ public:
             : base_type(),
               lhs(this, lhs),
               rhs(this, rhs) {
-        //...
+        // do nothing
+    }
+
+    inline ast_assign_stmt(const ast_assign_stmt& s) noexcept
+            : base_type((base_type&) s),
+              lhs(this, s.lhs),
+              rhs(this, s.rhs) {
+        // do nothing
     }
 
     property<ast_expr>                                          lhs;    //!<
@@ -969,7 +1238,13 @@ public:
     inline ast_decl_stmt(ast_local_decl* decl) noexcept
             : base_type(),
               decl(this, decl) {
-        //...
+        // do nothing
+    }
+
+    inline ast_decl_stmt(const ast_decl_stmt& s) noexcept
+            : base_type((base_type&) s),
+              decl(this, s.decl) {
+        // do nothing
     }
 
     property<ast_local_decl>                                    decl;   //!<
@@ -1001,7 +1276,14 @@ public:
             : base_type(),
               decls(this, new list<ast_local_decl>()),
               stmts(this, new list<ast_stmt>()) {
-        //...
+        // do nothing
+    }
+
+    inline ast_block_stmt(const ast_block_stmt& s) noexcept
+            : base_type((base_type&) s),
+              decls(this, s.decls),
+              stmts(this, s.stmts) {
+        // do nothing
     }
 
     property<list<ast_local_decl>>                              decls;  //!<
@@ -1026,7 +1308,15 @@ public:
               condition(this, condition),
               true_stmt(this, true_stmt),
               false_stmt(this, false_stmt) {
-        //...
+        // do nothing
+    }
+
+    inline ast_if_stmt(const ast_if_stmt& i) noexcept
+            : base_type((base_type&) i),
+              condition(this, i.condition),
+              true_stmt(this, i.true_stmt),
+              false_stmt(this, i.false_stmt) {
+        // do nothing
     }
 
     property<ast_expr>                                          condition;  //!<
@@ -1050,7 +1340,14 @@ public:
             : base_type(),
               condition(this, condition),
               stmt(this, stmt) {
-        //...
+        // do nothing
+    }
+
+    inline ast_while_stmt(const ast_while_stmt& w) noexcept
+            : base_type((base_type&) w),
+              condition(this, w.condition),
+              stmt(this, w.stmt) {
+        // do nothing
     }
 
     property<ast_expr>                                          condition;  //!<
@@ -1076,7 +1373,16 @@ public:
               condition(this, condition),
               each_stmt(this, each_stmt),
               body(this, body) {
-        //...
+        // do nothing
+    }
+
+    inline ast_for_stmt(const ast_for_stmt& f) noexcept
+            : base_type((base_type&) f),
+              init_stmt(this, f.init_stmt),
+              condition(this, f.condition),
+              each_stmt(this, f.each_stmt),
+              body(this, f.body) {
+        // do nothing
     }
 
     property<ast_stmt>                                          init_stmt;  //!<
@@ -1099,7 +1405,13 @@ public:
     inline ast_return_stmt(ast_expr* expr) noexcept
             : base_type(),
               expr(this, expr) {
-        //...
+        // do nothing
+    }
+
+    inline ast_return_stmt(const ast_return_stmt& r) noexcept
+            : base_type((base_type&) r),
+              expr(this, r.expr) {
+        // do nothing
     }
 
     property<ast_expr>                                          expr;   //!<
@@ -1118,6 +1430,11 @@ public:
      */
     inline ast_break_stmt() noexcept { }
 
+    inline ast_break_stmt(const ast_break_stmt& s) noexcept
+            : base_type((base_type&) s) {
+        // do nothing
+    }
+
 };
 
 
@@ -1128,6 +1445,11 @@ struct ast_continue_stmt final : public extend_tree<tree_type_id::ast_continue_s
 public:
 
     inline ast_continue_stmt() noexcept { }
+
+    inline ast_continue_stmt(const ast_continue_stmt& s) noexcept
+            : base_type((base_type&) s) {
+        // do nothing
+    }
 
 };
 
@@ -1248,7 +1570,7 @@ private:
 
 template<typename T,
          typename std::enable_if<std::is_base_of<ast_tree, T>::value, int>::type = 0>
-inline T* setloc(T* t, source_span& loc) noexcept {
+inline T* setloc(T* t, const source_span& loc) noexcept {
     if(t != nullptr) {
         t->source_location = loc;
     }
