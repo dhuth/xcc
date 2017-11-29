@@ -279,7 +279,7 @@ global-function-decl
                                     /* generics */
                             OP_LPAREN global-parameter-decl-list-opt OP_RPAREN
                             global-function-return-type-decl
-                            block-stmt                                          { $$ = builder.make_function_decl($2, $6, $4, $7); }
+                            block-stmt                                          { $$ = builder.make_xi_function_decl($2, $6, $4, $7); }
                         ;
 global-parameter-decl-list-opt
                         : global-parameter-decl-list                            { $$ = $1; }
@@ -291,8 +291,8 @@ global-parameter-decl-list
                         | global-parameter-decl                                 { $$ = make_list<parameter_t>($1); }
                         ;
 global-parameter-decl
-                        : TOK_IDENTIFIER OP_COLON type                          { $$ = builder.make_parameter_decl($1,      $3); }
-                        |                OP_COLON type                          { $$ = builder.make_parameter_decl(nullptr, $2); }
+                        : TOK_IDENTIFIER OP_COLON type                          { $$ = builder.make_xi_parameter_decl($1,      $3); }
+                        |                OP_COLON type                          { $$ = builder.make_xi_parameter_decl(nullptr, $2); }
                         ;
 global-function-return-type-decl
                         : OP_ARROW type                                         { $$ = $2; }
@@ -335,20 +335,20 @@ non-decl-stmt
                         | return-stmt                                           { $$ = $1; }
                         ;
 if-stmt
-                        : KW_IF expr s-body-stmt                                { $$ = builder.make_if_stmt($2, $3, nullptr); }
-                        | KW_IF expr s-body-stmt else-stmt                      { $$ = builder.make_if_stmt($2, $3, $4); }
-                        | KW_IF expr s-body-stmt elif-stmt                      { $$ = builder.make_if_stmt($2, $3, $4); }
+                        : KW_IF expr s-body-stmt                                { $$ = builder.make_xi_if_stmt($2, $3, nullptr); }
+                        | KW_IF expr s-body-stmt else-stmt                      { $$ = builder.make_xi_if_stmt($2, $3, $4); }
+                        | KW_IF expr s-body-stmt elif-stmt                      { $$ = builder.make_xi_if_stmt($2, $3, $4); }
                         ;
 else-stmt
                         : KW_ELSE s-body-stmt                                   { $$ = $2; }
                         ;
 elif-stmt
-                        : KW_ELIF expr s-body-stmt                              { $$ = builder.make_if_stmt($2, $3, nullptr); }
-                        | KW_ELIF expr s-body-stmt else-stmt                    { $$ = builder.make_if_stmt($2, $3, $4); }
-                        | KW_ELIF expr s-body-stmt elif-stmt                    { $$ = builder.make_if_stmt($2, $3, $4); }
+                        : KW_ELIF expr s-body-stmt                              { $$ = builder.make_xi_if_stmt($2, $3, nullptr); }
+                        | KW_ELIF expr s-body-stmt else-stmt                    { $$ = builder.make_xi_if_stmt($2, $3, $4); }
+                        | KW_ELIF expr s-body-stmt elif-stmt                    { $$ = builder.make_xi_if_stmt($2, $3, $4); }
                         ;
 while-stmt
-                        : KW_WHILE expr s-body-stmt                             { $$ = builder.make_while_stmt($2, $3); }
+                        : KW_WHILE expr s-body-stmt                             { $$ = builder.make_xi_while_stmt($2, $3); }
                         ;
 s-body-stmt
                         :  block-stmt                                           { $$ = $1; }
@@ -360,9 +360,9 @@ break-stmt
                         : KW_BREAK OP_SEMICOLON                                 { $$ = builder.make_break_stmt(); }
                         ;
 return-stmt
-                        : KW_RETURN expr OP_SEMICOLON                           { $$ = builder.make_return_stmt($2); }
-                        | KW_RETURN expr OP_COMA expr-list-opt OP_SEMICOLON     { $$ = builder.make_return_stmt(builder.make_tuple_expr(make_list<expr_t>($2, $4))); }
-                        | KW_RETURN OP_SEMICOLON                                { $$ = builder.make_return_stmt(nullptr); }
+                        : KW_RETURN expr OP_SEMICOLON                           { $$ = builder.make_xi_return_stmt($2); }
+                        | KW_RETURN expr OP_COMA expr-list-opt OP_SEMICOLON     { $$ = builder.make_xi_return_stmt(builder.make_xi_tuple_expr(make_list<expr_t>($2, $4))); }
+                        | KW_RETURN OP_SEMICOLON                                { $$ = builder.make_xi_return_stmt(nullptr); }
                         ;
 continue-stmt
                         : KW_CONTINUE OP_SEMICOLON                              { $$ = builder.make_continue_stmt(); }
@@ -433,8 +433,8 @@ postfix-expr
                             OP_LPAREN   expr-list-opt OP_RPAREN                 { $$ = builder.make_xi_op(operator_t::__invoke__, $3); }
                         | postfix-expr
                             OP_LBRACKET expr-list     OP_RBRACKET               { $$ = builder.make_xi_op(operator_t::__index__, $3); }
-                        | postfix-expr OP_DOT   TOK_IDENTIFIER                  { $$ = builder.make_member_id_expr($1, $3); }
-                        | postfix-expr OP_ARROW TOK_IDENTIFIER                  { $$ = builder.make_deref_member_id_expr($1, $3); }
+                        | postfix-expr OP_DOT   TOK_IDENTIFIER                  { $$ = builder.make_xi_member_id_expr($1, $3); }
+                        | postfix-expr OP_ARROW TOK_IDENTIFIER                  { $$ = builder.make_xi_deref_member_id_expr($1, $3); }
                         | prefix-expr                                           { $$ = $1; }
                         ;
 prefix-expr
@@ -444,11 +444,11 @@ prefix-expr
                         ;
 term-expr
                         : OP_LPAREN expr OP_RPAREN                              { $$ = $2; }
-                        | OP_LPAREN expr OP_COMA expr-list-opt OP_RPAREN        { $$ = builder.make_tuple_expr(make_list<expr_t>($2, $4)); }
+                        | OP_LPAREN expr OP_COMA expr-list-opt OP_RPAREN        { $$ = builder.make_xi_tuple_expr(make_list<expr_t>($2, $4)); }
                         | TOK_EXPR                                              { $$ = $1; }
                         | LITERAL_INTEGER                                       { $$ = $1; }
                         | LITERAL_REAL                                          { $$ = $1; }
-                        | TOK_IDENTIFIER                                        { $$ = builder.make_id_expr($1); }
+                        | TOK_IDENTIFIER                                        { $$ = builder.make_xi_id_expr($1); }
                         ;
 assign-op
                         : OP_ASSIGN                                             { $$ = $1; }

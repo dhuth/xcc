@@ -1,11 +1,12 @@
 
 
-tree_type(xi_type,                                      ast_type)
-tree_type(xi_decl,                                      ast_decl)
-tree_type(xi_stmt,                                      ast_stmt)
-tree_type(xi_expr,                                      ast_expr)
+tree_type(xi_type,                                      ast_type)           // abstract
+tree_type(xi_decl,                                      ast_decl)           // abstract
+tree_type(xi_stmt,                                      ast_stmt)           // abstract
+tree_type(xi_expr,                                      ast_expr)           // abstract
 
-tree_type(xi_id_type,                                   xi_type)
+tree_type(xi_id_type,                                   xi_type)            // pre-semantic
+tree_type(xi_group_type,                                xi_type)            // pre-semantic
 
 tree_type(xi_const_type,                                xi_type)
 tree_type(xi_auto_type,                                 xi_type)
@@ -15,18 +16,17 @@ tree_type(xi_tuple_type,                                xi_type)
 
 tree_type(xi_parameter_decl,                            xi_decl)
 tree_type(xi_function_decl,                             xi_decl)
-tree_type(xi_member_decl,                               xi_decl)
+tree_type(xi_member_decl,                               xi_decl)            // abstract
 tree_type(xi_field_decl,                                xi_member_decl)
 tree_type(xi_type_decl,                                 xi_member_decl)
 
-tree_type(xi_id_expr,                                   xi_expr)
-tree_type(xi_member_id_expr,                            xi_expr)
-tree_type(xi_deref_member_id_expr,                      xi_expr)
-tree_type(xi_group_expr,                                xi_expr)
+tree_type(xi_id_expr,                                   xi_expr)            // pre-semantic
+tree_type(xi_member_id_expr,                            xi_expr)            // pre-semantic
+tree_type(xi_group_expr,                                xi_expr)            // pre-semantic
 
-tree_type(xi_const_expr,                                xi_expr) // ?
+tree_type(xi_type_expr,                                 xi_expr)            // pre-semantic
+
+tree_type(xi_const_expr,                                xi_expr)            // abstract
 tree_type(xi_op_expr,                                   xi_expr)
-tree_type(xi_type_expr,                                 xi_expr)
 tree_type(xi_tuple_expr,                                xi_expr)
 tree_type(xi_member_expr,                               xi_expr)
-tree_type(xi_deref_member_expr,                         xi_expr)

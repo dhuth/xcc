@@ -7,6 +7,8 @@
 %{
 #include "xi-parser.hpp"
 #include "source.hpp"
+#include <cstring>
+#include <ctype.h>
 
 #define     SHIFTLOC                                    yyloc->columns(strlen(yytext));
 #define     NEWLINE                                     yyloc->lines(1);
@@ -28,6 +30,12 @@
 #define     RETURN_DECL(t)                              RETURN_VALUE(TOK,DECL,decl,t)
 #define     RETURN_EXPR(e)                              RETURN_VALUE(TOK,EXPR,expr,e)
 #define     RETURN_LOCATED_EXPR(e)                      RETURN_LOCATED_VALUE(TOK,EXPR,expr,e)
+
+static inline char* copy_cstring(const char* s) {
+    char* d = (char*) malloc(strlen(s) + 1);
+    strcpy(d, s);
+    return d;
+}
 
 %}
 
@@ -166,7 +174,7 @@ var                                                     RETURN_KW(VAR)
 {FLOATING_POINT_LITERAL}                                RETURN_LITERAL(REAL,    builder.make_real(yytext))
 {INTEGER_10_LITERAL}                                    RETURN_LITERAL(INTEGER, builder.make_integer(yytext, 10))
 {INTEGER_16_LITERAL}                                    RETURN_LITERAL(INTEGER, builder.make_integer(&yytext[2], 16))
-{IDENTIFIER}                                            RETURN_TOKEN(IDENTIFIER, text, yytext)
+{IDENTIFIER}                                            RETURN_TOKEN(IDENTIFIER, text, copy_cstring(yytext))
 
 <<EOF>>                                                 return xi::parser::token::TOK_EOF;
 %%

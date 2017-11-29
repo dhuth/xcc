@@ -98,7 +98,7 @@ size_t ast_type_hasher::hash_typelist(list<ast_type>* list) const noexcept {
 }
 
 size_t ast_type_hasher::operator()(ast_type* const& tp) const {
-    switch(tp->type_id) {
+    switch(tp->get_tree_type()) {
     case tree_type_id::ast_void_type:
         return (size_t) tree_type_id::ast_void_type;
     case tree_type_id::ast_integer_type:

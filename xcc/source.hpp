@@ -18,7 +18,7 @@ struct source_location {
     uint32_t                                        line_number;
     uint32_t                                        column_number;
 
-    inline source_location():filename(nullptr), line_number(0), column_number(0) { }
+    inline source_location():filename(), line_number(0), column_number(0) { }
 };
 
 struct source_span {

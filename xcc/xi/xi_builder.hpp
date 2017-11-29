@@ -14,6 +14,24 @@
 
 namespace xcc {
 
+struct xi_function_context final : ast_context {
+public:
+
+    inline xi_function_context(ast_context* prev, xi_function_decl* decl) noexcept : ast_context(prev), func(decl) { }
+    virtual ~xi_function_context() = default;
+
+    virtual void insert(const char*, ast_decl*);
+    virtual ast_type* get_return_type();
+
+protected:
+
+    virtual ptr<ast_decl> find_first_impl(const char*);
+    virtual void          find_all_impl(ptr<list<ast_decl>>, const char*);
+
+    ptr<xi_function_decl>                      func;
+
+};
+
 struct xi_builder : public ast_builder<ast_default_name_mangler,
                                        xi_type_comparer,
                                        xi_type_hasher> {
@@ -36,22 +54,30 @@ public:
     ast_type*                                   get_tuple_type(list<ast_type>* types)                                                                         noexcept;
     ast_type*                                   get_id_type(const char*)                                                                                const noexcept;
 
-    xi_function_decl*                           make_function_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*)                         const noexcept;
-    xi_parameter_decl*                          make_parameter_decl(const char*, ast_type*)                                                             const noexcept;
+    virtual ast_type*                           get_declaration_type(ast_decl*)                                                                               noexcept;
 
-    ast_expr*                                   make_id_expr(const char*)                                                                               const noexcept;
-    ast_expr*                                   make_member_id_expr(ast_expr*, const char*)                                                             const noexcept;
-    ast_expr*                                   make_deref_member_id_expr(ast_expr*, const char*)                                                       const noexcept;
-    ast_expr*                                   make_tuple_expr(list<ast_expr>*)                                                                        const noexcept;
+    xi_function_decl*                           make_xi_function_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*)                      const noexcept;
+    xi_parameter_decl*                          make_xi_parameter_decl(const char*, ast_type*)                                                          const noexcept;
+
+    ast_expr*                                   make_xi_id_expr(const char*)                                                                            const noexcept;
+    ast_expr*                                   make_xi_member_id_expr(ast_expr*, const char*)                                                          const noexcept;
+    ast_expr*                                   make_xi_deref_member_id_expr(ast_expr*, const char*)                                                    const noexcept;
+    ast_expr*                                   make_xi_tuple_expr(list<ast_expr>*)                                                                     const noexcept;
     ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, ast_expr*)                                                       const noexcept;
     ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, ast_expr*, ast_expr*)                                            const noexcept;
     ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, list<ast_expr>*)                                                 const noexcept;
 
-    ast_stmt*                                   make_return_stmt(ast_expr*)                                                                             const noexcept;
+    ast_stmt*                                   make_xi_if_stmt(ast_expr*, ast_stmt*, ast_stmt*)                                                        const noexcept;
+    ast_stmt*                                   make_xi_while_stmt(ast_expr*, ast_stmt*)                                                                const noexcept;
+    ast_stmt*                                   make_xi_return_stmt(ast_expr*)                                                                          const noexcept;
 
-    void                                        push_function(xi_function_decl*)                                                                              noexcept;
+    void                                        push_xi_function(xi_function_decl*)                                                                           noexcept;
 
-    void                                        semantic_check();
+    //ast_expr*                                   const_eval(ast_expr*)                                                                                   const noexcept;
+    void                                        semantic_check(/* error log info*/)                                                                           noexcept;
+    void                                        lower(/* error log info*/)                                                                                    noexcept;
+
+    ast_expr*                                   find_best_overload(xi_op_expr::xi_operator, list<ast_expr>*)                                            const noexcept;
 
 private:
 
@@ -63,7 +89,17 @@ private:
 
 };
 
+struct xi_postorder_walker : public dispatch_postorder_tree_walker<ast_tree, xi_builder&> {
+public:
 
+    inline xi_postorder_walker() noexcept
+            : dispatch_postorder_tree_walker<ast_tree, xi_builder&>() {
+        /* do nothing */
+    }
+
+    void begin(tree_type_id, ast_tree*, xi_builder&);
+    void end(tree_type_id, ast_tree*, xi_builder&);
+};
 
 }
 

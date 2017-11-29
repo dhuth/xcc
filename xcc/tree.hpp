@@ -179,9 +179,7 @@ public:
 
     inline __tree_base(const __tree_base& other) noexcept
             : _type(other._type) {
-        for(auto p: other._child_nodes) {
-            this->_child_nodes.push_back(p);
-        }
+        // do nothing
     }
 
     inline void pin() const noexcept {

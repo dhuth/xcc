@@ -4,6 +4,8 @@
 #include "xi_tree.hpp"
 #include "xi_builder.hpp"
 
+#include "location.hh"
+
 #include <type_traits>
 
 // Parser type defs

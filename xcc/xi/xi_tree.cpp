@@ -11,18 +11,19 @@
 namespace xcc {
 
 bool xi_type_comparer::operator()(ast_type* const& lhs, ast_type* const& rhs) const {
-    if(lhs->type_id != rhs->type_id) {
+    if(lhs->get_tree_type() != rhs->get_tree_type()) {
         return false;
     }
 
-    switch(lhs->type_id) {
+    switch(lhs->get_tree_type()) {
     case tree_type_id::xi_id_type:
         {
-            auto xilhs = lhs->as<xi_id_type>();
-            auto xirhs = rhs->as<xi_id_type>();
-
-            return
-                    ((std::string) xilhs->name) == ((std::string) xirhs->name);
+//            auto xilhs = lhs->as<xi_id_type>();
+//            auto xirhs = rhs->as<xi_id_type>();
+//
+//            return
+//                    ((std::string) xilhs->name) == ((std::string) xirhs->name);
+            return false;
         }
     case tree_type_id::xi_const_type:
         {
@@ -31,15 +32,6 @@ bool xi_type_comparer::operator()(ast_type* const& lhs, ast_type* const& rhs) co
 
             return
                     this->operator()(xilhs->type, xirhs->type);
-        }
-        break;
-    case tree_type_id::xi_array_type:
-        {
-            auto xilhs = lhs->as<xi_array_type>();
-            auto xirhs = rhs->as<xi_array_type>();
-
-            return
-                    this->operator()(xilhs->type, xirhs->type); //TODO: ???
         }
         break;
     case tree_type_id::xi_auto_type:
@@ -84,11 +76,9 @@ size_t xi_type_hasher::operator()(ast_type* const& tp) const {
 
     switch(tp->get_tree_type()) {
     case tree_type_id::xi_id_type:
-        return prefix;
+        return prefix | std::hash<std::string>()(tp->as<xi_id_type>()->name);
     case tree_type_id::xi_const_type:
         return prefix | this->operator()(tp->as<xi_const_type>()->type);
-    case tree_type_id::xi_array_type:
-        return prefix | this->operator()(tp->as<xi_array_type>()->type);
     case tree_type_id::xi_auto_type:
         return prefix;
     case tree_type_id::xi_reference_type:

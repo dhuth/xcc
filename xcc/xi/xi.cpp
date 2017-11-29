@@ -33,9 +33,9 @@ int ximain(const char* input_filename, const char* output_filename, std::vector<
 
     xi::parser(builder).parse();
 
-    // TODO: read library
+    // TODO: read libraries
     builder.semantic_check();
-    // TODO: lower
+    builder.lower();
 
     ircode_context ctx(input_filename);
     ctx.generate(unit, output_filename);
