@@ -13,7 +13,7 @@ xcc_core_sources       += ast_builder_mangler.cpp
 xcc_core_sources       += ast_context.cpp
 
 xcc_core_cppflags       = @llvm_cppflags@
-xcc_core_cxxflags       = -std=c++11 -pthread
+xcc_core_cxxflags       = -std=c++17 -pthread
 xcc_core_libs           = @xcc_lang_libs@ @llvm_libs@ @llvm_syslibs@
 xcc_core_ldflags        = @llvm_ldflags@
 

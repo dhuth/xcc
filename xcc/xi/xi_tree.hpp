@@ -235,6 +235,7 @@ struct xi_function_decl : public extend_tree<tree_type_id::xi_function_decl, xi_
         /* do nothing */
     }
 
+    property<bool>                                                  is_extern;
     property<ast_type>                                              return_type;
     property<list<xi_parameter_decl>>                               parameters;
     property<ast_stmt>                                              body;

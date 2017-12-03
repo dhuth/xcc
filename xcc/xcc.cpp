@@ -164,10 +164,17 @@ int main(int argc, char** argv) {
     auto res = argp_parse(&argp_program, argc, argv, 0, &arg_index, &args);
 
     std::vector<std::string> llfiles;
-    for(auto input_file : args.input_filenames) {
-        //TODO: preprocess
-        llfiles.push_back(handle_compile_from_file(input_file, &args));
+
+    if(true) { /* TODO: one to one */
+        for(auto input_file : args.input_filenames) {
+            //TODO: preprocess
+            llfiles.push_back(handle_compile_from_file(input_file, &args));
+        }
     }
+    else { /* TODO: many to one */
+    }
+
+    //TODO: link
 }
 
 

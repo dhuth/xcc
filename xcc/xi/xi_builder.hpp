@@ -101,6 +101,9 @@ public:
     void end(tree_type_id, ast_tree*, xi_builder&);
 };
 
+template<typename TResult, typename... TParameters>
+using xi_visitor = dispatch_visitor<TResult, xi_builder&, TParameters...>;
+
 }
 
 

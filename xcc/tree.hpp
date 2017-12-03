@@ -13,12 +13,14 @@
 #include <cstdlib>
 
 #include <algorithm>
+#include <iterator>
 #include <initializer_list>
 #include <functional>
 #include <map>
 #include <type_traits>
 #include <vector>
 
+#include "cppdefs.hpp"
 #include "managed_ptr.hpp"
 
 
@@ -28,9 +30,9 @@ template<typename T>
 using ptr = managed_ptr<T>;
 
 
-/* ============================= *
- * Forward declarations and tags *
- * ============================= */
+/* ==================== *
+ * Forward declarations *
+ * ==================== */
 
 struct tree_type;
 struct __tree_base;
@@ -38,6 +40,11 @@ struct __tree_property_base;
 template<typename> struct __tree_list_base;
 template<typename> struct __tree_list_tree;
 template<typename> struct __tree_list_value;
+template<typename> struct __tree_list_type_traits;
+template<typename> struct __tree_property_tree;
+template<typename> struct __tree_property_list;
+template<typename> struct __tree_property_value;
+template<typename> struct __tree_property_type_traits;
 
 
 /* ==================== *
@@ -50,15 +57,30 @@ struct __is_tree : std::is_base_of<__tree_base, T> { };
 template<typename T>
 using __is_tree_type = typename std::enable_if<__is_tree<T>::value, int>::type;
 
+/* ==================== *
+ * List Trait Utilities *
+ * ==================== */
+
+template<typename TList> struct __tree_list_type_traits {
+    typedef typename TList::iterator_t                      iterator_t;
+    typedef typename TList::const_iterator_t                const_iterator_t;
+    typedef typename TList::list_t                          list_t;
+    typedef typename TList::list_ptr_t                      list_ptr_t;
+    typedef typename TList::element_t                       element_t;
+};
+
 template<typename T> struct __list_type_selector {
     typedef typename std::conditional<std::is_base_of<__tree_base, T>::value,
                             __tree_list_tree<T>,
                             __tree_list_value<T>>::type         type;
 };
 
-template<typename> struct __tree_property_tree;
-template<typename> struct __tree_property_list;
-template<typename> struct __tree_property_value;
+template<typename T>
+using list = typename __list_type_selector<T>::type;
+
+/* ======================== *
+ * Property Trait Utilities *
+ * ======================== */
 
 template<typename T> struct __property_type_tree_selector {
     typedef __tree_property_tree<T>                             type;
@@ -114,8 +136,8 @@ struct tree_type {
     tree_type_id                                                base_id;
     const char*                                                 name;
 
-    inline static constexpr size_t count() noexcept { return (size_t)tree_type_id::__type_count; }
-    inline static           bool   is_base_of(const tree_type_id bt, const tree_type_id dt) noexcept {
+    inline static   constexpr size_t count() noexcept { return (size_t)tree_type_id::__type_count; }
+    inline static __constexpr bool   is_base_of(const tree_type_id bt, const tree_type_id dt) noexcept {
         tree_type_id tt = dt;
         while(tt != tree_type_id::tree) {
             if(bt == tt) {
@@ -197,7 +219,10 @@ protected:
     template<typename TBaseType, typename... TParamTypes>
     friend struct __dispatch_tree_walker_base;
 
-    inline size_t append_child(__tree_base* v) noexcept {
+    /**
+     * Used by __tree_property_tree constructor to insert new children
+     */
+    inline size_t __append_child(__tree_base* v) noexcept {
         size_t idx = this->_child_nodes.size();
         this->_child_nodes.push_back(ptr<__tree_base>(v));
         return idx;
@@ -226,6 +251,9 @@ public:
 
 };
 
+template<tree_type_id tp, typename base = __tree_base>
+using extend_tree = __extend_tree<tp, base>;
+
 template<typename T, __is_tree_type<T> = 0>
 constexpr tree_type_id __get_tree_type_id() { return T::type_id; }
 
@@ -248,11 +276,11 @@ private:
 
 public:
 
-    inline __tree_list_value()                                          noexcept : base_list_t()                  { }
-    inline __tree_list_value(TElement f)                                noexcept : base_list_t()                  { this->_list.push_back(f); }
-    inline __tree_list_value(TElement f, const list_ptr_t r)            noexcept : base_list_t(), _list(r->_list) { this->_list.insert(this->_list.begin(), f); }
-    inline __tree_list_value(const list_ptr_t f, TElement l)            noexcept : base_list_t(), _list(f->_list) { this->_list.push_back(l); }
-    inline __tree_list_value(std::vector<TElement>& vec)                noexcept : base_list_t() {
+    inline          __tree_list_value()                                          noexcept : base_list_t()                  { }
+    inline explicit __tree_list_value(TElement f)                                noexcept : base_list_t()                  { this->_list.push_back(f); }
+    inline          __tree_list_value(TElement f, const list_ptr_t r)            noexcept : base_list_t(), _list(r->_list) { this->_list.insert(this->_list.begin(), f); }
+    inline          __tree_list_value(const list_ptr_t f, TElement l)            noexcept : base_list_t(), _list(f->_list) { this->_list.push_back(l); }
+    inline explicit __tree_list_value(std::vector<TElement>& vec)                noexcept : base_list_t() {
         for(auto el: vec) {
             this->_list.push_back(el);
         }
@@ -289,17 +317,15 @@ protected:
 
 template<typename TElement>
 struct __tree_list_tree final : public __tree_list_base<ptr<TElement>> {
-protected:
+public:
 
+    // Traits
     typedef __tree_list_base<ptr<TElement>>             base_list_t;
     typedef __tree_list_tree<TElement>                  list_t;
     typedef list_t*                                     list_ptr_t;
-    //typedef ptr<TElement>                               box_t;
-
-
-public:
-
+    typedef ptr<list_t>                                 list_box_t;
     typedef TElement*                                   element_t;
+    typedef ptr<TElement>                               element_box_t;
 
     struct iterator {
         size_t                                  index;
@@ -320,6 +346,8 @@ public:
         }
     };
     typedef const iterator                              const_iterator;
+    typedef iterator                                    iterator_t;
+    typedef const_iterator                              const_iterator_t;
 
     inline __tree_list_tree()                                           noexcept : base_list_t()           { }
     inline __tree_list_tree(element_t f)                                noexcept : base_list_t()           { this->_child_nodes.push_back(box((__tree_base*) f)); }
@@ -391,61 +419,50 @@ template<typename T> inline typename __tree_list_tree<T>::      iterator begin(_
 template<typename T> inline typename __tree_list_tree<T>::      iterator end(__tree_list_tree<T>* lptr)         noexcept { return lptr->end();   }
 template<typename T> inline typename __tree_list_tree<T>::const_iterator begin(const __tree_list_tree<T>* lptr) noexcept { return lptr->begin(); }
 template<typename T> inline typename __tree_list_tree<T>::const_iterator end(const __tree_list_tree<T>* lptr)   noexcept { return lptr->end();   }
+template<typename T> inline typename __tree_list_tree<T>::      iterator begin(ptr<__tree_list_tree<T>>& lptr)  noexcept { return lptr->begin(); }
+template<typename T> inline typename __tree_list_tree<T>::      iterator end(ptr<__tree_list_tree<T>>& lptr)    noexcept { return lptr->end(); }
 
-template<typename TType>
-inline __tree_list_tree<TType>* copy(__tree_list_tree<TType>* lptr) {
-    auto dest_list = new __tree_list_tree<TType>();
-    for(auto itr = begin(lptr); itr != end(lptr); itr++) {
-        auto el = *itr;
-        dest_list->append(el);
+
+template<typename TSrcEl,
+         typename TDestEl>
+inline __tree_list_tree<TDestEl>* __map(__tree_list_tree<TSrcEl>* slist, std::function<TDestEl*(TSrcEl*)> f) {
+    __tree_list_tree<TDestEl>* dlist = new __tree_list_tree<TDestEl>();
+    for(auto el: *slist) {
+        dlist->append(f(el));
     }
-    return dest_list;
+    return dlist;
 }
 
-template<typename TType>
-inline __tree_list_value<TType>* copy(__tree_list_value<TType>* lptr) {
-    auto dest_list = new __tree_list_value<TType>();
-    for(auto itr = begin(lptr); itr != end(lptr); itr++) {
-        auto el = *itr;
-        dest_list->append(el);
+template<typename TSrcEl,
+         typename TDestEl>
+inline __tree_list_value<TDestEl>* __map(__tree_list_value<TSrcEl>* slist, std::function<TDestEl(TSrcEl)> f) {
+    __tree_list_value<TDestEl>* dlist = new __tree_list_value<TDestEl>();
+    for(auto el: *slist) {
+        dlist->append(f(el));
     }
-    return dest_list;
+    return dlist;
 }
 
-template<typename TToType,
-         typename TFromType>
-inline __tree_list_tree<TToType>* map(__tree_list_tree<TFromType>* lptr, std::function<TToType*(TFromType*)> f) {
-    auto dest_list = new __tree_list_tree<TToType>();
-    for(auto itr = begin(lptr); itr != end(lptr); itr++) {
-        auto el = *itr;
-        dest_list->append(f(el));
-    }
-    return dest_list;
+template<typename TSrcEl,
+         typename TFunc,
+         typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
+inline ptr<__tree_list_tree<_TDestEl>> map(ptr<__tree_list_tree<TSrcEl>>& slist, TFunc f) {
+    return box(__map(unbox(slist), std::function<_TDestEl*(TSrcEl*)>(f)));
 }
 
-template<typename TToType,
-         typename TFromType>
-inline __tree_list_tree<TToType>* map(ptr<__tree_list_tree<TFromType>> lptr, std::function<TToType*(TFromType*)> f) {
-    return map<TToType, TFromType>(lptr, f);
+template<typename TSrcEl,
+         typename TFunc,
+         typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
+inline ptr<__tree_list_tree<_TDestEl>> map(__tree_list_tree<TSrcEl>* slist, TFunc f) {
+    return box(__map(slist, std::function<_TDestEl*(TSrcEl*)>(f)));
 }
 
-template<typename TFilterType, typename TBaseType>
-inline __tree_list_tree<TFilterType>* filter(__tree_list_tree<TBaseType>* lptr) {
-    auto dest_list = new __tree_list_tree<TFilterType>();
-    for(auto itr = begin(lptr); itr != end(lptr); itr++) {
-        auto el = *itr;
-        if(el != nullptr && el->template is<TFilterType>()) {
-            dest_list->append(el->template as<TFilterType>());
-        }
-    }
-    return dest_list;
+template<typename TSrcEl,
+         typename TFunc,
+         typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
+inline ptr<__tree_list_tree<_TDestEl>> map(__tree_property_list<TSrcEl>& slist, TFunc f) {
+    return box(__map((__tree_list_tree<TSrcEl>*) slist, std::function<_TDestEl*(TSrcEl*)>(f)));
 }
-
-template<typename TFilterType, typename TBaseType>
-inline __tree_list_tree<TFilterType>* filter(ptr<__tree_list_tree<TBaseType>> lptr) {
-    return filter<TFilterType, TBaseType>(unbox(lptr));
-}
-
 
 /* =============== *
  * Property Access *
@@ -464,9 +481,9 @@ public:
     typedef TTreeType*                                          param_type_t;
 
     inline explicit __tree_property_tree(__tree_base* parent) noexcept
-            : __tree_property_base(), _parent(parent), _index(parent->append_child(nullptr)) { }
+            : __tree_property_base(), _parent(parent), _index(parent->__append_child(nullptr)) { }
     inline explicit __tree_property_tree(__tree_base* parent, TTreeType* value) noexcept
-            : __tree_property_base(), _parent(parent), _index(parent->append_child(value)) { }
+            : __tree_property_base(), _parent(parent), _index(parent->__append_child(value)) { }
 
     inline explicit __tree_property_tree(const __tree_property_tree<TTreeType>& other) noexcept
             : __tree_property_base(), _parent(other.shift_address(this)), _index(other._index) { }
@@ -553,31 +570,6 @@ public:
 
 };
 
-template<typename TType>
-inline typename __list_type_selector<TType>::type* copy(__tree_property_list<TType>& prop) {
-    auto dest_list = new typename __list_type_selector<TType>::type();
-    for(auto itr = prop.begin(); itr != prop.end(); ++itr) {
-        dest_list->append(*itr);
-    }
-    return dest_list;
-}
-
-template<typename TToType,
-         typename TFromType>
-inline typename __list_type_selector<TToType>::type* map(__tree_property_list<TFromType>& prop, std::function<TToType*(TFromType*)> f) {
-    auto dest_list = new typename __list_type_selector<TToType>::type();
-    try {
-        for(auto itr = prop.begin(); itr != prop.end(); ++itr) {
-            auto el = *itr;
-            dest_list->append(f(el));
-        }
-    }
-    catch (std::exception& e) {
-        delete dest_list;
-        throw e;
-    }
-    return dest_list;
-}
 
 template<typename TValue>
 struct __tree_property_value {
@@ -982,21 +974,11 @@ protected:
     }
 };
 
-template<tree_type_id tp, typename base = __tree_base>
-using extend_tree = __extend_tree<tp, base>;
-
 template<typename T, typename... TArgs>
 using dispatch_visitor = typename __dispatch_visitor_selector<T, TArgs...>::type;
 
 template<typename T>
 using property = typename __property_type_selector<T>::type;
-
-template<typename T>
-using list = typename __list_type_selector<T>::type;
-
-
-template<typename TElement> typename list<TElement>::iterator begin(ptr<__tree_list_tree<TElement>>& l) { return l->begin(); }
-template<typename TElement> typename list<TElement>::iterator end(ptr<__tree_list_tree<TElement>>& l)   { return l->end(); }
 
 }
 

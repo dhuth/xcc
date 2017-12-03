@@ -11,7 +11,7 @@ libxi_a_SOURCES    += xi-parser.cpp
 libxi_a_SOURCES    += xi-lex.cpp
 
 libxi_a_CPPFLAGS    = @llvm_cppflags@
-libxi_a_CXXFLAGS    = -std=c++11 -pthread
+libxi_a_CXXFLAGS    = -std=c++17 -pthread
 
 BUILT_SOURCES       = xi-parser.hpp
 BUILT_SOURCES      += xi-lex.hpp
