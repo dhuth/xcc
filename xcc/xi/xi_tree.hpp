@@ -357,28 +357,6 @@ struct xi_member_id_expr : public extend_tree<tree_type_id::xi_member_id_expr, x
 };
 
 
-struct xi_deref_member_id_expr : public extend_tree<tree_type_id::xi_deref_member_id_expr, xi_expr> {
-
-    inline xi_deref_member_id_expr(ast_expr* expr, std::string name) noexcept
-            : base_type(nullptr),
-              expr(this, expr),
-              name(this, name) {
-        /* do nothing */
-    }
-
-    inline xi_deref_member_id_expr(const xi_deref_member_id_expr& m) noexcept
-            : base_type((base_type&) m),
-              expr(this, m.expr),
-              name(this, m.name) {
-        /* do nothing */
-    }
-
-    property<ast_expr>                                              expr;
-    property<std::string>                                           name;
-
-};
-
-
 struct xi_group_expr : public extend_tree<tree_type_id::xi_group_expr, xi_expr> {
 
     inline xi_group_expr(list<ast_expr>* expressions) noexcept
