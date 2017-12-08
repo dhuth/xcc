@@ -22,9 +22,9 @@ tree_type(xi_type_decl,                                 xi_member_decl)
 
 tree_type(xi_id_expr,                                   xi_expr)            // pre-semantic
 tree_type(xi_member_id_expr,                            xi_expr)            // pre-semantic
-tree_type(xi_group_expr,                                xi_expr)            // pre-semantic
+tree_type(xi_group_expr,                                xi_expr)            //     semantic
 
-tree_type(xi_type_expr,                                 xi_expr)            // pre-semantic
+tree_type(xi_type_expr,                                 xi_expr)            //     semantic
 
 tree_type(xi_const_expr,                                xi_expr)            // abstract
 tree_type(xi_op_expr,                                   xi_expr)

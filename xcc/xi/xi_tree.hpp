@@ -223,7 +223,10 @@ struct xi_function_decl : public extend_tree<tree_type_id::xi_function_decl, xi_
                     : base_type(name),
                       return_type(this, return_type),
                       parameters(this, parameters),
-                      body(this, body) {
+                      body(this, body),
+                      is_extern(this, false),
+                      is_inline(this, false),
+                      is_header(this, false) {
         /* do nothing */
     }
 
@@ -231,11 +234,16 @@ struct xi_function_decl : public extend_tree<tree_type_id::xi_function_decl, xi_
             : base_type((base_type&) f),
               return_type(this, f.return_type),
               parameters(this, f.parameters),
-              body(this, f.body) {
+              body(this, f.body),
+              is_extern(this, false),
+              is_inline(this, false),
+              is_header(this, false) {
         /* do nothing */
     }
 
     property<bool>                                                  is_extern;
+    property<bool>                                                  is_inline;
+    property<bool>                                                  is_header;
     property<ast_type>                                              return_type;
     property<list<xi_parameter_decl>>                               parameters;
     property<ast_stmt>                                              body;
@@ -300,18 +308,22 @@ struct xi_type_decl : public extend_tree<tree_type_id::xi_type_decl, xi_member_d
 };
 
 
-// ???????
+
 struct xi_const_expr : public extend_tree<tree_type_id::xi_const_expr, xi_expr> {
 
-    inline xi_const_expr(ast_type* type) noexcept
-            : base_type(type) {
+    inline xi_const_expr(ast_expr* expr) noexcept
+            : base_type(nullptr),
+              expr(this, expr) {
         /* do nothing */
     }
 
     inline xi_const_expr(const xi_const_expr& e) noexcept
-            : base_type((base_type&) e) {
+            : base_type((base_type&) e),
+              expr(this, e.expr){
         /* do nothing */
     }
+
+    property<ast_expr>                                              expr;
 
 };
 
@@ -384,6 +396,12 @@ struct xi_group_expr : public extend_tree<tree_type_id::xi_group_expr, xi_expr> 
     inline xi_group_expr(list<ast_expr>* expressions) noexcept
             : base_type(nullptr),
               expressions(this, expressions) {
+        /* do nothing */
+    }
+
+    inline xi_group_expr(ptr<list<ast_expr*>> expressions) noexcept
+            : base_type(nullptr),
+              expressions(this, unbox(expressions)) {
         /* do nothing */
     }
 

@@ -422,6 +422,29 @@ template<typename T> inline typename __tree_list_tree<T>::const_iterator end(con
 template<typename T> inline typename __tree_list_tree<T>::      iterator begin(ptr<__tree_list_tree<T>>& lptr)  noexcept { return lptr->begin(); }
 template<typename T> inline typename __tree_list_tree<T>::      iterator end(ptr<__tree_list_tree<T>>& lptr)    noexcept { return lptr->end(); }
 
+template<typename T>
+inline T* first(__tree_list_tree<T>* l) {
+    return *(begin(l));
+}
+
+template<typename T>
+inline T* first(ptr<__tree_list_tree<T>>& l) {
+    return *(begin(l));
+}
+
+template<typename T>
+inline T* first(__tree_property_list<T>& p) {
+    return p[0];
+}
+
+template<typename T>
+inline __tree_list_tree<T>* rest(__tree_list_tree<T>* l) {
+    __tree_list_tree<T>* nl = new __tree_list_tree<T>();
+    for(int i = 1; i < l->size(); i++) {
+        nl->append((*l)[i]);
+    }
+    return nl;
+}
 
 template<typename TSrcEl,
          typename TDestEl>
@@ -462,6 +485,31 @@ template<typename TSrcEl,
          typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
 inline ptr<__tree_list_tree<_TDestEl>> map(__tree_property_list<TSrcEl>& slist, TFunc f) {
     return box(__map((__tree_list_tree<TSrcEl>*) slist, std::function<_TDestEl*(TSrcEl*)>(f)));
+}
+
+template<typename TTreeType,
+         typename TPred>
+inline ptr<__tree_list_tree<TTreeType>> filter(__tree_list_tree<TTreeType>* slist, TPred pred) {
+    __tree_list_tree<TTreeType>* dlist = new __tree_list_tree<TTreeType>();
+    auto f = std::function<bool(TTreeType*)>(pred);
+    for(auto el: *slist) {
+        if(f(el)) {
+            dlist->append(el);
+        }
+    }
+    return box(dlist);
+}
+
+template<typename TTreeType,
+         typename TPred>
+inline ptr<__tree_list_tree<TTreeType>> filter(ptr<__tree_list_tree<TTreeType>>& slist, TPred pred) {
+    return filter(unbox(slist), pred);
+}
+
+template<typename TTreeType,
+         typename TPred>
+inline ptr<__tree_list_tree<TTreeType>> filter(__tree_property_list<TTreeType>& slist, TPred pred) {
+    return filter((__tree_list_tree<TTreeType>*) slist, pred);
 }
 
 /* =============== *

@@ -14,7 +14,12 @@
 
 namespace xcc {
 
-struct xi_function_context final : ast_context {
+struct xi_builder;
+
+template<typename TResult, typename... TParameters>
+using xi_visitor = dispatch_visitor<TResult, xi_builder&, TParameters...>;
+
+struct xi_function_context final : public ast_context {
 public:
 
     inline xi_function_context(ast_context* prev, xi_function_decl* decl) noexcept : ast_context(prev), func(decl) { }
@@ -55,6 +60,8 @@ public:
     ast_type*                                   get_id_type(const char*)                                                                                const noexcept;
 
     virtual ast_type*                           get_declaration_type(ast_decl*)                                                                               noexcept;
+    ptr<list<ast_expr>>                         find_all_member_exprs(ast_type*, ast_expr*, const char*)                                                const noexcept;
+    ptr<list<ast_expr>>                         find_all_overload_exprs(ast_expr*, xi_op_expr::xi_operator, list<ast_expr>*)                            const noexcept;
 
     xi_function_decl*                           make_xi_function_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*)                      const noexcept;
     xi_parameter_decl*                          make_xi_parameter_decl(const char*, ast_type*)                                                          const noexcept;
@@ -66,6 +73,7 @@ public:
     ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, ast_expr*)                                                       const noexcept;
     ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, ast_expr*, ast_expr*)                                            const noexcept;
     ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, list<ast_expr>*)                                                 const noexcept;
+    ast_expr*                                   make_xi_member_expr(ast_expr*, xi_member_decl*)                                                         const noexcept;
 
     ast_stmt*                                   make_xi_if_stmt(ast_expr*, ast_stmt*, ast_stmt*)                                                        const noexcept;
     ast_stmt*                                   make_xi_while_stmt(ast_expr*, ast_stmt*)                                                                const noexcept;
@@ -100,9 +108,6 @@ public:
     void begin(tree_type_id, ast_tree*, xi_builder&);
     void end(tree_type_id, ast_tree*, xi_builder&);
 };
-
-template<typename TResult, typename... TParameters>
-using xi_visitor = dispatch_visitor<TResult, xi_builder&, TParameters...>;
 
 }
 
