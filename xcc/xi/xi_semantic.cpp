@@ -10,6 +10,7 @@
 
 namespace xcc {
 
+
 static ast_expr* rn_id_expr(xi_id_expr* idexpr, xi_builder& b) {
     auto decls = b.find_all_declarations(idexpr->name->c_str());
     if(decls->size() == 0) {
@@ -145,6 +146,7 @@ public:
 
 
 void xi_builder::semantic_check() noexcept {
+
 }
 
 
