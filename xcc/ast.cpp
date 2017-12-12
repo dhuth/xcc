@@ -133,4 +133,49 @@ size_t ast_type_hasher::operator()(ast_type* const& tp) const {
     }
 }
 
+bool ast_expr_comparer::operator()(ast_expr* const& lexpr, ast_expr* const& rexpr) const {
+    if(lexpr->get_tree_type() != rexpr->get_tree_type()) {
+        return false;
+    }
+
+    switch(lexpr->get_tree_type()) {
+    case tree_type_id::ast_integer:     return lexpr->as<ast_integer>()->value == rexpr->as<ast_integer>()->value;
+    case tree_type_id::ast_real:        break;
+    case tree_type_id::ast_string:      break;
+    case tree_type_id::ast_array:       break;
+    case tree_type_id::ast_record:
+        return this->same_exprlist(
+            lexpr->as<ast_record>()->values,
+            rexpr->as<ast_record>()->values);
+    case tree_type_id::ast_cast:
+        return this->operator()(lexpr->as<ast_cast>()->expr, rexpr->as<ast_cast>()->expr);
+    case tree_type_id::ast_binary_op:
+        return
+                lexpr->as<ast_binary_op>()->op == rexpr->as<ast_binary_op>()->op &&
+                this->operator()(lexpr->as<ast_binary_op>()->lhs, rexpr->as<ast_binary_op>()->lhs) &&
+                this->operator()(lexpr->as<ast_binary_op>()->rhs, rexpr->as<ast_binary_op>()->rhs);
+    case tree_type_id::ast_unary_op:
+        return
+                lexpr->as<ast_unary_op>()->op == rexpr->as<ast_unary_op>()->op &&
+                this->operator()(lexpr->as<ast_unary_op>()->expr, rexpr->as<ast_unary_op>()->expr);
+    case tree_type_id::ast_index:
+        return
+                this->operator()(lexpr->as<ast_index>()->arr_expr, rexpr->as<ast_index>()->arr_expr) &&
+                this->operator()(lexpr->as<ast_index>()->index_expr, rexpr->as<ast_index>()->index_expr);
+    case tree_type_id::ast_declref:     break;
+    case tree_type_id::ast_memberref:   break;
+    case tree_type_id::ast_deref:
+        return
+                this->operator()(lexpr->as<ast_deref>()->expr, rexpr->as<ast_deref>()->expr);
+    case tree_type_id::ast_addressof:
+        return
+                this->operator()(lexpr->as<ast_addressof>()->expr, rexpr->as<ast_addressof>()->expr);
+    case tree_type_id::ast_invoke:      break;
+    case tree_type_id::ast_call:        break;
+    case tree_type_id::ast_stmt_expr:   break;
+    }
+    throw std::runtime_error(std::string("ast.cpp: ast_expr_comparer::operator(): ") +
+                "unsuported expr " + lexpr->get_tree_type_name());
+}
+
 }

@@ -157,7 +157,7 @@ public:
         local_scope*                                                    prev;
         std::map<ast_decl*, llvm::Value*>                               named_values;
 
-        inline llvm::Value* operator[](ast_decl* decl) {
+        llvm::Value* operator[](ast_decl* decl) {
             auto itr = this->named_values.find(decl);
 
             if(itr == this->named_values.end()) {

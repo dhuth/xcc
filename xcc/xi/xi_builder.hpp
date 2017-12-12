@@ -97,18 +97,6 @@ private:
 
 };
 
-struct xi_postorder_walker : public dispatch_postorder_tree_walker<ast_tree, xi_builder&> {
-public:
-
-    inline xi_postorder_walker() noexcept
-            : dispatch_postorder_tree_walker<ast_tree, xi_builder&>() {
-        /* do nothing */
-    }
-
-    void begin(tree_type_id, ast_tree*, xi_builder&);
-    void end(tree_type_id, ast_tree*, xi_builder&);
-};
-
 }
 
 

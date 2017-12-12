@@ -14,7 +14,7 @@
 #   define  __constif(e)                if(e)
 #else
 #   define  __constexpr                 constexpr
-#   define  __constif(e)                if(constexpr e)
+#   define  __constif(e)                if constexpr (e)
 #endif
 
 

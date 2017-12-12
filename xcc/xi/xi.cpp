@@ -39,11 +39,13 @@ int ximain(const char* input_filename_list, const char* output_filename, std::ve
 
     // TODO: read libraries     ???
     // TODO: merge namespaces
-    builder.semantic_check();
+    // TODO: high level semantic check
     // TODO: write library      ???
-    // TODO: raise closures
+    // TODO: low level semantic check
+
     // TODO: lower generics / templates
-    builder.lower();
+    // TODO: lower closures
+    // TODO: builder.lower();                        // lower to ast
 
     ircode_context ctx(output_filename);
     ctx.generate(unit, output_filename);

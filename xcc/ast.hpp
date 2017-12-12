@@ -1636,6 +1636,22 @@ protected:
 
 };
 
+struct ast_expr_comparer {
+public:
+
+    ast_expr_comparer();
+    virtual ~ast_expr_comparer() = default;
+
+    virtual bool operator()(ast_expr* const&, ast_expr* const&) const;
+
+protected:
+
+    bool same_exprlist(list<ast_expr>* lhs, list<ast_expr>* rhs) const noexcept;
+
+};
+
+template<typename T>
+using ast_treeset = std::unordered_map<T*, ptr<T>, ast_type_hasher, ast_type_comparer>;
 typedef std::unordered_map<ast_type*,
                            ptr<ast_type>,
                            ast_type_hasher,

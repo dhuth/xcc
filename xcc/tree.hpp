@@ -46,16 +46,19 @@ template<typename> struct __tree_property_list;
 template<typename> struct __tree_property_value;
 template<typename> struct __tree_property_type_traits;
 
+typedef __tree_base             tree_t;
+
+typedef                         __tree_base*(*__tree_clone_func_t)(const __tree_base*);
 
 /* ==================== *
  * Type Trait Utilities *
  * ==================== */
 
 template<typename T>
-struct __is_tree : std::is_base_of<__tree_base, T> { };
+using is_tree = std::is_base_of<__tree_base, T>;
 
 template<typename T>
-using __is_tree_type = typename std::enable_if<__is_tree<T>::value, int>::type;
+using __is_tree_type = typename std::enable_if<is_tree<T>::value, int>::type;
 
 /* ==================== *
  * List Trait Utilities *
@@ -110,9 +113,9 @@ template<typename T> struct __property_type_selector {
 
 
 
-/* ==================== *
- * Tree Type Management *
- * ==================== */
+/* ============== *
+ * Tree Type Info *
+ * ============== */
 
 extern const tree_type __all_tree_types[];
 
@@ -136,6 +139,8 @@ struct tree_type {
     tree_type_id                                                base_id;
     const char*                                                 name;
 
+    __tree_clone_func_t                                         shallow_clone_func;
+
     inline static   constexpr size_t count() noexcept { return (size_t)tree_type_id::__type_count; }
     inline static __constexpr bool   is_base_of(const tree_type_id bt, const tree_type_id dt) noexcept {
         tree_type_id tt = dt;
@@ -156,25 +161,28 @@ struct tree_type {
 #include "all_tree_types.def.hpp"
 #undef  TREE_TYPE
 
-template<tree_type_id Id>
-struct __tree_id_to_type { };
+template<tree_type_id Id> struct __tree_id_to_type { };
+template<tree_type_id Id> struct __tree_id_to_base { };
+
+template<> struct __tree_id_to_type<tree_type_id::tree>         { typedef __tree_base                                       type; };
+template<> struct __tree_id_to_base<tree_type_id::tree>         { typedef void                                              type; };
+template<> struct __tree_id_to_type<tree_type_id::tree_list>    { typedef void                                              type; };
+template<> struct __tree_id_to_base<tree_type_id::tree_list>    { typedef __tree_base                                       type; };
 
 #ifdef TREE_TYPE
 #error "TREE_TYPE Already defined"
 #endif
-#define TREE_TYPE(name, ...) template<> struct __tree_id_to_type<tree_type_id::name>{ typedef xcc::name type; };
+#define TREE_TYPE(name, base, ...)\
+    template<> struct __tree_id_to_type<tree_type_id::name>{ typedef xcc::name                                              type; };\
+    template<> struct __tree_id_to_base<tree_type_id::name>{ typedef typename __tree_id_to_type<tree_type_id::base>::type   type; };
 #include "all_tree_types.def.hpp"
 #undef TREE_TYPE
 
-template<tree_type_id id> struct tree_type_selector { };
-
-#ifdef TREE_TYPE
-#error "TREE_TYPE Already defined"
-#endif
-#define TREE_TYPE(name, ...)                                    template<> struct tree_type_selector<tree_type_id::name> { typedef name type; };
-#include "all_tree_types.def.hpp"
-#undef  TREE_TYPE
-
+template<tree_type_id Id>
+struct tree_type_info {
+    typedef typename __tree_id_to_type<Id>::type                type;
+    typedef typename __tree_id_to_base<Id>::type                base_type;
+};
 
 
 /* =============== *
@@ -185,8 +193,8 @@ template<tree_type_id id> struct tree_type_selector { };
 struct __tree_base {
 public:
 
-    inline __tree_base()                noexcept : _type(tree_type_id::tree) { }
-    inline __tree_base(tree_type_id id) noexcept : _type(id)                 { }
+    explicit inline __tree_base()                noexcept : _type(tree_type_id::tree) { }
+    explicit inline __tree_base(tree_type_id id) noexcept : _type(id)                 { }
     virtual ~__tree_base() = default;
 
     inline bool is(const tree_type_id tp) const noexcept { return tree_type::is_base_of(tp, this->_type); }
@@ -199,7 +207,7 @@ public:
 
     inline const char* get_tree_type_name() const { return __all_tree_types[(size_t) this->_type].name; };
 
-    inline __tree_base(const __tree_base& other) noexcept
+    explicit inline __tree_base(const __tree_base& other) noexcept
             : _type(other._type) {
         // do nothing
     }
@@ -235,24 +243,31 @@ protected:
 
 template<tree_type_id VType, typename TBase = __tree_base, __is_tree_type<TBase> = 0>
 struct __extend_tree : public TBase {
+private:
+
+    typedef typename tree_type_info<VType>::type                __type;
+
 public:
 
     typedef __extend_tree<VType, TBase>                         base_type;
     static const tree_type_id                                   type_id = VType;
 
     template<typename... TArgs>
-    inline __extend_tree(TArgs... args): TBase(VType, args...) { }
+    explicit inline __extend_tree(TArgs... args): TBase(VType, args...) { }
 
     template<typename... TArgs>
-    inline __extend_tree(tree_type_id tp, TArgs... args): TBase(tp, args...) { }
+    explicit inline __extend_tree(tree_type_id tp, TArgs... args): TBase(tp, args...) { }
 
     // copy constructor
-    inline __extend_tree(const base_type& other) : TBase(other) { }
+    explicit inline __extend_tree(const base_type& other) : TBase(other) { }
 
 };
 
 template<tree_type_id tp, typename base = __tree_base>
 using extend_tree = __extend_tree<tp, base>;
+
+template<tree_type_id tp>
+using implement_tree = __extend_tree<tp, typename tree_type_info<tp>::base_type>;
 
 template<typename T, __is_tree_type<T> = 0>
 constexpr tree_type_id __get_tree_type_id() { return T::type_id; }
@@ -265,6 +280,7 @@ protected:
     inline __tree_list_base()                                          noexcept : base_type() { }
 
 };
+
 
 template<typename TElement>
 struct __tree_list_value final : public __tree_list_base<TElement> {
@@ -647,6 +663,14 @@ public:
         return v;
     }
 
+    inline bool operator==(const __tree_property_value<TValue>& other) const noexcept {
+        return this->_value == other._value;
+    }
+
+    inline bool operator==(const TValue& other) const noexcept {
+        return this->_value == other;
+    }
+
     inline TValue* operator->() {
         return &this->_value;
     }
@@ -693,8 +717,7 @@ public:
     __dispatch_visitor_base_notvoid() = default;
     virtual ~__dispatch_visitor_base_notvoid() = default;
 
-    template<typename T>
-    inline TReturnType visit(T* t, TParamTypes... args) {
+    inline TReturnType visit(tree_t* t, TParamTypes... args) {
         if(t == nullptr) {
             return this->handle_null_tree();
         }
@@ -711,8 +734,6 @@ public:
     inline TReturnType visit(__tree_property_tree<T>& p, TParamTypes... args) {
         return this->visit((__tree_base*)p, args...);
     }
-
-protected:
 
     template<typename TFuncReturnType,
              typename TTreeType>
@@ -731,6 +752,8 @@ protected:
         };
         this->_function_map[__get_tree_type_id<TTreeType>()] = wfunc;
     }
+
+protected:
 
     template<typename TFuncReturnType,
              typename TClassType,
@@ -767,8 +790,6 @@ public:
         return this->visit((__tree_base*)p, args...);
     }
 
-protected:
-
     template<typename TTreeType>
     using dispatch_function_type = void(*)(TTreeType*, TParamTypes...);
 
@@ -783,6 +804,8 @@ protected:
         };
         this->_function_map[__get_tree_type_id<TTreeType>()] = wfunc;
     }
+
+protected:
 
     template<typename TClassType,
              typename TTreeType>
@@ -804,8 +827,6 @@ template<typename... TArgs>
 struct __dispatch_visitor_selector<void, TArgs...> {
     typedef __dispatch_visitor_base_void<TArgs...>         type;
 };
-
-
 
 
 /* ==================================== *

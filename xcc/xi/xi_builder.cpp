@@ -124,33 +124,4 @@ void xi_builder::push_xi_function(xi_function_decl* decl) noexcept {
     this->push_context<xi_function_context>(decl);
 }
 
-
-
-static inline void walker_begin(tree_type_id i, ast_tree* t, xi_builder& b) {
-    switch(i) {
-    case tree_type_id::ast_namespace_decl:
-        b.push_namespace(t->as<ast_namespace_decl>());
-        break;
-    case tree_type_id::ast_block_stmt:
-        b.push_block(t->as<ast_block_stmt>());
-        break;
-    case tree_type_id::xi_function_decl:
-        b.push_xi_function(t->as<xi_function_decl>());
-        break;
-    }
-}
-
-static inline void walker_end(tree_type_id i, ast_tree* t, xi_builder& b) {
-    switch(i) {
-    case tree_type_id::ast_namespace_decl:
-    case tree_type_id::ast_block_stmt:
-    case tree_type_id::xi_function_decl:
-        b.pop();
-        break;
-    }
-}
-
-void xi_postorder_walker::begin(tree_type_id i, ast_tree* t, xi_builder& b) { walker_begin(i, t, b); }
-void xi_postorder_walker::end(tree_type_id i, ast_tree* t, xi_builder& b)   { walker_end(i, t, b);   }
-
 }
