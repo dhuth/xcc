@@ -45,10 +45,10 @@ public:
     inline xi_builder(translation_unit& tu) noexcept
             : ast_builder<ast_default_name_mangler, xi_type_comparer, xi_type_hasher>(tu),
               _the_auto_type(new xi_auto_type()),
-              _const_types(0, *this->_type_hasher_ptr, *this->_type_comparer_ptr),
-              _reference_types(0, *this->_type_hasher_ptr, *this->_type_comparer_ptr),
-              _object_types(0, *this->_type_hasher_ptr, *this->_type_comparer_ptr),
-              _tuple_types(0, *this->_type_hasher_ptr, *this->_type_comparer_ptr){
+              _const_types(*this->_type_hasher_ptr, *this->_type_comparer_ptr),
+              _reference_types(*this->_type_hasher_ptr, *this->_type_comparer_ptr),
+              _object_types(*this->_type_hasher_ptr, *this->_type_comparer_ptr),
+              _tuple_types(*this->_type_hasher_ptr, *this->_type_comparer_ptr){
         // do nothing ...
     }
 

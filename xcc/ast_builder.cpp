@@ -30,10 +30,10 @@ __ast_builder_impl::__ast_builder_impl(
               _the_nop_stmt(new ast_nop_stmt()),
               _the_break_stmt(new ast_break_stmt()),
               _the_continue_stmt(new ast_continue_stmt()),
-              _pointer_types(0, *type_hasher, *type_comparer),
-              _array_types(0, *type_hasher, *type_comparer),
-              _function_types(0, *type_hasher, *type_comparer),
-              _record_types(0, *type_hasher, *type_comparer) {
+              _pointer_types(*type_hasher, *type_comparer),
+              _array_types(*type_hasher, *type_comparer),
+              _function_types(*type_hasher, *type_comparer),
+              _record_types(*type_hasher, *type_comparer) {
 
     this->context = new ast_namespace_context(nullptr, this->global_namespace);
     this->create_default_types();
@@ -86,47 +86,19 @@ ast_real_type* __ast_builder_impl::get_real_type(uint32_t bitwidth) const noexce
 }
 
 ast_pointer_type* __ast_builder_impl::get_pointer_type(ast_type* eltype) noexcept {
-    auto newtype = box<ast_type>(new ast_pointer_type(eltype));
-    if(this->_pointer_types.find(newtype) == this->_pointer_types.end()) {
-        this->_pointer_types[newtype] = newtype;
-        return newtype->as<ast_pointer_type>();
-    }
-    else {
-        return this->_pointer_types[newtype]->as<ast_pointer_type>();
-    }
+    return this->_pointer_types.getnewas<ast_pointer_type>(eltype);
 }
 
 ast_array_type* __ast_builder_impl::get_array_type(ast_type* eltype, uint32_t size) noexcept {
-    auto newtype = box<ast_type>(new ast_array_type(eltype, size));
-    if(this->_array_types.find(newtype) == this->_array_types.end()) {
-        this->_array_types[newtype] = newtype;
-        return newtype->as<ast_array_type>();
-    }
-    else {
-        return this->_array_types[newtype]->as<ast_array_type>();
-    }
+    return this->_array_types.getnewas<ast_array_type>(eltype, size);
 }
 
 ast_function_type* __ast_builder_impl::get_function_type(ast_type* rtype, ptr<list<ast_type>> params) noexcept {
-    auto newtype = box<ast_type>(new ast_function_type(rtype, params));
-    if(this->_function_types.find(newtype) == this->_function_types.end()) {
-        this->_function_types[newtype] = newtype;
-        return newtype->as<ast_function_type>();
-    }
-    else {
-        return this->_function_types[newtype]->as<ast_function_type>();
-    }
+    return this->_function_types.getnewas<ast_function_type>(rtype, params);
 }
 
 ast_record_type* __ast_builder_impl::get_record_type(ptr<list<ast_type>> types) noexcept {
-    auto newtype = box<ast_type>(new ast_record_type(types));
-    if(this->_record_types.find(newtype) == this->_record_types.end()) {
-        this->_record_types[newtype] = newtype;
-        return newtype->as<ast_record_type>();
-    }
-    else {
-        return this->_record_types[newtype]->as<ast_record_type>();
-    }
+    return this->_record_types.getnewas<ast_record_type>(types);
 }
 
 ast_type* __ast_builder_impl::get_declaration_type(ast_decl* decl) noexcept {

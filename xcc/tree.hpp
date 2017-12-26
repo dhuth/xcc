@@ -717,7 +717,7 @@ public:
     __dispatch_visitor_base_notvoid() = default;
     virtual ~__dispatch_visitor_base_notvoid() = default;
 
-    inline TReturnType visit(tree_t* t, TParamTypes... args) {
+    TReturnType visit(tree_t* t, TParamTypes... args) {
         if(t == nullptr) {
             return this->handle_null_tree();
         }

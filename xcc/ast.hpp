@@ -19,6 +19,8 @@
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/StringRef.h>
 
+#include "llvm_metadata.hpp"
+
 namespace xcc {
 
 
@@ -980,7 +982,7 @@ public:
 };
 
 
-/*
+/**
  * A reference to a record member
  */
 struct ast_memberref final : public extend_tree<tree_type_id::ast_memberref, ast_expr> {
@@ -1622,6 +1624,7 @@ protected:
 
 };
 
+
 struct ast_type_hasher {
 public:
 
@@ -1635,6 +1638,7 @@ protected:
     size_t hash_typelist(list<ast_type>*) const noexcept;
 
 };
+
 
 struct ast_expr_comparer {
 public:
@@ -1650,12 +1654,43 @@ protected:
 
 };
 
-template<typename T>
-using ast_treeset = std::unordered_map<T*, ptr<T>, ast_type_hasher, ast_type_comparer>;
-typedef std::unordered_map<ast_type*,
-                           ptr<ast_type>,
-                           ast_type_hasher,
-                           ast_type_comparer>                           ast_typeset;
+
+struct ast_typeset {
+
+    inline explicit ast_typeset(ast_type_hasher& hasher, ast_type_comparer& comparer)
+            : _map(0, hasher, comparer) {
+        //...
+    }
+
+    std::unordered_map<ast_type*, ptr<ast_type>, ast_type_hasher, ast_type_comparer>
+                                                            _map;
+
+    inline ast_type* get(ast_type* p) noexcept {
+        if(this->_map.find(p) == this->_map.end()) {
+            this->_map[p] = box<ast_type>(p);
+            return p;
+        }
+        else {
+            return unbox(this->_map[p]);
+        }
+    }
+
+    template<typename T, typename... TArgs>
+    inline ast_type* getnew(TArgs... args) noexcept {
+        auto newtype = box<ast_type>(new T(args...));
+        return this->get(newtype);
+    }
+
+    template<typename TTarget>
+    inline TTarget* getas(TTarget* p) noexcept {
+        return this->get(p)->template as<TTarget>();
+    }
+
+    template<typename TTarget, typename... TArgs>
+    inline TTarget* getnewas(TArgs... args) noexcept {
+        return this->getnew<TTarget>(args...)-> template as<TTarget>();
+    }
+};
 
 }
 

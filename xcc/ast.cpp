@@ -24,7 +24,7 @@ bool ast_type_comparer::same_typelist(list<ast_type>* lhs, list<ast_type>* rhs) 
 }
 
 bool ast_type_comparer::operator()(ast_type* const& lhs, ast_type* const& rhs) const {
-    if(!(lhs->get_tree_type() != rhs->get_tree_type())) {
+    if(lhs->get_tree_type() != rhs->get_tree_type()) {
         return false;
     }
 
@@ -176,6 +176,23 @@ bool ast_expr_comparer::operator()(ast_expr* const& lexpr, ast_expr* const& rexp
     }
     throw std::runtime_error(std::string("ast.cpp: ast_expr_comparer::operator(): ") +
                 "unsuported expr " + lexpr->get_tree_type_name());
+}
+
+bool ast_expr_comparer::same_exprlist(list<ast_expr>* l, list<ast_expr>* r) const noexcept {
+    if(l->size() != r->size()) {
+        return false;
+    }
+
+    for(size_t i = 0; i < l->size(); i++) {
+        auto lexpr = (*l)[i];
+        auto rexpr = (*r)[i];
+
+        if(! this->operator()(lexpr, rexpr)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 }
