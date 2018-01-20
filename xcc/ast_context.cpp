@@ -35,14 +35,10 @@ void ast_context::findall(ptr<list<ast_decl>> olist, const char* name, bool sear
 }
 
 
-ast_namespace_context::ast_namespace_context(ast_context* p, ast_namespace_decl* ns) : ast_context(p), _ns(ns), _is_global(p == nullptr) { }
-
-void ast_namespace_context::insert(const char* name, ast_decl* decl) {
-    //decl->parent_namespace = this->_ns;
-    this->_ns->declarations->append(decl);
+ast_namespace_context::ast_namespace_context(ast_context* p, ast_namespace_decl* ns)
+        : ast_context(p), _ns(ns), _is_global(p == nullptr) {
+    // do nothing
 }
-
-ast_type* ast_namespace_context::get_return_type() { return nullptr; }
 
 ptr<ast_decl> ast_namespace_context::find_first_impl(const char* name) {
     for(auto d: this->_ns->declarations) {
@@ -65,13 +61,6 @@ void ast_namespace_context::find_all_impl(ptr<list<ast_decl>> olist, const char*
 
 ast_block_context::ast_block_context(ast_context* p, ast_block_stmt* block) : ast_context(p), _block(block) { }
 
-void ast_block_context::insert(const char* name, ast_decl* decl) {
-    assert(decl->is<ast_local_decl>());
-    this->_block->decls->append(decl->as<ast_local_decl>());
-}
-
-ast_type* ast_block_context::get_return_type() { return this->parent->get_return_type(); }
-
 ptr<ast_decl> ast_block_context::find_first_impl(const char* name) {
     for(auto decl: this->_block->decls) {
         std::string dname = decl->name;
@@ -89,10 +78,6 @@ void ast_block_context::find_all_impl(ptr<list<ast_decl>> olist, const char* nam
             olist->append(decl);
         }
     }
-}
-
-void ast_block_context::emit(ast_stmt* stmt) {
-    this->_block->stmts->append(stmt);
 }
 
 

@@ -14,15 +14,15 @@ ast_type* xi_builder::get_auto_type() const noexcept {
 }
 
 ast_type* xi_builder::get_const_type(ast_type* type) noexcept {
-    return this->_const_types.getnew<xi_const_type>(type);
+    return this->_const_types.get_new<xi_const_type>(type);
 }
 
 ast_type* xi_builder::get_reference_type(ast_type* type) noexcept {
-    return this->_reference_types.getnew<xi_reference_type>(type);
+    return this->_reference_types.get_new<xi_reference_type>(type);
 }
 
 ast_type* xi_builder::get_object_type(xi_decl* decl) noexcept {
-    return this->_object_types.getnew<xi_object_type>(decl);
+    return this->_object_types.get_new<xi_object_type>(decl);
 }
 
 ast_type* xi_builder::get_declaration_type(ast_decl* decl) noexcept {
@@ -35,13 +35,12 @@ ast_type* xi_builder::get_declaration_type(ast_decl* decl) noexcept {
 }
 
 ast_type* xi_builder::get_tuple_type(list<ast_type>* types) noexcept {
-    return this->_tuple_types.getnew<xi_tuple_type>(types);
+    return this->_tuple_types.get_new<xi_tuple_type>(types);
 }
 
 ast_type* xi_builder::get_id_type(const char* name) const noexcept {
     return new xi_id_type(name);
 }
-
 
 xi_function_decl* xi_builder::make_xi_function_decl(const char* name, ast_type* return_type, list<xi_parameter_decl>* parameters, ast_stmt* body) const noexcept {
     return new xi_function_decl(name, return_type, parameters, body);

@@ -26,7 +26,6 @@ public:
     virtual ~xi_function_context() = default;
 
     virtual void insert(const char*, ast_decl*);
-    virtual ast_type* get_return_type();
 
 protected:
 
@@ -60,8 +59,6 @@ public:
     ast_type*                                   get_id_type(const char*)                                                                                const noexcept;
 
     virtual ast_type*                           get_declaration_type(ast_decl*)                                                                               noexcept;
-    ptr<list<ast_expr>>                         find_all_member_exprs(ast_type*, ast_expr*, const char*)                                                const noexcept;
-    ptr<list<ast_expr>>                         find_all_overload_exprs(ast_expr*, xi_op_expr::xi_operator, list<ast_expr>*)                            const noexcept;
 
     xi_function_decl*                           make_xi_function_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*)                      const noexcept;
     xi_parameter_decl*                          make_xi_parameter_decl(const char*, ast_type*)                                                          const noexcept;
@@ -82,6 +79,7 @@ public:
     void                                        push_xi_function(xi_function_decl*)                                                                           noexcept;
 
     //ast_expr*                                   const_eval(ast_expr*)                                                                                   const noexcept;
+    void                                        write_metadata(ircode_context&)                                                                               noexcept;
     void                                        semantic_check(/* error log info*/)                                                                           noexcept;
     void                                        lower(/* error log info*/)                                                                                    noexcept;
 

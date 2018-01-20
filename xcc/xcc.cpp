@@ -108,29 +108,31 @@ static const argp argp_program {
     NULL
 };
 
-static xcc::compiler_function get_compiler_by_ext(const std::string& ext) {
-    for(int i = 0; !xcc::all_frontends[i].language_name.empty(); i++) {
+static const xcc::frontend* get_frontend_by_ext(const std::string& ext) {
+    for(size_t i = 0; !xcc::all_frontends[i].language_name.empty(); i++) {
         for(size_t j = 0; j < xcc::all_frontends[i].language_extensions.size(); j++) {
             if(xcc::all_frontends[i].language_extensions[j] == ext) {
-                return xcc::all_frontends[i].language_compiler;
+                return &xcc::all_frontends[i];
             }
         }
     }
+
     //TODO: error
     return NULL;
 }
 
-static xcc::compiler_function get_compiler_by_name(const std::string& name, const std::string& version) {
-    for(int i = 0; !xcc::all_frontends[i].language_name.empty(); i++) {
+static const xcc::frontend* get_frontend_by_name(const std::string& name, const std::string& version) {
+    for(size_t i = 0; !xcc::all_frontends[i].language_name.empty(); i++) {
         if(xcc::all_frontends[i].language_name == name) {
             if(version.empty()) {
-                return xcc::all_frontends[i].language_compiler;
+                return &xcc::all_frontends[i];
             }
             else if(xcc::all_frontends[i].language_version == version) {
-                return xcc::all_frontends[i].language_compiler;
+                return &xcc::all_frontends[i];
             }
         }
     }
+
     //TODO: error
     return NULL;
 }
@@ -140,18 +142,48 @@ static inline std::string getext(std::string filename) {
 }
 
 static std::string handle_compile_from_file(const std::string& filename, xcc_program_args* args) {
-    xcc::compiler_function cfunc;
+    //TODO: A lot...
+    const xcc::frontend* lang;
     if(!args->override_compiler_name) {
-        cfunc   = get_compiler_by_ext(getext(filename));
+        lang    = get_frontend_by_ext(getext(filename));
     }
     else {
-        cfunc   = get_compiler_by_name(args->compiler_name, args->compiler_version);
+        lang    = get_frontend_by_name(args->compiler_name, args->compiler_version);
     }
 
-    std::string outfile = (filename.substr(0, filename.find_last_of('.')) + ".ll");
-    cfunc(filename.c_str(), outfile.c_str(), args->compiler_args);
+    std::string outfile;
+    if(!args->override_out_filename) {
+        switch(args->terminal_stage) {
+        case xcc::compiler_stage::preprocessor:
+        case xcc::compiler_stage::compiler_proper:
+        case xcc::compiler_stage::linker:
+            outfile = (filename.substr(0, filename.find_last_of('.')) + ".ll");
+            break;
+        default:
+            throw std::runtime_error(
+                    std::string("runtime error: ") +
+                    std::string(__FILE__) + ", " +
+                    std::to_string(__LINE__) + "compiler stage not supported");
+        }
+    }
+    else {
+        outfile = args->out_filename;
+    }
+
+    //TODO: preprocessor
+    lang->language_compiler(filename.c_str(), outfile.c_str(), args->compiler_args);
 
     return outfile;
+}
+
+static std::string handle_single_input_file(xcc_program_args* args) {
+    return handle_compile_from_file(args->input_filenames[0], args);
+}
+
+static void handle_multiple_input_files(std::vector<std::string>& outfiles, xcc_program_args* args) {
+    for(auto input_filename : args->input_filenames) {
+        outfiles.push_back(handle_compile_from_file(input_filename, args));
+    }
 }
 
 int main(int argc, char** argv) {
@@ -162,19 +194,21 @@ int main(int argc, char** argv) {
     args.override_compiler_name         = false;
 
     auto res = argp_parse(&argp_program, argc, argv, 0, &arg_index, &args);
+    // TODO: handle res error
 
-    std::vector<std::string> llfiles;
-
-    if(true) { /* TODO: one to one */
-        for(auto input_file : args.input_filenames) {
-            //TODO: preprocess
-            llfiles.push_back(handle_compile_from_file(input_file, &args));
-        }
+    // Compile all input files
+    std::vector<std::string> outfiles;
+    if(args.input_filenames.size() > 1) {
+        outfiles.push_back(handle_single_input_file(&args));
     }
-    else { /* TODO: many to one */
+    else {
+        handle_multiple_input_files(outfiles, &args);
     }
 
-    //TODO: link
+    // TODO: Maybe link files?
+    if(args.terminal_stage >= xcc::compiler_stage::linker) {
+        //TODO: send to linker ...
+    }
 }
 
 

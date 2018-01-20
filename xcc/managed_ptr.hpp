@@ -102,7 +102,6 @@ struct managed_ptr final : __ptr_impl {
 
 template<typename T> inline managed_ptr<T>      box(T* v)                   { return managed_ptr<T>(v); }
 template<typename T> inline T*                  unbox(managed_ptr<T> p)     { return (T*)p;     }
-//template<typename T> inline T*&                 unbox(managed_ptr<T>& p)    { return (T*)p;     }
 template<typename T>        int32_t             refcount(managed_ptr<T>& p) { return __refcount((void*)(T*)p); }
 template<typename T> inline uintptr_t           addr(managed_ptr<T>& p)     { return (uintptr_t)(T*)p; }
 

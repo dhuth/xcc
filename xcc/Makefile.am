@@ -7,10 +7,12 @@ xcc_core_sources       += ircodegen.cpp
 xcc_core_sources       += managed_ptr.cpp
 xcc_core_sources       += tree.cpp
 xcc_core_sources       += ast.cpp
-xcc_core_sources       += ast_printer.cpp
 xcc_core_sources       += ast_builder.cpp
 xcc_core_sources       += ast_builder_mangler.cpp
 xcc_core_sources       += ast_context.cpp
+xcc_core_sources	   += ast_eval.cpp
+xcc_core_sources       += ast_metadata.cpp
+xcc_core_sources       += ast_printer.cpp
 xcc_core_sources       += llvm_metadata.cpp
 
 xcc_core_cppflags       = @llvm_cppflags@

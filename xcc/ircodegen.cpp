@@ -19,7 +19,7 @@ llvm::Type* ircode_type_generator::generate_void_type(ast_void_type*) {
 }
 
 llvm::Type* ircode_type_generator::generate_integer_type(ast_integer_type* itype) {
-    return llvm::IntegerType::get(context.llvm_context, itype->bitwidth);
+    return llvm::IntegerType::get(context.llvm_context, (uint32_t) itype->bitwidth);
 }
 
 llvm::Type* ircode_type_generator::generate_real_type(ast_real_type* rtype) {
@@ -286,7 +286,7 @@ llvm::Value* ircode_address_generator::generate_memberref(ast_memberref* memref)
     auto objaddr = this->visit(memref->objexpr);
     auto objtype = context.generate_type(memref->objexpr->type);
 
-    return context.ir_builder.CreateConstGEP2_32(objtype, objaddr, 0, memref->member_index);
+    return context.ir_builder.CreateConstGEP2_32(objtype, objaddr, 0, (uint32_t) memref->member_index);
 }
 
 llvm::Value* ircode_address_generator::generate_index(ast_index* expr) {
@@ -338,7 +338,7 @@ void ircode_context::generate_variable_decl(ast_variable_decl* var) {
     llvm::GlobalVariable*   globalvar;
     if(var->is_extern_visible) {
         globalvar = new llvm::GlobalVariable(
-                *this->module.get(),
+                *this->module,
                 type,
                 false,
                 llvm::GlobalVariable::LinkageTypes::ExternalLinkage,
@@ -347,7 +347,7 @@ void ircode_context::generate_variable_decl(ast_variable_decl* var) {
     }
     else {
         globalvar = new llvm::GlobalVariable(
-                *this->module.get(),
+                *this->module,
                 type,
                 false,
                 llvm::GlobalVariable::LinkageTypes::InternalLinkage,
@@ -373,14 +373,14 @@ void ircode_context::generate_function_decl(ast_function_decl* func) {
                 ftype,
                 llvm::Function::ExternalLinkage,
                 llvm::Twine((std::string) func->generated_name),
-                this->module.get());
+                this->module);
     }
     else {
        fvalue = llvm::Function::Create(
                ftype,
                llvm::GlobalValue::LinkageTypes::InternalLinkage,
                llvm::Twine((std::string) func->generated_name),
-               this->module.get());
+               this->module);
     }
     uint32_t i = 0;
     for(auto& arg : fvalue->args()) {

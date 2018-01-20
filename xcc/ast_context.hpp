@@ -13,19 +13,38 @@
 
 namespace xcc {
 
+/**
+ * The base class for all contexts. Represents visibility in a location of code
+ */
 struct ast_context {
 public:
 
-    inline ast_context()                  : parent(nullptr) { };
-    inline ast_context(ast_context* prev) : parent(prev)    { };
+    explicit inline ast_context()                  noexcept : parent(nullptr) { };
+    explicit inline ast_context(ast_context* prev) noexcept : parent(prev)    { };
     virtual ~ast_context() = default;
 
-    virtual void      insert(const char*, ast_decl*) = 0;
-    virtual ast_type* get_return_type() = 0;
-
+    /**
+     * Find the first declaration with the given name
+     * @param name              the given name
+     * @param search_parent     if true, search all parents for this name
+     * @return                  a managed pointer to the declaration if one was found, otherwise a null managed pointer
+     */
     ptr<ast_decl>       find(const char* name, bool search_parent = true);
+
+    /**
+     * Find all declarations with the given name
+     * @param name              the given name
+     * @param search_parent     if true, search all parents for this name
+     * @return                  a managed pointer to list of all declarations of the given name
+     */
     ptr<list<ast_decl>> findall(const char* name, bool search_parent = true);
 
+    /**
+     * Convenience function for find. Returns the declataration casted to a base type
+     * @param name              the given name
+     * @param search_parent     if true, search all parents for this name
+     * @return                  a managed pointer to the declaration if one was found, otherwise a null managed pointer
+     */
     template<typename TTreeType,
              typename std::enable_if<std::is_base_of<ast_decl, TTreeType>::value, int>::type = 0>
     ptr<TTreeType>          find_of(const char* name, bool search_parent = true) {
@@ -43,12 +62,28 @@ public:
         }
     }
 
+    /**
+     * Convenience function for findall. Find all declarations with the given name, cast to a common base type
+     * @param name              the given name
+     * @param search_parent     if true, search all parents for this name
+     * @return                  a managed pointer to list of all declarations of the given name
+     */
     template<typename TTreeType,
              typename std::enable_if<std::is_base_of<ast_decl, TTreeType>::value, int>::type = 0>
     ptr<list<TTreeType>>    findall_of(const char* name, bool search_parent = true) {
         ptr<list<TTreeType>> olist = box(new list<TTreeType>());
         this->findall_of<TTreeType>(olist, name, search_parent);
         return olist;
+    }
+
+    /**
+     * Create a context within this current context
+     * @param args              Arguments to pass to the constructor
+     * @return                  A managed pointer to a new context of type TContext
+     */
+    template<typename TContext, typename... TArgs>
+    ptr<ast_context> push_context(TArgs&&... args) {
+        return box<ast_context>(new TContext(this, std::forward<TArgs>(args)...));
     }
 
 protected:
@@ -70,25 +105,36 @@ protected:
         }
     }
 
-
+    /**
+     * implementation of find_fist, searching only the current context
+     * @param name
+     * @return
+     */
     virtual ptr<ast_decl> find_first_impl(const char* name) = 0;
+
+    /**
+     * implementation of find_all, searching only the current context
+     * @param
+     * @param
+     */
     virtual void find_all_impl(ptr<list<ast_decl>>, const char*) = 0;
 
     friend struct __ast_builder_impl;
 
-    ast_context*                                                         parent;
+    ast_context*                                                         parent;    //! The parent context
 
 };
 
+
+/**
+ * A namespace context
+ */
 struct ast_namespace_context : public ast_context {
 public:
 
-    ast_namespace_context();
-    ast_namespace_context(ast_context* p, ast_namespace_decl* ns);
+    explicit ast_namespace_context();
+    explicit ast_namespace_context(ast_context* p, ast_namespace_decl* ns);
     virtual ~ast_namespace_context() = default;
-
-    void insert(const char*, ast_decl*) final override;
-    ast_type* get_return_type() final override;
 
 protected:
 
@@ -97,20 +143,19 @@ protected:
 
 private:
 
-    ptr<ast_namespace_decl>                                             _ns;
-    bool                                                                _is_global;
+    ptr<ast_namespace_decl>                                             _ns;        //! The namespace that this context belongs to
+    bool                                                                _is_global; //! True if this is a global namespace
 
 };
 
+/**
+ * A block context
+ */
 struct ast_block_context : public ast_context {
 public:
 
-    ast_block_context(ast_context* p, ast_block_stmt* block);
+    explicit ast_block_context(ast_context* p, ast_block_stmt* block);
     virtual ~ast_block_context() = default;
-
-    void insert(const char*, ast_decl*) final override;
-    ast_type* get_return_type() final override;
-    void emit(ast_stmt*);
 
 protected:
 
@@ -119,7 +164,7 @@ protected:
 
 private:
 
-    ptr<ast_block_stmt>                                                 _block;
+    ptr<ast_block_stmt>                                                 _block; //! The block that this context belongs to
 
 };
 

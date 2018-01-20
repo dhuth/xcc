@@ -13,10 +13,6 @@ void xi_function_context::insert(const char*, ast_decl*) {
     assert(false);
 }
 
-ast_type* xi_function_context::get_return_type() {
-    return this->func->return_type;
-}
-
 ptr<ast_decl> xi_function_context::find_first_impl(const char* name) {
     // search parameters
     for(auto p: this->func->parameters) {

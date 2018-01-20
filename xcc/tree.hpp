@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "cppdefs.hpp"
+//#include "cpp_type_traits_ext.hpp"
 #include "managed_ptr.hpp"
 
 
@@ -58,7 +59,14 @@ template<typename T>
 using is_tree = std::is_base_of<__tree_base, T>;
 
 template<typename T>
-using __is_tree_type = typename std::enable_if<is_tree<T>::value, int>::type;
+constexpr bool is_tree_v() { return is_tree<T>::value; }
+
+template<typename TTree, typename T>
+struct enable_if_tree : std::enable_if<is_tree_v<TTree>(), T> { };
+
+template<typename TTree, typename T = int>
+using enable_if_tree_t = typename enable_if_tree<TTree, T>::type;
+
 
 /* ==================== *
  * List Trait Utilities *
@@ -110,7 +118,6 @@ template<typename T> struct __property_type_selector {
                             typename __property_type_tree_selector<T>::type,
                             typename __property_type_other_selector<T>::type>::type type;
 };
-
 
 
 /* ============== *
@@ -198,10 +205,10 @@ public:
     virtual ~__tree_base() = default;
 
     inline bool is(const tree_type_id tp) const noexcept { return tree_type::is_base_of(tp, this->_type); }
-    template<typename T, __is_tree_type<T> = 0>
+    template<typename T, enable_if_tree_t<T> = 0>
     inline bool is() const noexcept { return this->is(T::type_id); }
 
-    template<typename T, __is_tree_type<T> = 0>
+    template<typename T, enable_if_tree_t<T> = 0>
     inline T* as() const noexcept { return dynamic_cast<T*>(const_cast<__tree_base*>(this)); }
     inline tree_type_id get_tree_type() const { return this->_type; }
 
@@ -241,7 +248,7 @@ protected:
 
 };
 
-template<tree_type_id VType, typename TBase = __tree_base, __is_tree_type<TBase> = 0>
+template<tree_type_id VType, typename TBase = __tree_base, enable_if_tree_t<TBase> = 0>
 struct __extend_tree : public TBase {
 private:
 
@@ -269,8 +276,8 @@ using extend_tree = __extend_tree<tp, base>;
 template<tree_type_id tp>
 using implement_tree = __extend_tree<tp, typename tree_type_info<tp>::base_type>;
 
-template<typename T, __is_tree_type<T> = 0>
-constexpr tree_type_id __get_tree_type_id() { return T::type_id; }
+template<typename T>
+constexpr enable_if_tree_t<T, tree_type_id> tree_type_id_from() { return T::type_id; }
 
 
 template<typename TElement>
@@ -362,8 +369,6 @@ public:
         }
     };
     typedef const iterator                              const_iterator;
-    typedef iterator                                    iterator_t;
-    typedef const_iterator                              const_iterator_t;
 
     inline __tree_list_tree()                                           noexcept : base_list_t()           { }
     inline __tree_list_tree(element_t f)                                noexcept : base_list_t()           { this->_child_nodes.push_back(box((__tree_base*) f)); }
@@ -424,6 +429,10 @@ public:
 
     inline void prepend(element_t&& el) {
         this->_child_nodes.insert(this->_child_nodes.begin(), box((__tree_base*) el));
+    }
+
+    inline void remove(const_iterator& itr) {
+        this->_child_nodes.erase(this->_child_nodes.begin() + itr.index);
     }
 
     inline typename std::vector<ptr<__tree_base>>::size_type size() const noexcept {
@@ -585,8 +594,8 @@ public:
     inline bool operator==(decltype(nullptr)) {
         return this->__get() == nullptr;
     }
-    template<typename TOther, __is_tree_type<TOther> = 0>
-    inline bool operator==(const __tree_property_tree<TOther>& p) {
+    template<typename TOther>
+    inline enable_if_tree_t<TOther, bool> operator==(const __tree_property_tree<TOther>& p) {
         return this->__get() == p.__get();
     }
 
@@ -612,8 +621,10 @@ template<typename TTreeListElement>
 struct __tree_property_list final : public __tree_property_tree<typename __list_type_selector<TTreeListElement>::type> {
 public:
 
-    typedef typename __list_type_selector<TTreeListElement>::type list_t;
-    typedef typename list_t::element_t                            element_t;
+    typedef typename __list_type_selector<TTreeListElement>::type   list_t;
+    typedef typename list_t::element_t                              element_t;
+    typedef typename list_t::iterator                               iterator;
+    typedef typename list_t::const_iterator                         const_iterator;
 
     inline explicit __tree_property_list(__tree_base* parent)                noexcept : __tree_property_tree<list_t>(parent) { }
     inline explicit __tree_property_list(__tree_base* parent, list_t* value) noexcept : __tree_property_tree<list_t>(parent, value) { }
@@ -750,7 +761,7 @@ public:
         auto wfunc = [=](__tree_base* t, TParamTypes... args) {
             return func(t->as<TTreeType>(), args...);
         };
-        this->_function_map[__get_tree_type_id<TTreeType>()] = wfunc;
+        this->_function_map[tree_type_id_from<TTreeType>()] = wfunc;
     }
 
 protected:
@@ -762,7 +773,7 @@ protected:
         auto wfunc = [=](__tree_base* t, TParamTypes... args) -> TReturnType {
             return (TReturnType) (dynamic_cast<TClassType*>(this)->*func)(t->as<TTreeType>(), args...);
         };
-        this->_function_map[__get_tree_type_id<TTreeType>()] = wfunc;
+        this->_function_map[tree_type_id_from<TTreeType>()] = wfunc;
     }
 };
 
@@ -802,7 +813,7 @@ public:
         auto wfunc = [=](__tree_base* t, TParamTypes... args) {
             return func(t->as<TTreeType>(), args...);
         };
-        this->_function_map[__get_tree_type_id<TTreeType>()] = wfunc;
+        this->_function_map[tree_type_id_from<TTreeType>()] = wfunc;
     }
 
 protected:
@@ -813,7 +824,7 @@ protected:
         auto wfunc = [=](__tree_base* t, TParamTypes... args) {
             return (dynamic_cast<TClassType*>(this)->*func)(t->as<TTreeType>(), args...);
         };
-        this->_function_map[__get_tree_type_id<TTreeType>()] = wfunc;
+        this->_function_map[tree_type_id_from<TTreeType>()] = wfunc;
     }
 };
 
@@ -846,13 +857,13 @@ public:
 
 
     template<typename TTreeType,
-             __is_tree_type<TTreeType> = 0>
+             enable_if_tree_t<TTreeType> = 0>
     using visit_func_t = void(*)(TTreeType*, TParamTypes...);
 
     template<typename TReturnType,
              typename TTreeType,
              typename std::enable_if<std::is_base_of<TReturnType, TTreeType>::value, int>::type = 0,
-             __is_tree_type<TTreeType> = 0>
+             enable_if_tree_t<TTreeType> = 0>
     using translate_func_t = TReturnType*(*)(TTreeType*, TParamTypes...);
 
     template<typename TReturnType,
@@ -860,13 +871,13 @@ public:
              typename TClassType,
              typename std::enable_if<std::is_base_of<TReturnType, TTreeType>::value, int>::type = 0,
              typename std::enable_if<std::is_base_of<__dispatch_tree_walker_base<TBaseType, TParamTypes...>, TClassType>::value, int>::type = 0,
-             __is_tree_type<TTreeType> = 0>
+             enable_if_tree_t<TTreeType> = 0>
     using translate_method_t = TReturnType*(TClassType::*)(TTreeType*, TParamTypes...);
 
     template<typename TTreeType,
              typename TClassType,
              typename std::enable_if<std::is_base_of<__dispatch_tree_walker_base<TBaseType, TParamTypes...>, TClassType>::value, int>::type = 0,
-             __is_tree_type<TTreeType> = 0>
+             enable_if_tree_t<TTreeType> = 0>
     using visit_method_t = void(TClassType::*)(TTreeType*, TParamTypes...);
 
 
@@ -877,7 +888,7 @@ public:
         auto wfunc = [=](__tree_base**, __tree_base* node, TParamTypes... args) {
             func(node->as<TTreeType>(), args...);
         };
-        this->_functions[__get_tree_type_id<TTreeType>()] = wfunc;
+        this->_functions[tree_type_id_from<TTreeType>()] = wfunc;
     }
 
     template<typename TReturnType, typename TTreeType>
@@ -886,7 +897,7 @@ public:
             *retv = dynamic_cast<__tree_base*>(
                     func(node->as<TTreeType>(), args...));
         };
-        this->_functions[__get_tree_type_id<TTreeType>()] = wfunc;
+        this->_functions[tree_type_id_from<TTreeType>()] = wfunc;
     }
 
     template<typename TReturnType, typename TTreeType, typename TClassType>
@@ -895,7 +906,7 @@ public:
             *retv = dynamic_cast<__tree_base*>(
                     (dynamic_cast<TClassType*>(this)->*mtd)(node->as<TTreeType>(), args...));
         };
-        this->_functions[__get_tree_type_id<TTreeType>()] = wfunc;
+        this->_functions[tree_type_id_from<TTreeType>()] = wfunc;
     }
 
     template<typename TTreeType, typename TClassType>
@@ -903,7 +914,7 @@ public:
         auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
             (dynamic_cast<TClassType*>(this)->*mtd)(node->as<TTreeType>(), args...);
         };
-        this->_functions[__get_tree_type_id<TTreeType>()] = wfunc;
+        this->_functions[tree_type_id_from<TTreeType>()] = wfunc;
     }
 
     virtual void begin(tree_type_id, TBaseType*, TParamTypes...)     { }

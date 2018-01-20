@@ -145,6 +145,7 @@ namespace                                               RETURN_KW(NAMESPACE)
             /* type keywords */
             
 void                                                    RETURN_TYPE(builder.get_void_type())
+bool                                                    RETURN_TYPE(builder.get_bool_type())
 u8                                                      RETURN_TYPE(builder.get_integer_type(8,   true))
 u16                                                     RETURN_TYPE(builder.get_integer_type(16,  true))
 u32                                                     RETURN_TYPE(builder.get_integer_type(32,  true))
@@ -174,6 +175,8 @@ var                                                     RETURN_KW(VAR)
 {FLOATING_POINT_LITERAL}                                RETURN_LITERAL(REAL,    builder.make_real(yytext))
 {INTEGER_10_LITERAL}                                    RETURN_LITERAL(INTEGER, builder.make_integer(yytext, 10))
 {INTEGER_16_LITERAL}                                    RETURN_LITERAL(INTEGER, builder.make_integer(&yytext[2], 16))
+true                                                    RETURN_LITERAL(BOOL,    builder.make_true())
+false                                                   RETURN_LITERAL(BOOL,    builder.make_false())
 {IDENTIFIER}                                            RETURN_TOKEN(IDENTIFIER, text, copy_cstring(yytext))
 
 <<EOF>>                                                 return xi::parser::token::TOK_EOF;

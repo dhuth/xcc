@@ -131,7 +131,7 @@ public:
           generate_expr(*this),
           generate_type(*this),
           generate_address(*this) {
-        this->module = llvm::make_unique<llvm::Module>(module_name, this->llvm_context);
+        this->module = new llvm::Module(module_name, this->llvm_context);
     }
     inline ~ircode_context() {
         delete this->_local_scope;
@@ -143,12 +143,12 @@ public:
 
     llvm::LLVMContext                                                   llvm_context;
     llvm::IRBuilder<>                                                   ir_builder;
-    std::unique_ptr<llvm::Module>                                       module;
+    ptr<llvm::Module>                                                   module;
     ircode_expr_generator                                               generate_expr;
     ircode_address_generator                                            generate_address;
     ircode_type_generator                                               generate_type;
 
-//private:
+//private: //TODO: maybe make some friends ?
 
     struct local_scope {
         inline local_scope(local_scope* prev): prev(prev) { }

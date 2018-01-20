@@ -19,7 +19,7 @@
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/StringRef.h>
 
-#include "llvm_metadata.hpp"
+//#include "llvm_metadata.hpp"
 
 namespace xcc {
 
@@ -1468,6 +1468,10 @@ inline const char* to_string(xcc::ast_op op) { return xcc::to_string(op); }
 }
 
 namespace xcc {
+
+/**
+ * A class for printing ast_tree nodes.
+ */
 struct ast_printer final : public dispatch_visitor<void, std::ostream&> {
 public:
 
@@ -1569,7 +1573,12 @@ private:
 
 };
 
-
+/**
+ * Set the source location of an ast_tree node
+ * @param t     the node
+ * @param loc   the source location
+ * @return      a pointer to the same node
+ */
 template<typename T,
          typename std::enable_if<std::is_base_of<ast_tree, T>::value, int>::type = 0>
 inline T* setloc(T* t, const source_span& loc) noexcept {
@@ -1579,6 +1588,15 @@ inline T* setloc(T* t, const source_span& loc) noexcept {
     return t;
 }
 
+/**
+ * Set teh source location of an ast_tree node
+ * @param t         the node
+ * @param filename  the name of the source file
+ * @param line      the lime number
+ * @param col       the column number at the begining of the node
+ * @param width     the textual width of the node
+ * @return          a pointer to the same node
+ */
 template<typename T,
          typename std::enable_if<std::is_base_of<ast_tree, T>::value, int>::type = 0>
 inline T* setloc(T* t, std::string filename, uint32_t line, uint32_t col, uint32_t width) noexcept {
@@ -1591,12 +1609,25 @@ inline T* setloc(T* t, std::string filename, uint32_t line, uint32_t col, uint32
     return t;
 }
 
+/**
+ * Copy the location of one ast_tree node to another
+ * @param t     the destination node
+ * @param ft    the source node
+ * @return      a pointer to the destination node
+ */
 template<typename TDestTreeType,
          typename TSrcTreeType,
          typename std::enable_if<std::is_base_of<ast_tree, TDestTreeType>::value, int>::type = 0,
          typename std::enable_if<std::is_base_of<ast_tree, TSrcTreeType>::value, int>::type = 0>
 TDestTreeType* copyloc(TDestTreeType* t, TSrcTreeType* ft) noexcept { t->source_location = ft->source_location; return t; }
 
+/**
+ * Copy the location from a begining and end ast_tree nodes to a destination node
+ * @param t     the destination node
+ * @param fmin  the first node
+ * @param fmax  the last node
+ * @return      a pointer to the destination node
+ */
 template<typename TDestTreeType,
          typename TSrcMinTreeType,
          typename TSrcMaxTreeType,
@@ -1609,7 +1640,9 @@ TDestTreeType* copyloc(TDestTreeType *t, TSrcMinTreeType* fmin, TSrcMaxTreeType*
     return t;
 }
 
-
+/**
+ * A class for comparing ast_types
+ */
 struct ast_type_comparer {
 public:
 
@@ -1625,6 +1658,9 @@ protected:
 };
 
 
+/**
+ * A class for hashing ast_types
+ */
 struct ast_type_hasher {
 public:
 
@@ -1640,6 +1676,9 @@ protected:
 };
 
 
+/**
+ * A class for comparing ast_exprs
+ */
 struct ast_expr_comparer {
 public:
 
@@ -1655,6 +1694,9 @@ protected:
 };
 
 
+/**
+ * A mapped set of ast_types indexed by pointer
+ */
 struct ast_typeset {
 
     inline explicit ast_typeset(ast_type_hasher& hasher, ast_type_comparer& comparer)
@@ -1665,6 +1707,11 @@ struct ast_typeset {
     std::unordered_map<ast_type*, ptr<ast_type>, ast_type_hasher, ast_type_comparer>
                                                             _map;
 
+    /**
+     * Get a pointer to the same type. If the type does not exist in the set, it is placed in the set
+     * @param p     the type to look for
+     * @return      the given new type, or one already in the set
+     */
     inline ast_type* get(ast_type* p) noexcept {
         if(this->_map.find(p) == this->_map.end()) {
             this->_map[p] = box<ast_type>(p);
@@ -1675,20 +1722,35 @@ struct ast_typeset {
         }
     }
 
+    /**
+     * Convenience function for calling ast_typeset::get
+     * @param args  arguments to the constructor
+     * @return      a new type, or one already in the set
+     */
     template<typename T, typename... TArgs>
-    inline ast_type* getnew(TArgs... args) noexcept {
+    inline ast_type* get_new(TArgs... args) noexcept {
         auto newtype = box<ast_type>(new T(args...));
         return this->get(newtype);
     }
 
+    /**
+     * Convenience function for calling ast_typeset::get
+     * @param p     a type to look for
+     * @return      the given new type, or one already in the set, cast to a base type
+     */
     template<typename TTarget>
-    inline TTarget* getas(TTarget* p) noexcept {
+    inline TTarget* get_as(TTarget* p) noexcept {
         return this->get(p)->template as<TTarget>();
     }
 
+    /**
+     * Convenience function for calling ast_typeset::get
+     * @param args  arguments to the constructor
+     * @return      a new type, or one already in the set
+     */
     template<typename TTarget, typename... TArgs>
-    inline TTarget* getnewas(TArgs... args) noexcept {
-        return this->getnew<TTarget>(args...)-> template as<TTarget>();
+    inline TTarget* get_new_as(TArgs... args) noexcept {
+        return this->get_new<TTarget>(args...)-> template as<TTarget>();
     }
 };
 

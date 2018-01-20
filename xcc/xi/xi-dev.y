@@ -33,15 +33,16 @@
 
 %token
         TOK_EOF                         0   "end of file"
-        TOK_IDENTIFIER                      "Identifier"
-        TOK_TYPE                            "Type"
-        TOK_EXPR                            "Basic expression"
-        TOK_DECL                            "Declaration"
+        TOK_IDENTIFIER                      "identifier token"
+        TOK_TYPE                            "type token"
+        TOK_EXPR                            "basic expression token"
+        TOK_DECL                            "declaration token"
         
-        LITERAL_INTEGER                     "Integer"
-        LITERAL_REAL                        "Real"
-        LITERAL_STRING                      "String"
-        LITERAL_CHARACTER                   "Character"
+        LITERAL_INTEGER                     "integer value"
+        LITERAL_REAL                        "real value"
+        LITERAL_STRING                      "string value"
+        LITERAL_CHARACTER                   "character value"
+        LITERAL_BOOL                        "boolean value"
         
         OP_LBRACE                           "{"
         OP_RBRACE                           "}"
@@ -151,6 +152,7 @@
 
 %type <expr>                                expr
 %type <expr>                                assign-expr
+%type <expr>                                assign-expr-only
 %type <expr>                                logical-or-expr
 %type <expr>                                logical-and-expr
 %type <expr>                                binary-or-expr
@@ -168,6 +170,7 @@
 %type <expr>                                TOK_EXPR
 %type <expr>                                LITERAL_INTEGER
 %type <expr>                                LITERAL_REAL
+%type <expr>                                LITERAL_BOOL
 
 %type <text>                                TOK_IDENTIFIER
 
@@ -381,8 +384,10 @@ expr-list
                         | expr                                                  { $$ = make_list<expr_t>($1); }
                         ;
 
-assign-expr
-                        : assign-expr assign-op expr                            { $$ = builder.make_xi_op($2, $1, $3); }
+assign-expr-only        : expr assign-op expr                                   { $$ = builder.make_xi_op($2, $1, $3); }
+                        ;
+
+assign-expr             : expr assign-op expr                                   { $$ = builder.make_xi_op($2, $1, $3); }
                         | expr                                                  { $$ = $1; }
                         ;
 
@@ -448,6 +453,7 @@ term-expr
                         | TOK_EXPR                                              { $$ = $1; }
                         | LITERAL_INTEGER                                       { $$ = $1; }
                         | LITERAL_REAL                                          { $$ = $1; }
+                        | LITERAL_BOOL                                          { $$ = $1; }
                         | TOK_IDENTIFIER                                        { $$ = builder.make_xi_id_expr($1); }
                         ;
 assign-op

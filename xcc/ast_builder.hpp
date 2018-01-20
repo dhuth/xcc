@@ -10,6 +10,7 @@
 
 #include "ast.hpp"
 #include "ast_context.hpp"
+#include "ast_eval.hpp"
 
 #include <map>
 #include <unordered_map>
@@ -19,14 +20,21 @@ namespace xcc {
 
 struct translation_unit;
 struct ircode_context;
+struct __ast_builder_impl;
 
-typedef dispatch_visitor<ast_expr, ast_expr>                                    ast_folder_t;
+/// A convenient way to refer to ast_builder implementation without template parameters
+typedef __ast_builder_impl                                  ast_builder_impl_t;
 
 struct ast_name_mangler : public dispatch_visitor<std::string> {
     virtual std::string         operator()(ast_tree* t) = 0;
     virtual std::string         operator()(std::string prefix, ast_tree* t) = 0;
 };
 
+
+/**
+ * The default name mangling function for ast_trees.
+ * Follows c++ conventions
+ */
 struct ast_default_name_mangler : public ast_name_mangler {
 public:
 
@@ -64,15 +72,27 @@ private:
 
 };
 
+
+/**
+ * The base implementation for an ast_builder
+ */
 struct __ast_builder_impl {
 public:
 
+    /**
+     * __ast_builder_impl constructor
+     * @param tu                the translation unit where top level nodes will be placed
+     * @param mangler           the name mangler function
+     * @param type_comparer     the type comparer used in typesets
+     * @param type_hasher       the type hasher used in typesets
+     */
     __ast_builder_impl(
             translation_unit& tu,
             ast_name_mangler* mangler,
             ast_type_comparer* type_comparer,
             ast_type_hasher* type_hasher) noexcept;
     virtual ~__ast_builder_impl() noexcept;
+
 
             ast_void_type*                      get_void_type()                                                     const noexcept;
             ast_integer_type*                   get_integer_type(uint32_t bitwidth, bool is_unsigned)               const noexcept;
@@ -83,6 +103,12 @@ public:
             ast_function_type*                  get_function_type(ast_type*, ptr<list<ast_type>>)                         noexcept;
             ast_record_type*                    get_record_type(ptr<list<ast_type>>)                                      noexcept;
 
+    /**
+     * Get the type of a declaration
+     * TODO: better explanation
+     * @param
+     * @return The type of a declaration
+     */
     virtual ast_type*                           get_declaration_type(ast_decl*)                                           noexcept;
 
     // Declarations
@@ -128,11 +154,6 @@ public:
     virtual ast_stmt*                           make_break_stmt()                                                   const noexcept;
     virtual ast_stmt*                           make_continue_stmt()                                                const noexcept;
 
-    // Utility
-    virtual uint32_t                            foldu32(ast_expr* e);
-    virtual uint64_t                            foldu64(ast_expr* e);
-    virtual ast_expr*                           fold(ast_expr* e);
-
     // Anylasis
             ast_name_mangler&                   get_mangled_name;
     virtual bool                                sametype(ast_type*, ast_type*)                                      const;
@@ -146,71 +167,117 @@ protected:
 
 
     // Building context
-    ptr<ast_context>                                                    context;
+    ptr<ast_context>                                                    context;                                    //! Current context
+
+    /**
+     * Push a new context as a child to the current one
+     * @param args          Arguments to the new context's constructor
+     */
     template<typename TContext, typename... TArgs>
-    inline void push_context(TArgs... args) noexcept {
-        this->context = new TContext(this->context, args...);
+    inline void push_context(TArgs&&... args) noexcept {
+        this->context = this->context->push_context<TContext>(std::forward<TArgs>(args)...);
     }
 
+    /**
+     * Leave the current context and return to its' parent
+     * @return              the original context
+     */
     inline ptr<ast_context> pop_context() noexcept {
         auto popped_context = this->context;
         this->context = this->context->parent;
         return popped_context;
     }
 
-    translation_unit&                                                   tu;
-    ptr<ast_namespace_decl>                                             global_namespace;
+    translation_unit&                                                   tu;                                         //! The translation unit
+    ptr<ast_namespace_decl>                                             global_namespace;                           //! The unnamed global namespace
 
-    ast_type_comparer*                                                  _type_comparer_ptr;
-    ast_type_hasher*                                                    _type_hasher_ptr;
+    ast_type_comparer*                                                  _type_comparer_ptr;                         //! A pointer to the type comparer function
+    ast_type_hasher*                                                    _type_hasher_ptr;                           //! A pointer to the type hasher function
 
 public:
 
-            ptr<ast_context>                    get_context()                                                             noexcept;
-            void                                set_context(ptr<ast_context>)                                             noexcept;
-            void                                clear_context()                                                           noexcept;
-
+    /**
+     * Step into a block scope
+     * @param
+     */
     virtual void                                push_block(ast_block_stmt*)                                               noexcept;
+    /**
+     * Step into a namespace scope
+     * @param
+     */
     virtual void                                push_namespace(ast_namespace_decl*)                                       noexcept;
-    virtual ast_type*                           get_return_type()                                                         noexcept;
 
-    virtual ast_decl*                           find_declaration(const char*)                                             noexcept;
-    virtual ptr<list<ast_decl>>                 find_all_declarations(const char*)                                        noexcept;
+    /**
+     * Get the first declaration with the given name
+     * @param
+     * @return
+     */
+            ast_decl*                           find_declaration(const char*)                                             noexcept;
+    /**
+     * Get the first declaration with the given name in a particular context
+     * @param
+     * @param
+     * @return
+     */
+    virtual ast_decl*                           find_declaration(ast_context*, const char*)                         const noexcept;
+    /**
+     * Find all declarations with the given name, starting with the closest
+     * @param
+     * @return
+     */
+            ptr<list<ast_decl>>                 find_all_declarations(const char*)                                        noexcept;
+    /**
+     * Find all declarations with the given name in a particular context, starting with the closest
+     * @param
+     * @param
+     * @return
+     */
+    virtual ptr<list<ast_decl>>                 find_all_declarations(ast_context*, const char*)                    const noexcept;
 
+    /**
+     * Step out of the current context and back into its parent
+     */
     virtual void                                pop()                                                                     noexcept;
 
-            void                                insert_global(ast_decl*)                                                  noexcept;
+    /**
+     * Insert a declaration at the global scope
+     * @param
+     */
+            void                                insert_at_global_scope(ast_decl*)                                         noexcept;
 
 private:
 
             ast_expr*                           cast_to(ast_integer_type*, ast_expr*)                               const;
-            ast_expr*                           cast_to(ast_real_type*, ast_expr*)                                  const;
+            ast_expr*                           cast_to(ast_real_type*,    ast_expr*)                               const;
             ast_expr*                           cast_to(ast_pointer_type*, ast_expr*)                               const;
-            ast_expr*                           cast_to(ast_record_type*, ast_expr*)                                const;
+            ast_expr*                           cast_to(ast_record_type*,  ast_expr*)                               const;
 
-    ptr<ast_void_type>                                                  _the_void_type;
-    ptr<ast_pointer_type>                                               _the_void_ptr_type;
-    ptr<ast_integer_type>                                               _the_boolean_type;
-    ptr<ast_stmt>                                                       _the_nop_stmt;
-    ptr<ast_stmt>                                                       _the_break_stmt;
-    ptr<ast_stmt>                                                       _the_continue_stmt;
+    ptr<ast_void_type>                                                  _the_void_type;                             //! The void type
+    ptr<ast_pointer_type>                                               _the_void_ptr_type;                         //! The void pointer type
+    ptr<ast_integer_type>                                               _the_boolean_type;                          //! The default boolean type;
+    ptr<ast_stmt>                                                       _the_nop_stmt;                              //! The nop stmt
+    ptr<ast_stmt>                                                       _the_break_stmt;                            //! The break stmt;
+    ptr<ast_stmt>                                                       _the_continue_stmt;                         //! The continue stmt
 
-    ptr<ast_expr>                                                       _true_value;
-    ptr<ast_expr>                                                       _false_value;
+    ptr<ast_expr>                                                       _true_value;                                //! The default true value
+    ptr<ast_expr>                                                       _false_value;                               //! The default false value
 
-    std::map<uint32_t, ptr<ast_integer_type>>                           _unsigned_integer_types;
-    std::map<uint32_t, ptr<ast_integer_type>>                           _signed_integer_types;
-    std::map<uint32_t, ptr<ast_real_type>>                              _real_types;
+    std::map<uint32_t, ptr<ast_integer_type>>                           _unsigned_integer_types;                    //! Unsigned integer types by bitwidth
+    std::map<uint32_t, ptr<ast_integer_type>>                           _signed_integer_types;                      //! Signed integer types by bitwidth
+    std::map<uint32_t, ptr<ast_real_type>>                              _real_types;                                //! Floating point types by bitwidth
 
-    ast_typeset                                                         _pointer_types;
-    ast_typeset                                                         _function_types;
-    ast_typeset                                                         _array_types;
-    ast_typeset                                                         _record_types;
+    ast_typeset                                                         _pointer_types;                             //! The pointer type set
+    ast_typeset                                                         _function_types;                            //! The function type set
+    ast_typeset                                                         _array_types;                               //! The array type set
+    ast_typeset                                                         _record_types;                              //! The record type set
 
-    ast_name_mangler*                                                   _mangler_ptr;
-
+    ast_name_mangler*                                                   _mangler_ptr;                               //! A pointer to the name mangling function
 };
 
+
+/**
+ * The base class for abstract syntax builders
+ */
 template<typename TMangler              = ast_default_name_mangler,
          typename TTypeComparer         = ast_type_comparer,
          typename TTypeHasher           = ast_type_hasher,
@@ -218,6 +285,10 @@ template<typename TMangler              = ast_default_name_mangler,
 struct ast_builder : public __ast_builder_impl {
 public:
 
+    /**
+     *
+     * @param tu    the translation unit where top level nodes will be placed
+     */
     ast_builder(translation_unit& tu) noexcept
             : __ast_builder_impl(
                     tu,
