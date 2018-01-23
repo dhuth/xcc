@@ -32,7 +32,7 @@ public:
 
     /**
      * Passing constructor for ast_tree
-     * \param id overriding tree type id
+     * @param id overriding tree type id
      */
     inline ast_tree(tree_type_id id) noexcept
             : base_type(id),
@@ -62,7 +62,7 @@ public:
 
     /**
      * Passing constructor
-     * \param id overriding tree type id
+     * @param id overriding tree type id
      */
     inline ast_type(tree_type_id id) noexcept
             : base_type(id) {
@@ -89,8 +89,8 @@ public:
 
     /**
      * Passing constructor
-     * \param id overriding tree type id
-     * \param name declaration name
+     * @param id overriding tree type id
+     * @param name declaration name
      */
     inline ast_decl(tree_type_id id, std::string name) noexcept
             : base_type(id),
@@ -123,7 +123,7 @@ public:
 
     /**
      * Passing constructor
-     * \param id overriding tree type id
+     * @param id overriding tree type id
      */
     inline ast_expr(tree_type_id id) noexcept
             : base_type(id),
@@ -133,8 +133,8 @@ public:
 
     /**
      * Passing constructor
-     * \param id overriding tree type id
-     * \param type expression type
+     * @param id overriding tree type id
+     * @param type expression type
      */
     inline ast_expr(tree_type_id id, ast_type* type) noexcept
             : base_type(id),
@@ -164,7 +164,7 @@ public:
 
     /**
      * Passing constructor
-     * \param id overriding type id
+     * @param id overriding type id
      */
     inline ast_stmt(tree_type_id id) noexcept : base_type(id) {
         //...
@@ -217,9 +217,9 @@ struct ast_variable_decl final : public extend_tree<tree_type_id::ast_variable_d
 public:
 
     /**
-     * \param name
-     * \param type
-     * \param initial_value
+     * @param name
+     * @param type
+     * @param initial_value
      */
     inline ast_variable_decl(std::string name, ast_type* type, ast_expr* initial_value = nullptr) noexcept
             : base_type(name),
@@ -257,8 +257,8 @@ struct ast_parameter_decl final : public extend_tree<tree_type_id::ast_parameter
 public:
 
     /**
-     * \param name
-     * \param type
+     * @param name
+     * @param type
      */
     inline ast_parameter_decl(std::string name, ast_type* type) noexcept
             : base_type(name),
@@ -287,9 +287,9 @@ struct ast_local_decl final : public extend_tree<tree_type_id::ast_local_decl, a
 public:
 
     /**
-     * \param name
-     * \param type
-     * \param init_value
+     * @param name
+     * @param type
+     * @param init_value
      */
     inline ast_local_decl(std::string name, ast_type* type, ast_expr* init_value) noexcept
             : base_type(name),
@@ -299,8 +299,8 @@ public:
     }
 
     /**
-     * \param type
-     * \param init_value
+     * @param type
+     * @param init_value
      */
     inline ast_local_decl(ast_type* type, ast_expr* init_value) noexcept
             : base_type(std::string("anonymous")),
@@ -332,10 +332,10 @@ struct ast_function_decl final : public extend_tree<tree_type_id::ast_function_d
 public:
 
     /**
-     * \param name function name
-     * \param return_type the function return type
-     * \param parameters list of parameter declartions
-     * \param body the fnction body
+     * @param name function name
+     * @param return_type the function return type
+     * @param parameters list of parameter declartions
+     * @param body the fnction body
      */
     inline ast_function_decl(std::string name, ast_type* return_type, list<ast_parameter_decl>* parameters, ast_stmt* body) noexcept
             : base_type(name),
@@ -376,8 +376,8 @@ struct ast_typedef_decl final : public extend_tree<tree_type_id::ast_typedef_dec
 public:
 
     /**
-     * \param name
-     * \param type
+     * @param name
+     * @param type
      */
     inline ast_typedef_decl(std::string name, ast_type* type)
             : base_type(name),
@@ -423,8 +423,8 @@ public:
 struct ast_integer_type final : public extend_tree<tree_type_id::ast_integer_type, ast_type> {
 
     /**
-     * \param bitwidth
-     * \param is_unsigned
+     * @param bitwidth
+     * @param is_unsigned
      */
     inline ast_integer_type(uint32_t bitwidth, bool is_unsigned) noexcept
             : base_type(),
@@ -453,7 +453,7 @@ struct ast_real_type final : public extend_tree<tree_type_id::ast_real_type, ast
 public:
 
     /**
-     * \param bitwidth
+     * @param bitwidth
      */
     inline ast_real_type(uint32_t bitwidth) noexcept
             : base_type(),
@@ -479,8 +479,8 @@ struct ast_array_type final : public extend_tree<tree_type_id::ast_array_type, a
 public:
 
     /**
-     * \param element_type
-     * \param size
+     * @param element_type
+     * @param size
      */
     inline ast_array_type(ast_type* element_type, uint32_t size) noexcept
             : base_type(),
@@ -509,7 +509,7 @@ struct ast_pointer_type final : public extend_tree<tree_type_id::ast_pointer_typ
 public:
 
     /**
-     * \param element_type
+     * @param element_type
      */
     inline ast_pointer_type(ast_type* element_type) noexcept
             : base_type(),
@@ -535,8 +535,8 @@ struct ast_function_type final : public extend_tree<tree_type_id::ast_function_t
 public:
 
     /**
-     * \param return_type
-     * \param parameter_types
+     * @param return_type
+     * @param parameter_types
      */
     inline ast_function_type(ast_type* return_type, list<ast_type>* parameter_types) noexcept
             : base_type(),
@@ -565,7 +565,7 @@ struct ast_record_type final : public extend_tree<tree_type_id::ast_record_type,
 public:
 
     /**
-     * \param is_packed is this type tightly packed ?
+     * @param is_packed is this type tightly packed ?
      */
     inline ast_record_type(bool is_packed = false) noexcept
             : base_type(),
@@ -575,8 +575,8 @@ public:
     }
 
     /**
-     * \param types
-     * \param is_packed
+     * @param types
+     * @param is_packed
      */
     inline ast_record_type(list<ast_type>* types, bool is_packed = false) noexcept
             : base_type(),
@@ -605,13 +605,23 @@ struct ast_integer final : public extend_tree<tree_type_id::ast_integer, ast_exp
 public:
 
     /**
-     * \param itype
-     * \param value
+     * @param itype
+     * @param value
      */
     inline ast_integer(ast_type* itype, llvm::APSInt value) noexcept
             : base_type(itype),
               value(this, value) {
         // do nothing
+    }
+
+    /**
+     *
+     * @param itype
+     * @param value
+     */
+    inline ast_integer(ast_type* itype, llvm::APInt value) noexcept
+            : base_type(itype),
+              value(this, llvm::APSInt(value, !itype->as<ast_integer_type>()->is_unsigned)) {
     }
 
     inline ast_integer(const ast_integer& i) noexcept
@@ -632,8 +642,8 @@ struct ast_real final : public extend_tree<tree_type_id::ast_real, ast_expr> {
 public:
 
     /**
-     * \param ftype
-     * \param value
+     * @param ftype
+     * @param value
      */
     inline ast_real(ast_type* ftype, llvm::APFloat value)
             : base_type(ftype),
@@ -659,8 +669,8 @@ struct ast_string final : public extend_tree<tree_type_id::ast_string, ast_expr>
 public:
 
     /**
-     * \param stype
-     * \param value
+     * @param stype
+     * @param value
      */
     inline ast_string(ast_type* stype, std::string value)
             : base_type(stype),
@@ -686,8 +696,8 @@ struct ast_array final : public extend_tree<tree_type_id::ast_array, ast_expr> {
 public:
 
     /**
-     * \param atype    the array type
-     * \param values   a list of values
+     * @param atype    the array type
+     * @param values   a list of values
      */
     inline ast_array(ast_type* atype, list<ast_expr>* values)
             : base_type(atype),
@@ -713,8 +723,8 @@ struct ast_record final : public extend_tree<tree_type_id::ast_record, ast_expr>
 public:
 
     /**
-     * \param rtype     the record type
-     * \param values    a list of values
+     * @param rtype     the record type
+     * @param values    a list of values
      */
     inline ast_record(ast_type* rtype, list<ast_expr>* values)
             : base_type(rtype),
@@ -768,6 +778,7 @@ enum class ast_op : uint32_t {
     land,                                                               //!< Logical and
     lor,                                                                //!< Logical or
     lnot,                                                               //!< Logical not
+    lxor,                                                               //!< Logical xor
     band,                                                               //!< Binary and
     bor,                                                                //!< Binary or
     bxor,                                                               //!< Binary xor
@@ -836,8 +847,8 @@ struct ast_cast final : public extend_tree<tree_type_id::ast_cast, ast_expr> {
 public:
 
     /**
-     * \param type Type to cast to
-     * \param expr
+     * @param type Type to cast to
+     * @param expr
      */
     inline ast_cast(ast_type* type, ast_op op, ast_expr* expr)
             : base_type(type),
@@ -866,10 +877,10 @@ struct ast_binary_op final : public extend_tree<tree_type_id::ast_binary_op, ast
 public:
 
     /**
-     * \param type
-     * \param op
-     * \param lhs
-     * \param rhs
+     * @param type
+     * @param op
+     * @param lhs
+     * @param rhs
      */
     inline ast_binary_op(ast_type* type, ast_op op, ast_expr* lhs, ast_expr* rhs) noexcept
             : base_type(type),
@@ -901,9 +912,9 @@ struct ast_unary_op final : public extend_tree<tree_type_id::ast_unary_op, ast_e
 public:
 
     /**
-     * \param type
-     * \param op
-     * \param expr
+     * @param type
+     * @param op
+     * @param expr
      */
     inline ast_unary_op(ast_type* type, ast_op op, ast_expr* expr) noexcept
             : base_type(type),
@@ -932,9 +943,9 @@ struct ast_index final : public extend_tree<tree_type_id::ast_index, ast_expr> {
 public:
 
     /**
-     * \param type
-     * \param expr
-     * \param index
+     * @param type
+     * @param expr
+     * @param index
      */
     inline ast_index(ast_type* type, ast_expr* expr, ast_expr* index)
             : base_type(type),
@@ -963,8 +974,8 @@ struct ast_declref final : public extend_tree<tree_type_id::ast_declref, ast_exp
 public:
 
     /**
-     * \param type
-     * \param variable
+     * @param type
+     * @param variable
      */
     inline ast_declref(ast_type* type, ast_decl* declaration) noexcept
             : base_type(type),
@@ -1016,8 +1027,8 @@ struct ast_deref final : public extend_tree<tree_type_id::ast_deref, ast_expr> {
 public:
 
     /**
-     * \param type
-     * \param expr
+     * @param type
+     * @param expr
      */
     inline ast_deref(ast_type* type, ast_expr* expr) noexcept
             : base_type(type),
@@ -1043,8 +1054,8 @@ struct ast_addressof final : public extend_tree<tree_type_id::ast_addressof, ast
 public:
 
     /**
-     * \param type
-     * \param expr
+     * @param type
+     * @param expr
      */
     inline ast_addressof(ast_type* type, ast_expr* expr) noexcept
             : base_type(type),
@@ -1070,9 +1081,9 @@ struct ast_invoke final : public extend_tree<tree_type_id::ast_invoke, ast_expr>
 public:
 
     /**
-     * \param type
-     * \param funcexpr
-     * \param arguments
+     * @param type
+     * @param funcexpr
+     * @param arguments
      */
     inline ast_invoke(ast_type* type, ast_expr* funcexpr, list<ast_expr>* arguments) noexcept
             : base_type(type),
@@ -1101,9 +1112,9 @@ struct ast_call final : public extend_tree<tree_type_id::ast_call, ast_expr> {
 public:
 
     /**
-     * \param type
-     * \param funcdecl
-     * \param arguments
+     * @param type
+     * @param funcdecl
+     * @param arguments
      */
     inline ast_call(ast_type* type, ast_decl* funcdecl, list<ast_expr>* arguments) noexcept
             : base_type(type),
@@ -1132,9 +1143,9 @@ struct ast_stmt_expr final : public extend_tree<tree_type_id::ast_stmt_expr, ast
 public:
 
     /**
-     * \param type
-     * \param statements
-     * \param expr
+     * @param type
+     * @param statements
+     * @param expr
      */
     inline ast_stmt_expr(ast_type* type, list<ast_stmt>* statements, ast_expr* expr) noexcept
             : base_type(type),
@@ -1182,7 +1193,7 @@ struct ast_expr_stmt final : public extend_tree<tree_type_id::ast_expr_stmt, ast
 public:
 
     /**
-     * \param expr
+     * @param expr
      */
     inline ast_expr_stmt(ast_expr* expr) noexcept
             : base_type(),
@@ -1208,8 +1219,8 @@ struct ast_assign_stmt final : public extend_tree<tree_type_id::ast_assign_stmt,
 public:
 
     /**
-     * \param lhs
-     * \param rhs
+     * @param lhs
+     * @param rhs
      */
     inline ast_assign_stmt(ast_expr* lhs, ast_expr* rhs) noexcept
             : base_type(),
@@ -1261,8 +1272,8 @@ struct ast_block_stmt final : public extend_tree<tree_type_id::ast_block_stmt, a
 public:
 
     /**
-     * \param decls list of declarations
-     * \param stmts a sequence of statements to be executed in order
+     * @param decls list of declarations
+     * @param stmts a sequence of statements to be executed in order
      */
     inline ast_block_stmt(list<ast_local_decl>* locals, list<ast_stmt>* stmts) noexcept
             : base_type(),
@@ -1301,9 +1312,9 @@ struct ast_if_stmt final : public extend_tree<tree_type_id::ast_if_stmt, ast_stm
 public:
 
     /**
-     * \param condition
-     * \param true_stmt     stmt to execute if the condition is true
-     * \param false_stmt    stmt to execute if the condition is false
+     * @param condition
+     * @param true_stmt     stmt to execute if the condition is true
+     * @param false_stmt    stmt to execute if the condition is false
      */
     inline ast_if_stmt(ast_expr* condition, ast_stmt* true_stmt, ast_stmt* false_stmt) noexcept
             : base_type(),
@@ -1335,8 +1346,8 @@ struct ast_while_stmt final : public extend_tree<tree_type_id::ast_while_stmt, a
 public:
 
     /**
-     * \param condition
-     * \param stmt
+     * @param condition
+     * @param stmt
      */
     inline ast_while_stmt(ast_expr* condition, ast_stmt* stmt) noexcept
             : base_type(),
@@ -1365,9 +1376,9 @@ struct ast_for_stmt final : public extend_tree<tree_type_id::ast_for_stmt, ast_s
 public:
 
     /**
-     * \param init_stmt
-     * \param condition
-     * \param each_stmt
+     * @param init_stmt
+     * @param condition
+     * @param each_stmt
      */
     inline ast_for_stmt(ast_stmt* init_stmt, ast_expr* condition, ast_stmt* each_stmt, ast_stmt* body) noexcept
             : base_type(),
@@ -1402,7 +1413,7 @@ struct ast_return_stmt final : public extend_tree<tree_type_id::ast_return_stmt,
 public:
 
     /**
-     * \param expr null if returning nothing
+     * @param expr null if returning nothing
      */
     inline ast_return_stmt(ast_expr* expr) noexcept
             : base_type(),

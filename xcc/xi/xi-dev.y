@@ -100,6 +100,7 @@
         KW_CONST                            "const"
         KW_FUNC                             "func"
         KW_NAMESPACE                        "namespace"
+        KW_STRUCT                           "struct"
         
         KW_BREAK                            "break"
         KW_CONTINUE                         "continue"
@@ -117,12 +118,14 @@
     type_t                                  type;
     stmt_t                                  stmt;
     decl_t                                  decl;
+    member_t                                member;
     parameter_t                             parameter;
     
     expr_list_t                             expr_list;
     type_list_t                             type_list;
     stmt_list_t                             stmt_list;
     decl_list_t                             decl_list;
+    member_list_t                           member_list;
     parameter_list_t                        parameter_list;
     
     operator_t                              op;
@@ -139,6 +142,11 @@
 %type <parameter_list>                      global-parameter-decl-list-opt
 %type <parameter_list>                      global-parameter-decl-list
 %type <parameter>                           global-parameter-decl
+%type <decl>                                global-struct-decl
+%type <member_list>                         struct-member-decl-list-opt
+%type <member_list>                         struct-member-decl-list
+%type <member>                              struct-member-decl
+%type <member>                              field-decl
 
 %type <type>                                type
 %type <type>                                TOK_TYPE
@@ -260,6 +268,7 @@ global-decl-list
 global-decl
                         : namespace-decl                                        { $$ = $1; }
                         | global-function-decl                                  { $$ = $1; }
+                        | global-struct-decl                                    { $$ = $1; }
                         ;
 
 /* ------------------- *
@@ -300,6 +309,28 @@ global-parameter-decl
 global-function-return-type-decl
                         : OP_ARROW type                                         { $$ = $2; }
                         | %empty                                                { $$ = builder.get_void_type(); }
+                        ;
+global-struct-decl
+                        :           /* attributes */
+                          KW_STRUCT
+                            TOK_IDENTIFIER
+                                    /* generics */
+                            OP_LBRACE
+                                struct-member-decl-list-opt
+                            OP_RBRACE                                           { $$ = builder.make_xi_struct_decl($2, $4); }
+                        ;
+struct-member-decl-list-opt
+                        : struct-member-decl-list                               { $$ = $1; }
+                        | %empty                                                { $$ = make_list<member_t>(); }
+                        ;
+struct-member-decl-list
+                        : struct-member-decl-list struct-member-decl            { $$ = make_list<member_t>($1, $2); }
+                        | struct-member-decl                                    { $$ = make_list<member_t>($1); }
+                        ;
+struct-member-decl
+                        : field-decl                                            { $$ = $1; }
+                        ;
+field-decl              : TOK_IDENTIFIER OP_COLON type OP_SEMICOLON             { $$ = builder.make_xi_field($1, $3); }
                         ;
 
 /* ---------- *

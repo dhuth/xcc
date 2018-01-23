@@ -81,5 +81,25 @@ void ast_block_context::find_all_impl(ptr<list<ast_decl>> olist, const char* nam
 }
 
 
+ast_function_context::ast_function_context(ast_context* p, ast_function_decl* func) : ast_context(p), _func(func) { }
+
+ptr<ast_decl> ast_function_context::find_first_impl(const char* name) {
+    for(auto param: this->_func->parameters) {
+        std::string pname = param->name;
+        if(pname == std::string(name)) {
+            return box<ast_decl>(param);
+        }
+    }
+    return box<ast_decl>(nullptr);
+}
+
+void ast_function_context::find_all_impl(ptr<list<ast_decl>> olist, const char* name) {
+    for(auto param: this->_func->parameters) {
+        std::string pname = param->name;
+        if(pname == std::string(name)) {
+            olist->append(param);
+        }
+    }
+}
 }
 

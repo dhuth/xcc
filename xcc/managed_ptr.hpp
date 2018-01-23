@@ -79,7 +79,7 @@ struct managed_ptr final : __ptr_impl {
         trace_ptr_msg(this->_internal_ptr, "copy ctor");
     }
 
-    inline const managed_ptr<T>& operator=(const managed_ptr<T>& other) {
+    inline managed_ptr<T>& operator=(managed_ptr<T>& other) {
         if(this->_internal_ptr != other._internal_ptr) {
             if(this->decr_ref() == 0) {
                 //TODO: delete
@@ -91,7 +91,27 @@ struct managed_ptr final : __ptr_impl {
         return other;
     }
 
+    inline const managed_ptr<T>& operator=(const managed_ptr<T>& other) {
+        if(this->_internal_ptr != other._internal_ptr) {
+            if(this->decr_ref() == 0) {
+                //TODO: delete
+            }
+            this->_internal_ptr = other._internal_ptr;
+        }
+        this->incr_ref();
+        trace_ptr_msg(this->_internal_ptr, "ctor assign ctor");
+        return other;
+    }
+
+    inline operator T*() noexcept {
+        return reinterpret_cast<T*>(this->_internal_ptr);
+    }
+
     inline operator T*() const noexcept {
+        return reinterpret_cast<T*>(this->_internal_ptr);
+    }
+
+    inline T* operator->() noexcept {
         return reinterpret_cast<T*>(this->_internal_ptr);
     }
 

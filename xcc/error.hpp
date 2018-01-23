@@ -5,10 +5,11 @@
  *      Author: derick
  */
 
-#ifndef XCC_LOG_HPP_
-#define XCC_LOG_HPP_
+#ifndef XCC_ERROR_HPP_
+#define XCC_ERROR_HPP_
 
 #include <exception>
+#include <string>
 
 namespace xcc {
 
@@ -16,4 +17,4 @@ namespace xcc {
 
 
 
-#endif /* XCC_LOG_HPP_ */
+#endif /* XCC_ERROR_HPP_ */

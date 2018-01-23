@@ -133,7 +133,7 @@ struct ast_namespace_context : public ast_context {
 public:
 
     explicit ast_namespace_context();
-    explicit ast_namespace_context(ast_context* p, ast_namespace_decl* ns);
+    explicit ast_namespace_context(ast_context*, ast_namespace_decl*);
     virtual ~ast_namespace_context() = default;
 
 protected:
@@ -148,13 +148,14 @@ private:
 
 };
 
+
 /**
  * A block context
  */
 struct ast_block_context : public ast_context {
 public:
 
-    explicit ast_block_context(ast_context* p, ast_block_stmt* block);
+    explicit ast_block_context(ast_context*, ast_block_stmt*);
     virtual ~ast_block_context() = default;
 
 protected:
@@ -168,6 +169,26 @@ private:
 
 };
 
+
+/**
+ * A function context
+ */
+struct ast_function_context : public ast_context {
+public:
+
+    explicit ast_function_context(ast_context*, ast_function_decl*);
+    virtual ~ast_function_context() = default;
+
+protected:
+
+    ptr<ast_decl> find_first_impl(const char*) final override;
+    void find_all_impl(ptr<list<ast_decl>>, const char*) final override;
+
+private:
+
+    ptr<ast_function_decl>                                              _func; //! The function that this context belongs to
+
+};
 }
 
 

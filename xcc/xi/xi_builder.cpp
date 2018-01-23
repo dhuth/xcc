@@ -51,15 +51,16 @@ xi_parameter_decl* xi_builder::make_xi_parameter_decl(const char* name, ast_type
 }
 
 
-ast_expr* xi_builder::make_xi_id_expr(const char* name) const noexcept {
+ast_expr* xi_builder::make_xi_id_expr(xi_qname* name) const noexcept {
     return new xi_id_expr(name);
 }
 
-ast_expr* xi_builder::make_xi_member_id_expr(ast_expr* e, const char* name) const noexcept {
+ast_expr* xi_builder::make_xi_member_id_expr(ast_expr* e, xi_qname* name) const noexcept {
     return new xi_member_id_expr(e, name);
 }
 
-ast_expr* xi_builder::make_xi_deref_member_id_expr(ast_expr* e, const char* name) const noexcept {
+ast_expr* xi_builder::make_xi_deref_member_id_expr(ast_expr* e, xi_qname* name) const noexcept {
+    //TODO: member pointer operator ???
     return new xi_member_id_expr(copyloc(this->make_xi_op(xi_op_expr::xi_operator::__deref__, e), e), name);
 }
 

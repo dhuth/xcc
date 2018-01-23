@@ -83,12 +83,40 @@ public:
 
 
 /**
+ * QName
+ */
+struct xi_qname : public implement_tree<tree_type_id::xi_qname> {
+public:
+
+    explicit inline xi_qname(std::string name) noexcept
+            : base_type(),
+              names(this, new list<std::string>(name)) {
+        /* do nothing */
+    }
+
+    explicit inline xi_qname(xi_qname* p, std::string name) noexcept
+            : base_type(),
+              names(this, new list<std::string>(p->names, name)) {
+        /* do nothing */
+    }
+
+    explicit inline xi_qname(const xi_qname& other) noexcept
+            : base_type((base_type&) other),
+              names(this, other.names) {
+        /* do nothing */
+    }
+
+    property<list<std::string>>                             names;
+};
+
+
+/**
  * The name of a type
  */
 struct xi_id_type : public implement_tree<tree_type_id::xi_id_type> {
 public:
 
-    explicit inline xi_id_type(std::string name) noexcept
+    explicit inline xi_id_type(xi_qname* name) noexcept
             : base_type(),
               name(this, name) {
         /* do nothing */
@@ -100,7 +128,7 @@ public:
         /* do nothing */
     }
 
-    property<std::string>                                           name;   //! Type name
+    property<xi_qname>                                              name;   //! Type name
 };
 
 
@@ -463,7 +491,7 @@ struct xi_const_expr : public implement_tree<tree_type_id::xi_const_expr> {
 struct xi_id_expr : public implement_tree<tree_type_id::xi_id_expr> {
 public:
 
-    explicit inline xi_id_expr(std::string name) noexcept
+    explicit inline xi_id_expr(xi_qname* name) noexcept
             : base_type(nullptr),
               name(this, name) {
         /* do nothing */
@@ -475,7 +503,7 @@ public:
         /* do nothing */
     }
 
-    property<std::string>                                           name;
+    property<xi_qname>                                              name;
 
 };
 
@@ -505,7 +533,7 @@ public:
 struct xi_member_id_expr : public implement_tree<tree_type_id::xi_member_id_expr> {
 public:
 
-    explicit inline xi_member_id_expr(ast_expr* expr, std::string name) noexcept
+    explicit inline xi_member_id_expr(ast_expr* expr, xi_qname* name) noexcept
             : base_type(nullptr),
               expr(this, expr),
               name(this, name) {
@@ -520,7 +548,7 @@ public:
     }
 
     property<ast_expr>                                              expr;   //! object expression
-    property<std::string>                                           name;   //! member name
+    property<xi_qname>                                              name;   //! member name
 
 };
 

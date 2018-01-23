@@ -10,7 +10,6 @@
 
 #include "ast.hpp"
 #include "ast_context.hpp"
-#include "ast_eval.hpp"
 
 #include <map>
 #include <unordered_map>
@@ -197,15 +196,22 @@ protected:
 public:
 
     /**
-     * Step into a block scope
-     * @param
-     */
-    virtual void                                push_block(ast_block_stmt*)                                               noexcept;
-    /**
      * Step into a namespace scope
      * @param
      */
     virtual void                                push_namespace(ast_namespace_decl*)                                       noexcept;
+
+    /**
+     * Step into a function scope
+     * @param
+     */
+    virtual void                                push_function(ast_function_decl*)                                         noexcept;
+
+    /**
+     * Step into a block scope
+     * @param
+     */
+    virtual void                                push_block(ast_block_stmt*)                                               noexcept;
 
     /**
      * Get the first declaration with the given name

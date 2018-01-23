@@ -62,10 +62,12 @@ public:
 
     xi_function_decl*                           make_xi_function_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*)                      const noexcept;
     xi_parameter_decl*                          make_xi_parameter_decl(const char*, ast_type*)                                                          const noexcept;
+    xi_struct_decl*                             make_xi_struct_decl(const char*, list<xi_member_decl>*)                                                 const noexcept;
+    xi_field_decl*                              make_xi_field_decl(const char*, ast_type*)                                                              const noexcept;
 
-    ast_expr*                                   make_xi_id_expr(const char*)                                                                            const noexcept;
-    ast_expr*                                   make_xi_member_id_expr(ast_expr*, const char*)                                                          const noexcept;
-    ast_expr*                                   make_xi_deref_member_id_expr(ast_expr*, const char*)                                                    const noexcept;
+    ast_expr*                                   make_xi_id_expr(xi_qname*)                                                                              const noexcept;
+    ast_expr*                                   make_xi_member_id_expr(ast_expr*, xi_qname*)                                                            const noexcept;
+    ast_expr*                                   make_xi_deref_member_id_expr(ast_expr*, xi_qname*)                                                      const noexcept;
     ast_expr*                                   make_xi_tuple_expr(list<ast_expr>*)                                                                     const noexcept;
     ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, ast_expr*)                                                       const noexcept;
     ast_expr*                                   make_xi_op(xi_op_expr::xi_operator op, ast_expr*, ast_expr*)                                            const noexcept;

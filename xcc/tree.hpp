@@ -446,6 +446,8 @@ template<typename T> inline typename __tree_list_tree<T>::const_iterator begin(c
 template<typename T> inline typename __tree_list_tree<T>::const_iterator end(const __tree_list_tree<T>* lptr)   noexcept { return lptr->end();   }
 template<typename T> inline typename __tree_list_tree<T>::      iterator begin(ptr<__tree_list_tree<T>>& lptr)  noexcept { return lptr->begin(); }
 template<typename T> inline typename __tree_list_tree<T>::      iterator end(ptr<__tree_list_tree<T>>& lptr)    noexcept { return lptr->end(); }
+template<typename T> inline typename __tree_list_tree<T>::      iterator begin(__tree_property_list<T>& lptr)   noexcept { return lptr.begin(); }
+template<typename T> inline typename __tree_list_tree<T>::      iterator end(__tree_property_list<T>& lptr)     noexcept { return lptr.end(); }
 
 template<typename T>
 inline T* first(__tree_list_tree<T>* l) {
@@ -730,12 +732,12 @@ public:
 
     TReturnType visit(tree_t* t, TParamTypes... args) {
         if(t == nullptr) {
-            return this->handle_null_tree();
+            return this->handle_null_tree(args...);
         }
         else {
             tree_type_id id = t->get_tree_type();
             if(this->_function_map.find(id) == this->_function_map.end()) {
-                return this->handle_unregisterd_tree_type(id);
+                return this->handle_unregisterd_tree_type(id, args...);
             }
             return this->_function_map[id](t, args...);
         }

@@ -802,6 +802,10 @@ void __ast_builder_impl::push_namespace(ast_namespace_decl* ns) noexcept {
     this->push_context<ast_namespace_context>(ns);
 }
 
+void __ast_builder_impl::push_function(ast_function_decl* func) noexcept {
+    this->push_context<ast_function_context>(func);
+}
+
 void __ast_builder_impl::push_block(ast_block_stmt* block) noexcept {
     this->push_context<ast_block_context>(block);
 }

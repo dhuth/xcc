@@ -14,12 +14,14 @@ typedef xcc::ast_type*                                          type_t;
 typedef xcc::ast_expr*                                          expr_t;
 typedef xcc::ast_stmt*                                          stmt_t;
 typedef xcc::ast_decl*                                          decl_t;
+typedef xcc::xi_member_decl*                                    member_t;
 typedef xcc::xi_parameter_decl*                                 parameter_t;
 
 typedef xcc::list<xcc::ast_type>*                               type_list_t;
 typedef xcc::list<xcc::ast_expr>*                               expr_list_t;
 typedef xcc::list<xcc::ast_stmt>*                               stmt_list_t;
 typedef xcc::list<xcc::ast_decl>*                               decl_list_t;
+typedef xcc::list<xcc::xi_member_decl>*                         member_list_t;
 typedef xcc::list<xcc::xi_parameter_decl>*                      parameter_list_t;
 
 typedef xcc::xi_op_expr::xi_operator                            operator_t;
