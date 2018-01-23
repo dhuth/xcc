@@ -118,6 +118,7 @@
     type_t                                  type;
     stmt_t                                  stmt;
     decl_t                                  decl;
+    qname_t                                 qname;
     member_t                                member;
     parameter_t                             parameter;
     
@@ -132,6 +133,8 @@
     
     char*                                   text;
 }
+
+%type <qname>                               qname
 
 %type <decl_list>                           global-decl-list-opt
 %type <decl_list>                           global-decl-list
@@ -253,7 +256,7 @@ void yyerror(XILTYPE* loc, xi::parser&, xi_builder_t& builder, const char* msg);
 translation-unit
                         : global-decl-list-opt                                  {
                                                                                     for(auto d: $1) {
-                                                                                        builder.insert_global(d);
+                                                                                        builder.insert_at_global_scope(d);
                                                                                     }
                                                                                 }
                         ;
@@ -271,6 +274,15 @@ global-decl
                         | global-struct-decl                                    { $$ = $1; }
                         ;
 
+/*       *
+ * Qname *
+ * ----- */
+ 
+ qname
+                        : TOK_IDENTIFIER                                        { $$ = make_xi_qname($1);     }
+                        | qname OP_DOUBLE_COLON TOK_IDENTIFIER                  { $$ = make_xi_qname($1, $3); }
+                        ;
+ 
 /* ------------------- *
  * Global Declarations *
  * ------------------- */
@@ -330,7 +342,7 @@ struct-member-decl-list
 struct-member-decl
                         : field-decl                                            { $$ = $1; }
                         ;
-field-decl              : TOK_IDENTIFIER OP_COLON type OP_SEMICOLON             { $$ = builder.make_xi_field($1, $3); }
+field-decl              : TOK_IDENTIFIER OP_COLON type OP_SEMICOLON             { $$ = builder.make_xi_field_decl($1, $3); }
                         ;
 
 /* ---------- *
@@ -469,8 +481,8 @@ postfix-expr
                             OP_LPAREN   expr-list-opt OP_RPAREN                 { $$ = builder.make_xi_op(operator_t::__invoke__, $3); }
                         | postfix-expr
                             OP_LBRACKET expr-list     OP_RBRACKET               { $$ = builder.make_xi_op(operator_t::__index__, $3); }
-                        | postfix-expr OP_DOT   TOK_IDENTIFIER                  { $$ = builder.make_xi_member_id_expr($1, $3); }
-                        | postfix-expr OP_ARROW TOK_IDENTIFIER                  { $$ = builder.make_xi_deref_member_id_expr($1, $3); }
+                        | postfix-expr OP_DOT   TOK_IDENTIFIER                  { $$ = builder.make_xi_member_id_expr($1, make_xi_qname($3)); }
+                        | postfix-expr OP_ARROW TOK_IDENTIFIER                  { $$ = builder.make_xi_deref_member_id_expr($1, make_xi_qname($3)); }
                         | prefix-expr                                           { $$ = $1; }
                         ;
 prefix-expr
@@ -485,7 +497,7 @@ term-expr
                         | LITERAL_INTEGER                                       { $$ = $1; }
                         | LITERAL_REAL                                          { $$ = $1; }
                         | LITERAL_BOOL                                          { $$ = $1; }
-                        | TOK_IDENTIFIER                                        { $$ = builder.make_xi_id_expr($1); }
+                        | qname                                                 { $$ = builder.make_xi_id_expr($1); }
                         ;
 assign-op
                         : OP_ASSIGN                                             { $$ = $1; }
@@ -525,7 +537,7 @@ non-const-prefix-type
                         ;
 term-type
                         : TOK_TYPE                                              { $$ = $1; }
-                        | TOK_IDENTIFIER                                        { $$ = builder.get_id_type($1); }
+                        | TOK_IDENTIFIER                                        { $$ = builder.get_id_type(make_xi_qname($1)); }
                         | OP_LPAREN type OP_RPAREN                              { $$ = $2; }
                         | OP_LPAREN
                             type OP_COMA type-list-opt

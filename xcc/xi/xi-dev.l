@@ -140,6 +140,7 @@ xor\=                                                   RETURN_OP(ASSIGN_LOGICAL
 const                                                   RETURN_KW(CONST)
 func                                                    RETURN_KW(FUNC)
 namespace                                               RETURN_KW(NAMESPACE)
+struct                                                  RETURN_KW(STRUCT)
 
 
             /* type keywords */

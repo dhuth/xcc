@@ -29,9 +29,6 @@ public:
     }
     ~ast_eval_context() = default;
 
-    ast_eval_context(const ast_eval_context&) = delete;
-    ast_eval_context(const ast_eval_context&&) = delete;
-
     ptr<ast_expr> get(ast_decl*) noexcept;
     void set(ast_decl*, ptr<ast_expr>) noexcept;
     void bind(ast_decl*, ptr<ast_expr>) noexcept;

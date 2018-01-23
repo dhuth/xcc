@@ -56,7 +56,7 @@ public:
     ast_type*                                   get_reference_type(ast_type* type)                                                                            noexcept;
     ast_type*                                   get_object_type(xi_decl* decl)                                                                                noexcept;
     ast_type*                                   get_tuple_type(list<ast_type>* types)                                                                         noexcept;
-    ast_type*                                   get_id_type(const char*)                                                                                const noexcept;
+    ast_type*                                   get_id_type(xi_qname*)                                                                                const noexcept;
 
     virtual ast_type*                           get_declaration_type(ast_decl*)                                                                               noexcept;
 
@@ -78,6 +78,7 @@ public:
     ast_stmt*                                   make_xi_while_stmt(ast_expr*, ast_stmt*)                                                                const noexcept;
     ast_stmt*                                   make_xi_return_stmt(ast_expr*)                                                                          const noexcept;
 
+    ast_decl*                                   find_declaration(xi_qname*)                                                                                   noexcept;
     void                                        push_xi_function(xi_function_decl*)                                                                           noexcept;
 
     //ast_expr*                                   const_eval(ast_expr*)                                                                                   const noexcept;

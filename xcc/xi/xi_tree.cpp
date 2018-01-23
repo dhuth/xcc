@@ -71,12 +71,20 @@ bool xi_type_comparer::operator()(ast_type* const& lhs, ast_type* const& rhs) co
     }
 }
 
+static size_t hash_qname(xi_qname* qname) {
+    size_t res = 0;
+    for(auto n: qname->names) {
+        res |= std::hash<std::string>()(n);
+    }
+    return res;
+}
+
 size_t xi_type_hasher::operator()(ast_type* const& tp) const {
     size_t prefix = (size_t) tp->get_tree_type() << 8;
 
     switch(tp->get_tree_type()) {
     case tree_type_id::xi_id_type:
-        return prefix | std::hash<std::string>()(tp->as<xi_id_type>()->name);
+        return prefix | hash_qname(tp->as<xi_id_type>()->name);
     case tree_type_id::xi_const_type:
         return prefix | this->operator()(tp->as<xi_const_type>()->type);
     case tree_type_id::xi_auto_type:

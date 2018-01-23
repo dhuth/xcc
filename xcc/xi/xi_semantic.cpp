@@ -52,7 +52,7 @@ void xi_builder::semantic_check(/*error log info*/) noexcept {
     // merge namespaces
     merge_namespaces_in(this->global_namespace);
 
-    // type check
+    //TODO: ...
 }
 
 }

@@ -14,6 +14,7 @@ typedef xcc::ast_type*                                          type_t;
 typedef xcc::ast_expr*                                          expr_t;
 typedef xcc::ast_stmt*                                          stmt_t;
 typedef xcc::ast_decl*                                          decl_t;
+typedef xcc::xi_qname*                                          qname_t;
 typedef xcc::xi_member_decl*                                    member_t;
 typedef xcc::xi_parameter_decl*                                 parameter_t;
 
@@ -55,6 +56,14 @@ template<typename Tptr, typename T = typename std::remove_pointer<Tptr>::type>
 inline xcc::list<T>* make_list(Tptr el, xcc::list<T>* l) {
     l->prepend(el);
     return l;
+}
+
+inline xcc::xi_qname* make_xi_qname(const char* name) {
+    return new xcc::xi_qname(std::string(name));
+}
+
+inline xcc::xi_qname* make_xi_qname(xcc::xi_qname* qname, const char* name) {
+    return new xcc::xi_qname(qname, std::string(name));
 }
 
 template<typename Tptr>

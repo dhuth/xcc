@@ -290,7 +290,7 @@ static ptr<ast_expr> ast_eval_invoke(ast_invoke* iexpr, ast_compile_time_evaluat
 
 // Call
 static ptr<ast_expr> ast_eval_call(ast_call* cexpr, ast_compile_time_evaluator& evaluator, ast_eval_context& context) {
-    auto args = map(cexpr->arguments, std::function<ast_expr*(ast_expr*)>([=](ast_expr* e)->ast_expr* {
+    auto args = map(cexpr->arguments, std::function<ast_expr*(ast_expr*)>([&](ast_expr* e) mutable ->ast_expr* {
         return evaluator.visit(e, evaluator, context);
     }));
     return evaluator.call(cexpr->funcdecl->as<ast_function_decl>(), args, context);

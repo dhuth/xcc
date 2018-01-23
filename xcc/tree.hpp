@@ -293,11 +293,15 @@ template<typename TElement>
 struct __tree_list_value final : public __tree_list_base<TElement> {
 private:
 
-    typedef          __tree_list_base<TElement>                 base_list_t;
-    typedef          __tree_list_value<TElement>                list_t;
-    typedef          list_t*                                    list_ptr_t;
+    typedef             __tree_list_base<TElement>                  base_list_t;
 
 public:
+
+    typedef             __tree_list_value<TElement>                 list_t;
+    typedef             list_t*                                     list_ptr_t;
+    typedef             TElement                                    element_t;
+    typedef typename    std::vector<TElement>::iterator             iterator;
+    typedef typename    std::vector<TElement>::const_iterator       const_iterator;
 
     inline          __tree_list_value()                                          noexcept : base_list_t()                  { }
     inline explicit __tree_list_value(TElement f)                                noexcept : base_list_t()                  { this->_list.push_back(f); }
@@ -330,6 +334,22 @@ public:
 
     inline typename std::vector<TElement>::size_type size() const noexcept {
         return this->_list.size();
+    }
+
+    inline iterator begin() noexcept {
+        return this->_list.begin();
+    }
+
+    inline const_iterator begin() const noexcept {
+        return this->_list.begin();
+    }
+
+    inline iterator end() noexcept {
+        return this->_list.end();
+    }
+
+    inline const_iterator end() const noexcept {
+        return this->_list.end();
     }
 
 protected:
@@ -446,8 +466,9 @@ template<typename T> inline typename __tree_list_tree<T>::const_iterator begin(c
 template<typename T> inline typename __tree_list_tree<T>::const_iterator end(const __tree_list_tree<T>* lptr)   noexcept { return lptr->end();   }
 template<typename T> inline typename __tree_list_tree<T>::      iterator begin(ptr<__tree_list_tree<T>>& lptr)  noexcept { return lptr->begin(); }
 template<typename T> inline typename __tree_list_tree<T>::      iterator end(ptr<__tree_list_tree<T>>& lptr)    noexcept { return lptr->end(); }
-template<typename T> inline typename __tree_list_tree<T>::      iterator begin(__tree_property_list<T>& lptr)   noexcept { return lptr.begin(); }
-template<typename T> inline typename __tree_list_tree<T>::      iterator end(__tree_property_list<T>& lptr)     noexcept { return lptr.end(); }
+
+template<typename T> inline typename __tree_property_list<T>::list_t::      iterator begin(__tree_property_list<T>& lref)   noexcept { return lref.begin(); }
+template<typename T> inline typename __tree_property_list<T>::list_t::      iterator end(__tree_property_list<T>& lref)     noexcept { return lref.end(); }
 
 template<typename T>
 inline T* first(__tree_list_tree<T>* l) {
