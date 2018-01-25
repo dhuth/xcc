@@ -6,81 +6,6 @@
 
 namespace xcc {
 
-/**
- * Base type tree for all xi specific types
- */
-struct xi_type : public implement_tree<tree_type_id::xi_type> {
-public:
-
-    explicit inline xi_type(tree_type_id id) noexcept : base_type(id) {
-        /* do nothing */
-    }
-
-    explicit inline xi_type(const xi_type& t) noexcept
-            : base_type((base_type&) t) {
-        /* do nothing */
-    }
-
-};
-
-
-/**
- * Base decl tree for all xi specific declarations
- */
-struct xi_decl : public implement_tree<tree_type_id::xi_decl> {
-public:
-
-    explicit inline xi_decl(tree_type_id id, std::string name) noexcept : base_type(id, name) {
-        /* do nothing */
-    }
-
-    explicit inline xi_decl(const xi_decl& d) noexcept
-            : base_type((base_type&) d) {
-        /* do nothing */
-    }
-
-};
-
-
-/**
- * Base expr tree for all xi specific expressions
- */
-struct xi_expr : public implement_tree<tree_type_id::xi_expr> {
-public:
-
-    explicit inline xi_expr(tree_type_id id) noexcept : base_type(id) {
-        /* do nothing */
-    }
-
-    explicit inline xi_expr(tree_type_id id, ast_type* type) noexcept : base_type(id, type) {
-        /* do nothing */
-    }
-
-    explicit inline xi_expr(const xi_expr& e) noexcept
-            : base_type((base_type&) e) {
-        /* do nothing */
-    }
-
-};
-
-
-/**
- * Base stmt tree for all xi specific statements
- */
-struct xi_stmt : public implement_tree<tree_type_id::xi_stmt> {
-public:
-
-    explicit inline xi_stmt(tree_type_id id) noexcept : base_type(id) {
-        /* do nothing */
-    }
-
-    explicit inline xi_stmt(const xi_stmt& s) noexcept
-            : base_type((base_type&) s) {
-        /* do nothing */
-    }
-
-};
-
 
 /**
  * QName
@@ -226,7 +151,7 @@ public:
 struct xi_object_type : public implement_tree<tree_type_id::xi_object_type> {
 public:
 
-    explicit inline xi_object_type(xi_decl* decl) noexcept
+    explicit inline xi_object_type(ast_decl* decl) noexcept
             : base_type(),
               declaration(this, decl) {
         /* do nothing */
@@ -238,7 +163,7 @@ public:
         /* do nothing */
     }
 
-    property<xi_decl>                                               declaration;    //! The declaration that defines the type
+    property<ast_decl>                                              declaration;    //! The declaration that defines the type
 
 };
 
@@ -267,7 +192,7 @@ public:
 
 
 /**
- * A using declaration (???)
+ * A using declaration
  */
 struct xi_using_decl : public implement_tree<tree_type_id::xi_using_decl> {
 public:
@@ -327,7 +252,8 @@ public:
                       parameters(this, parameters),
                       body(this, body),
                       is_extern(this, false),
-                      is_inline(this, false) {
+                      is_inline(this, false),
+                      is_forward_decl(this, false) {
         /* do nothing */
     }
 
@@ -336,16 +262,18 @@ public:
               return_type(this, f.return_type),
               parameters(this, f.parameters),
               body(this, f.body),
-              is_extern(this, false),
-              is_inline(this, false) {
+              is_extern(this, f.is_extern),
+              is_inline(this, f.is_inline),
+              is_forward_decl(this, f.is_forward_decl){
         /* do nothing */
     }
 
-    property<bool>                                                  is_extern;      //! is defined somewhere else
-    property<bool>                                                  is_inline;      //! the code generator should try to inline this function
-    property<ast_type>                                              return_type;    //! the return type of this function
-    property<list<xi_parameter_decl>>                               parameters;     //! function parameters
-    property<ast_stmt>                                              body;           //! function body
+    property<bool>                                                  is_extern;          //! is defined somewhere else
+    property<bool>                                                  is_inline;          //! the code generator should try to inline this function
+    property<bool>                                                  is_forward_decl;    //! is a forward declaration
+    property<ast_type>                                              return_type;        //! the return type of this function
+    property<list<xi_parameter_decl>>                               parameters;         //! function parameters
+    property<ast_stmt>                                              body;               //! function body
 
 };
 
@@ -359,6 +287,13 @@ public:
     explicit inline xi_member_decl(tree_type_id id, std::string name, ast_type* parent) noexcept
             : base_type(id, name),
               is_static(this, false),
+              parent(this, parent) {
+        /* do nothing */
+    }
+
+    explicit inline xi_member_decl(tree_type_id id, std::string name, ast_type* parent, bool is_static) noexcept
+            : base_type(id, name),
+              is_static(this, is_static),
               parent(this, parent) {
         /* do nothing */
     }
@@ -394,7 +329,7 @@ public:
         /* do nothing */
     }
 
-    property<ast_type>                                              type;   //! this datamembers type
+    property<ast_type>                                              type;   //! this datamembers' type
 
 };
 
@@ -406,8 +341,8 @@ struct xi_method_decl : public implement_tree<tree_type_id::xi_method_decl> {
 public:
 
     //TODO: incomplete
-    explicit inline xi_method_decl(std::string name, ast_type* parent) noexcept
-            : base_type(name, parent) {
+    explicit inline xi_method_decl(std::string name, ast_type* parent, bool is_static) noexcept
+            : base_type(name, parent, is_static) {
         /* do nothing */
     }
 
@@ -450,16 +385,30 @@ public:
 struct xi_struct_decl : public implement_tree<tree_type_id::xi_struct_decl> {
 public:
 
+
     explicit inline xi_struct_decl(std::string name, ast_type* parent, list<xi_member_decl>* members) noexcept
-            : base_type(name, parent, members) {
+            : base_type(name, parent, members),
+              base_types(this, new list<ast_type>()),
+              is_forward_decl(this, false) {
+        /* do nothing */
+    }
+
+    explicit inline xi_struct_decl(std::string name, ast_type* parent, list<xi_member_decl>* members, list<ast_type>* base_types) noexcept
+            : base_type(name, parent, members),
+              base_types(this, base_types),
+              is_forward_decl(this, false) {
         /* do nothing */
     }
 
     explicit inline xi_struct_decl(const xi_struct_decl& s) noexcept
-            : base_type((base_type&) s) {
+            : base_type((base_type&) s),
+              base_types(this, s.base_types),
+              is_forward_decl(this, s.is_forward_decl) {
         /* do nothing */
     }
 
+    property<bool>                                                  is_forward_decl;
+    property<list<ast_type>>                                        base_types;
 };
 
 
@@ -554,7 +503,7 @@ public:
 
 
 /**
- * A group of candidate expressions (ususally a group of function overload candidates)
+ * A group of candidate expressions (usually a group of function overload candidates)
  */
 struct xi_group_expr : public implement_tree<tree_type_id::xi_group_expr> {
 public:
@@ -614,10 +563,10 @@ struct xi_op_expr : public implement_tree<tree_type_id::xi_op_expr> {
 
         __none__                =       0,
 
-        __and__                 =       1   | OP_BINARY | OP_LOGICAL    | OP_SHORT_CIRC,
-        __or__                  =       2   | OP_BINARY | OP_LOGICAL    | OP_SHORT_CIRC,
-        __xor__                 =       3   | OP_BINARY | OP_LOGICAL    | OP_SHORT_CIRC,
-        __not__                 =       4   | OP_UNARY  | OP_LOGICAL,
+        __and__                 =       1   | OP_BINARY | OP_LOGICAL    | OP_SHORT_CIRC | OP_COMP,
+        __or__                  =       2   | OP_BINARY | OP_LOGICAL    | OP_SHORT_CIRC | OP_COMP,
+        __xor__                 =       3   | OP_BINARY | OP_LOGICAL    | OP_SHORT_CIRC | OP_COMP,
+        __not__                 =       4   | OP_UNARY  | OP_LOGICAL                    | OP_COMP,
         __rand__                =       __and__         | OP_REVERSE,
         __ror__                 =       __or__          | OP_REVERSE,
         __rxor__                =       __xor__         | OP_REVERSE,
@@ -660,12 +609,12 @@ struct xi_op_expr : public implement_tree<tree_type_id::xi_op_expr> {
         __ibor__                =       __bor__         | OP_ASSIGN,
         __ibxor__               =       __bxor__        | OP_ASSIGN,
 
-        __lt__                  =       16  | OP_BINARY | OP_NUMERIC,
-        __le__                  =       17  | OP_BINARY | OP_NUMERIC,
-        __gt__                  =       18  | OP_BINARY | OP_NUMERIC,
-        __ge__                  =       19  | OP_BINARY | OP_NUMERIC,
-        __eq__                  =       20  | OP_BINARY | OP_NUMERIC,
-        __ne__                  =       21  | OP_BINARY | OP_NUMERIC,
+        __lt__                  =       16  | OP_BINARY | OP_NUMERIC | OP_COMP,
+        __le__                  =       17  | OP_BINARY | OP_NUMERIC | OP_COMP,
+        __gt__                  =       18  | OP_BINARY | OP_NUMERIC | OP_COMP,
+        __ge__                  =       19  | OP_BINARY | OP_NUMERIC | OP_COMP,
+        __eq__                  =       20  | OP_BINARY | OP_NUMERIC | OP_COMP,
+        __ne__                  =       21  | OP_BINARY | OP_NUMERIC | OP_COMP,
         __rlt__                 =       __lt__          | OP_REVERSE,
         __rle__                 =       __le__          | OP_REVERSE,
         __rgt__                 =       __gt__          | OP_REVERSE,
@@ -673,24 +622,25 @@ struct xi_op_expr : public implement_tree<tree_type_id::xi_op_expr> {
         __req__                 =       __eq__          | OP_REVERSE,
         __rne__                 =       __ne__          | OP_REVERSE,
 
-        __invoke__              =       22  | OP_SPECIAL,
-        __index__               =       23  | OP_SPECIAL,
-        __ctor__                =       24  | OP_SPECIAL,
-        __dtor__                =       25  | OP_SPECIAL,
-        __get__                 =       26  | OP_SPECIAL,
-        __set__                 =       27  | OP_SPECIAL,
-        __alloc__               =       28  | OP_SPECIAL,
-        __dealloc__             =       29  | OP_SPECIAL,
+        __call__                =       22  | OP_SPECIAL,
+        __invoke__              =       23  | OP_SPECIAL,
+        __index__               =       24  | OP_SPECIAL,
+        __ctor__                =       25  | OP_SPECIAL,
+        __dtor__                =       26  | OP_SPECIAL,
+        __get__                 =       27  | OP_SPECIAL,
+        __set__                 =       28  | OP_SPECIAL,
+        __alloc__               =       29  | OP_SPECIAL,
+        __dealloc__             =       30  | OP_SPECIAL,
 
-        __assign__              =       30  | OP_SPECIAL    | OP_ASSIGN,
+        __assign__              =       31  | OP_SPECIAL    | OP_ASSIGN,
 
-        __move__                =       31  | OP_SPECIAL    | OP_ASSIGN,
-        __move_const__          =       32  | OP_SPECIAL    | OP_ASSIGN,
-        __copy__                =       33  | OP_SPECIAL    | OP_ASSIGN,
-        __copy_const__          =       34  | OP_SPECIAL    | OP_ASSIGN,
+        __move__                =       32  | OP_SPECIAL    | OP_ASSIGN,
+        __move_const__          =       33  | OP_SPECIAL    | OP_ASSIGN,
+        __copy__                =       34  | OP_SPECIAL    | OP_ASSIGN,
+        __copy_const__          =       35  | OP_SPECIAL    | OP_ASSIGN,
 
-        __deref__               =       35  | OP_SPECIAL    | OP_UNARY,
-        __address_of__          =       36  | OP_SPECIAL    | OP_UNARY,
+        __deref__               =       36  | OP_SPECIAL    | OP_UNARY,
+        __address_of__          =       37  | OP_SPECIAL    | OP_UNARY,
 
     };
 
@@ -733,6 +683,12 @@ public:
 
     explicit inline xi_tuple_expr(list<ast_expr>* expressions) noexcept
             : base_type(nullptr),
+              expressions(this, expressions) {
+        /* do nothing */
+    }
+
+    explicit inline xi_tuple_expr(ast_type* tp, list<ast_expr>* expressions) noexcept
+            : base_type(tp),
               expressions(this, expressions) {
         /* do nothing */
     }

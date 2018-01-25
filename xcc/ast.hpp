@@ -181,6 +181,12 @@ public:
 };
 
 
+inline bool is_type(tree_t* t) { return t->is<ast_type>(); }
+inline bool is_decl(tree_t* t) { return t->is<ast_decl>(); }
+inline bool is_expr(tree_t* t) { return t->is<ast_expr>(); }
+inline bool is_stmt(tree_t* t) { return t->is<ast_stmt>(); }
+
+
 /**
  * A Namespace
  */

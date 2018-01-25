@@ -177,16 +177,6 @@ protected:
         this->context = this->context->push_context<TContext>(std::forward<TArgs>(args)...);
     }
 
-    /**
-     * Leave the current context and return to its' parent
-     * @return              the original context
-     */
-    inline ptr<ast_context> pop_context() noexcept {
-        auto popped_context = this->context;
-        this->context = this->context->parent;
-        return popped_context;
-    }
-
     translation_unit&                                                   tu;                                         //! The translation unit
     ptr<ast_namespace_decl>                                             global_namespace;                           //! The unnamed global namespace
 
@@ -194,6 +184,10 @@ protected:
     ast_type_hasher*                                                    _type_hasher_ptr;                           //! A pointer to the type hasher function
 
 public:
+
+    inline ptr<ast_namespace_decl> get_global_namespace() const {
+        return this->global_namespace;
+    }
 
     /**
      * Step into a namespace scope
@@ -212,6 +206,13 @@ public:
      * @param
      */
     virtual void                                push_block(ast_block_stmt*)                                               noexcept;
+
+    /**
+     * Leave the current context
+     */
+    inline void pop_context() noexcept {
+        this->context = this->context->pop_context();
+    }
 
     /**
      * Get the first declaration with the given name
@@ -239,11 +240,6 @@ public:
      * @return
      */
     virtual ptr<list<ast_decl>>                 find_all_declarations(ast_context*, const char*)                    const noexcept;
-
-    /**
-     * Step out of the current context and back into its parent
-     */
-    virtual void                                pop()                                                                     noexcept;
 
     /**
      * Insert a declaration at the global scope

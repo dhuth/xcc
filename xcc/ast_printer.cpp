@@ -213,7 +213,7 @@ static void print_record_type(ast_record_type* rtype, std::ostream& s) {
 }
 
 static void print_namespace_decl(ast_namespace_decl* ns, std::ostream& s) {
-    ast_printer::print(s, "namespace %0 {\\n\\>%{1:,\\n}\\<\\n}", ns->name, ns->declarations);
+    ast_printer::print(s, "namespace %0 {\\>\\n%{1:\\n}\\<\\n}", ns->name, ns->declarations);
 }
 
 static void print_variable_decl(ast_variable_decl* var, std::ostream& s) {

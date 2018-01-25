@@ -133,6 +133,7 @@ llvm::Value* ircode_expr_generator::generate_cast(ast_cast* cexpr) {
     return nullptr;
 }
 
+#define __mk_inst(mt)          llvm::dyn_cast<llvm::Value>(context.ir_builder.Create##mt(lexpr, rexpr))
 llvm::Value* ircode_expr_generator::generate_binary_op(ast_binary_op* expr) {
     auto type = context.generate_type(expr->type);
     auto lexpr = this->visit(expr->lhs);
@@ -140,50 +141,50 @@ llvm::Value* ircode_expr_generator::generate_binary_op(ast_binary_op* expr) {
 
     switch((ast_op) expr->op) {
 
-    case ast_op::iadd:          return context.ir_builder.CreateAdd(lexpr, rexpr);
-    case ast_op::fadd:          return context.ir_builder.CreateFAdd(lexpr, rexpr);
-    case ast_op::isub:          return context.ir_builder.CreateSub(lexpr, rexpr);
-    case ast_op::fsub:          return context.ir_builder.CreateFSub(lexpr, rexpr);
-    case ast_op::imul:          return context.ir_builder.CreateMul(lexpr, rexpr);
-    case ast_op::fmul:          return context.ir_builder.CreateFMul(lexpr, rexpr);
-    case ast_op::idiv:          return context.ir_builder.CreateSDiv(lexpr, rexpr);
-    case ast_op::udiv:          return context.ir_builder.CreateUDiv(lexpr, rexpr);
-    case ast_op::fdiv:          return context.ir_builder.CreateFDiv(lexpr, rexpr);
-    case ast_op::umod:          return context.ir_builder.CreateURem(lexpr, rexpr);
-    case ast_op::imod:          return context.ir_builder.CreateSRem(lexpr, rexpr);
-    case ast_op::fmod:          return context.ir_builder.CreateFRem(lexpr, rexpr);
+    case ast_op::iadd:          return __mk_inst(Add);      //context.ir_builder.CreateAdd(lexpr, rexpr);
+    case ast_op::fadd:          return __mk_inst(FAdd);     //context.ir_builder.CreateFAdd(lexpr, rexpr);
+    case ast_op::isub:          return __mk_inst(Sub);      //context.ir_builder.CreateSub(lexpr, rexpr);
+    case ast_op::fsub:          return __mk_inst(FSub);     //context.ir_builder.CreateFSub(lexpr, rexpr);
+    case ast_op::imul:          return __mk_inst(Mul);      //context.ir_builder.CreateMul(lexpr, rexpr);
+    case ast_op::fmul:          return __mk_inst(FMul);     //context.ir_builder.CreateFMul(lexpr, rexpr);
+    case ast_op::idiv:          return __mk_inst(SDiv);     //context.ir_builder.CreateSDiv(lexpr, rexpr);
+    case ast_op::udiv:          return __mk_inst(UDiv);     //context.ir_builder.CreateUDiv(lexpr, rexpr);
+    case ast_op::fdiv:          return __mk_inst(FDiv);     //context.ir_builder.CreateFDiv(lexpr, rexpr);
+    case ast_op::umod:          return __mk_inst(URem);     //context.ir_builder.CreateURem(lexpr, rexpr);
+    case ast_op::imod:          return __mk_inst(SRem);     //context.ir_builder.CreateSRem(lexpr, rexpr);
+    case ast_op::fmod:          return __mk_inst(FRem);     //context.ir_builder.CreateFRem(lexpr, rexpr);
 
-    case ast_op::land:          return context.ir_builder.CreateAnd(lexpr, rexpr);
-    case ast_op::lor:           return context.ir_builder.CreateOr(lexpr, rexpr);
-    case ast_op::band:          return context.ir_builder.CreateAnd(lexpr, rexpr);
-    case ast_op::bor:           return context.ir_builder.CreateOr(lexpr, rexpr);
-    case ast_op::bxor:          return context.ir_builder.CreateXor(lexpr, rexpr);
-    case ast_op::bshl:          return context.ir_builder.CreateShl(lexpr, rexpr);
-    case ast_op::bshr:          return context.ir_builder.CreateLShr(lexpr, rexpr);
-    case ast_op::ashr:          return context.ir_builder.CreateAShr(lexpr, rexpr);
+    case ast_op::land:          return __mk_inst(And);      //context.ir_builder.CreateAnd(lexpr, rexpr);
+    case ast_op::lor:           return __mk_inst(Or);       //context.ir_builder.CreateOr(lexpr, rexpr);
+    case ast_op::band:          return __mk_inst(And);      //context.ir_builder.CreateAnd(lexpr, rexpr);
+    case ast_op::bor:           return __mk_inst(Or);       //context.ir_builder.CreateOr(lexpr, rexpr);
+    case ast_op::bxor:          return __mk_inst(Xor);      //context.ir_builder.CreateXor(lexpr, rexpr);
+    case ast_op::bshl:          return __mk_inst(Shl);      //context.ir_builder.CreateShl(lexpr, rexpr);
+    case ast_op::bshr:          return __mk_inst(LShr);     //context.ir_builder.CreateLShr(lexpr, rexpr);
+    case ast_op::ashr:          return __mk_inst(AShr);     //context.ir_builder.CreateAShr(lexpr, rexpr);
 
-    case ast_op::cmp_eq:        return context.ir_builder.CreateICmpEQ(lexpr, rexpr);
-    case ast_op::cmp_ne:        return context.ir_builder.CreateICmpNE(lexpr, rexpr);
-    case ast_op::icmp_ult:      return context.ir_builder.CreateICmpULT(lexpr, rexpr);
-    case ast_op::icmp_ule:      return context.ir_builder.CreateICmpULE(lexpr, rexpr);
-    case ast_op::icmp_ugt:      return context.ir_builder.CreateICmpUGT(lexpr, rexpr);
-    case ast_op::icmp_uge:      return context.ir_builder.CreateICmpUGE(lexpr, rexpr);
-    case ast_op::icmp_slt:      return context.ir_builder.CreateICmpSLT(lexpr, rexpr);
-    case ast_op::icmp_sle:      return context.ir_builder.CreateICmpSLE(lexpr, rexpr);
-    case ast_op::icmp_sgt:      return context.ir_builder.CreateICmpSGT(lexpr, rexpr);
-    case ast_op::icmp_sge:      return context.ir_builder.CreateICmpSGE(lexpr, rexpr);
-    case ast_op::fcmp_oeq:      return context.ir_builder.CreateFCmpOEQ(lexpr, rexpr);
-    case ast_op::fcmp_one:      return context.ir_builder.CreateFCmpONE(lexpr, rexpr);
-    case ast_op::fcmp_olt:      return context.ir_builder.CreateFCmpOLT(lexpr, rexpr);
-    case ast_op::fcmp_ole:      return context.ir_builder.CreateFCmpOLE(lexpr, rexpr);
-    case ast_op::fcmp_ogt:      return context.ir_builder.CreateFCmpOGT(lexpr, rexpr);
-    case ast_op::fcmp_oge:      return context.ir_builder.CreateFCmpOGE(lexpr, rexpr);
-    case ast_op::fcmp_ueq:      return context.ir_builder.CreateFCmpUEQ(lexpr, rexpr);
-    case ast_op::fcmp_une:      return context.ir_builder.CreateFCmpUNE(lexpr, rexpr);
-    case ast_op::fcmp_ult:      return context.ir_builder.CreateFCmpULT(lexpr, rexpr);
-    case ast_op::fcmp_ule:      return context.ir_builder.CreateFCmpULE(lexpr, rexpr);
-    case ast_op::fcmp_ugt:      return context.ir_builder.CreateFCmpUGT(lexpr, rexpr);
-    case ast_op::fcmp_uge:      return context.ir_builder.CreateFCmpUGE(lexpr, rexpr);
+    case ast_op::cmp_eq:        return __mk_inst(ICmpEQ);   //context.ir_builder.CreateICmpEQ(lexpr, rexpr);
+    case ast_op::cmp_ne:        return __mk_inst(ICmpNE);   //context.ir_builder.CreateICmpNE(lexpr, rexpr);
+    case ast_op::icmp_ult:      return __mk_inst(ICmpULT);  //context.ir_builder.CreateICmpULT(lexpr, rexpr);
+    case ast_op::icmp_ule:      return __mk_inst(ICmpULE);  //context.ir_builder.CreateICmpULE(lexpr, rexpr);
+    case ast_op::icmp_ugt:      return __mk_inst(ICmpUGT);  //context.ir_builder.CreateICmpUGT(lexpr, rexpr);
+    case ast_op::icmp_uge:      return __mk_inst(ICmpUGE);  //context.ir_builder.CreateICmpUGE(lexpr, rexpr);
+    case ast_op::icmp_slt:      return __mk_inst(ICmpSLT);  //context.ir_builder.CreateICmpSLT(lexpr, rexpr);
+    case ast_op::icmp_sle:      return __mk_inst(ICmpSLE);  //context.ir_builder.CreateICmpSLE(lexpr, rexpr);
+    case ast_op::icmp_sgt:      return __mk_inst(ICmpSGT);  //context.ir_builder.CreateICmpSGT(lexpr, rexpr);
+    case ast_op::icmp_sge:      return __mk_inst(ICmpSGE);  //context.ir_builder.CreateICmpSGE(lexpr, rexpr);
+    case ast_op::fcmp_oeq:      return __mk_inst(FCmpOEQ);  //context.ir_builder.CreateFCmpOEQ(lexpr, rexpr);
+    case ast_op::fcmp_one:      return __mk_inst(FCmpONE);  //context.ir_builder.CreateFCmpONE(lexpr, rexpr);
+    case ast_op::fcmp_olt:      return __mk_inst(FCmpOLT);  //context.ir_builder.CreateFCmpOLT(lexpr, rexpr);
+    case ast_op::fcmp_ole:      return __mk_inst(FCmpOLE);  //context.ir_builder.CreateFCmpOLE(lexpr, rexpr);
+    case ast_op::fcmp_ogt:      return __mk_inst(FCmpOGT);  //context.ir_builder.CreateFCmpOGT(lexpr, rexpr);
+    case ast_op::fcmp_oge:      return __mk_inst(FCmpOGE);  //context.ir_builder.CreateFCmpOGE(lexpr, rexpr);
+    case ast_op::fcmp_ueq:      return __mk_inst(FCmpUEQ);  //context.ir_builder.CreateFCmpUEQ(lexpr, rexpr);
+    case ast_op::fcmp_une:      return __mk_inst(FCmpUNE);  //context.ir_builder.CreateFCmpUNE(lexpr, rexpr);
+    case ast_op::fcmp_ult:      return __mk_inst(FCmpULT);  //context.ir_builder.CreateFCmpULT(lexpr, rexpr);
+    case ast_op::fcmp_ule:      return __mk_inst(FCmpULE);  //context.ir_builder.CreateFCmpULE(lexpr, rexpr);
+    case ast_op::fcmp_ugt:      return __mk_inst(FCmpUGT);  //context.ir_builder.CreateFCmpUGT(lexpr, rexpr);
+    case ast_op::fcmp_uge:      return __mk_inst(FCmpUGE);  //context.ir_builder.CreateFCmpUGE(lexpr, rexpr);
     default:
         //TODO: error unandled
         break;

@@ -23,7 +23,11 @@
 
 namespace xcc {
 
+extern void setup_xi_printer();
+
 int ximain(const char* input_filename_list, const char* output_filename, std::vector<std::string>& args) {
+    setup_xi_printer();
+
     translation_unit            unit;
 
     // TODO: read input args
@@ -47,6 +51,8 @@ int ximain(const char* input_filename_list, const char* output_filename, std::ve
     // TODO: builder.lower();                        // lower to ast
     ctx.generate(unit, output_filename);
 
+
+    ast_printer::print(builder.get_global_namespace(), std::cout); std::cout << '\n';
     return 0;
 }
 

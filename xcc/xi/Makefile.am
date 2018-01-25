@@ -6,13 +6,15 @@ libxi_a_SOURCES    += xi_builder.cpp
 libxi_a_SOURCES    += xi_context.cpp
 libxi_a_SOURCES    += xi_lower.cpp
 libxi_a_SOURCES    += xi_metadata.cpp
+libxi_a_SOURCES    += xi_printer.cpp
 libxi_a_SOURCES    += xi_semantic.cpp
+libxi_a_SOURCES    += xi_tc_expr.cpp
 libxi_a_SOURCES    += xi_tree.cpp
 libxi_a_SOURCES    += xi-parser.cpp
 libxi_a_SOURCES    += xi-lex.cpp
 
 libxi_a_CPPFLAGS    = @llvm_cppflags@
-libxi_a_CXXFLAGS    = -std=c++17 -pthread
+libxi_a_CXXFLAGS    = -std=c++17 -pthread -fno-rtti
 
 BUILT_SOURCES       = xi-parser.hpp
 BUILT_SOURCES      += xi-lex.hpp

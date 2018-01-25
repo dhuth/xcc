@@ -16,26 +16,6 @@ namespace xcc {
 
 struct xi_builder;
 
-template<typename TResult, typename... TParameters>
-using xi_visitor = dispatch_visitor<TResult, xi_builder&, TParameters...>;
-
-struct xi_function_context final : public ast_context {
-public:
-
-    inline xi_function_context(ast_context* prev, xi_function_decl* decl) noexcept : ast_context(prev), func(decl) { }
-    virtual ~xi_function_context() = default;
-
-    virtual void insert(const char*, ast_decl*);
-
-protected:
-
-    virtual ptr<ast_decl> find_first_impl(const char*);
-    virtual void          find_all_impl(ptr<list<ast_decl>>, const char*);
-
-    ptr<xi_function_decl>                      func;
-
-};
-
 struct xi_builder : public ast_builder<ast_default_name_mangler,
                                        xi_type_comparer,
                                        xi_type_hasher> {
@@ -54,15 +34,17 @@ public:
     ast_type*                                   get_const_type(ast_type* type)                                                                                noexcept;
     ast_type*                                   get_auto_type()                                                                                         const noexcept;
     ast_type*                                   get_reference_type(ast_type* type)                                                                            noexcept;
-    ast_type*                                   get_object_type(xi_decl* decl)                                                                                noexcept;
+    ast_type*                                   get_object_type(ast_decl* decl)                                                                               noexcept;
     ast_type*                                   get_tuple_type(list<ast_type>* types)                                                                         noexcept;
     ast_type*                                   get_id_type(xi_qname*)                                                                                const noexcept;
 
     virtual ast_type*                           get_declaration_type(ast_decl*)                                                                               noexcept;
 
     xi_function_decl*                           make_xi_function_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*)                      const noexcept;
+    xi_function_decl*                           make_xi_function_fwd_decl(const char*, ast_type*, list<xi_parameter_decl>*)                             const noexcept;
     xi_parameter_decl*                          make_xi_parameter_decl(const char*, ast_type*)                                                          const noexcept;
     xi_struct_decl*                             make_xi_struct_decl(const char*, list<xi_member_decl>*)                                                 const noexcept;
+    xi_struct_decl*                             make_xi_struct_fwd_decl(const char*)                                                                    const noexcept;
     xi_field_decl*                              make_xi_field_decl(const char*, ast_type*)                                                              const noexcept;
 
     ast_expr*                                   make_xi_id_expr(xi_qname*)                                                                              const noexcept;
@@ -78,8 +60,13 @@ public:
     ast_stmt*                                   make_xi_while_stmt(ast_expr*, ast_stmt*)                                                                const noexcept;
     ast_stmt*                                   make_xi_return_stmt(ast_expr*)                                                                          const noexcept;
 
-    ast_decl*                                   find_declaration(xi_qname*)                                                                                   noexcept;
+    ast_decl*                                   find_declaration(xi_qname*)                                                                             const noexcept;
+    ptr<list<ast_decl>>                         find_all_declarations(xi_qname*)                                                                        const noexcept;
+
+    void                                        push_xi_using(xi_using_decl*)                                                                                 noexcept;
     void                                        push_xi_function(xi_function_decl*)                                                                           noexcept;
+    void                                        push_xi_struct(xi_struct_decl*)                                                                               noexcept;
+    void                                        push_xi_method(xi_method_decl*)                                                                               noexcept;
 
     //ast_expr*                                   const_eval(ast_expr*)                                                                                   const noexcept;
     void                                        write_metadata(ircode_context&)                                                                               noexcept;
@@ -97,6 +84,34 @@ private:
     ast_typeset                                 _tuple_types;
 
 };
+
+void maybe_push_context(tree_t*, xi_builder& b);
+void maybe_pop_context(tree_t*, xi_builder& b);
+
+template<typename... TParameters>
+struct xi_postorder_walker : public dispatch_postorder_tree_walker<tree_t, xi_builder&, TParameters...> {
+public:
+
+    void begin(tree_type_id, tree_t* t, xi_builder& b, TParameters...) override {
+        maybe_push_context(t, b);
+    }
+    void end(tree_type_id, tree_t* t, xi_builder& b, TParameters...) override {
+        maybe_pop_context(t, b);
+    }
+};
+
+template<typename... TParameters>
+struct xi_preorder_walker : public dispatch_postorder_tree_walker<tree_t, xi_builder&, TParameters...> {
+public:
+
+    void begin(tree_type_id, tree_t* t, xi_builder& b, TParameters...) override {
+        maybe_push_context(t, b);
+    }
+    void end(tree_type_id, tree_t* t, xi_builder& b, TParameters...) override {
+        maybe_pop_context(t, b);
+    }
+};
+
 
 }
 

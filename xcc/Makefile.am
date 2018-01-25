@@ -16,7 +16,7 @@ xcc_core_sources       += ast_printer.cpp
 xcc_core_sources       += llvm_metadata.cpp
 
 xcc_core_cppflags       = @llvm_cppflags@
-xcc_core_cxxflags       = -std=c++17 -pthread
+xcc_core_cxxflags       = -std=c++17 -pthread -fno-rtti
 xcc_core_libs           = @xcc_lang_libs@ @llvm_libs@ @llvm_syslibs@
 xcc_core_ldflags        = @llvm_ldflags@
 
@@ -32,7 +32,7 @@ xcc_SOURCES             = $(xcc_core_sources) xcc.cpp
 xcc_LDADD               = $(xcc_core_libs)
 xcc_LDFLAGS             = $(xcc_core_ldflags)
 
-
+EXTRA_xcc_DEPENDENCIES  = @xcc_lang_libs@
 
 check_PROGRAMS          = check_tree
 check_PROGRAMS         += check_ast

@@ -5,11 +5,13 @@
  *      Author: derick
  */
 
-#include "xi_builder.hpp"
+#include "xi_semantic.hpp"
+#include "error.hpp"
 
 namespace xcc {
 
 static void merge_namespaces_in(ast_namespace_decl*) noexcept;
+
 
 static void merge_namespaces_into(ast_namespace_decl* ns, list<ast_decl>::iterator rest, list<ast_decl>* list) {
     auto itr = rest;
@@ -44,14 +46,24 @@ static void merge_namespaces(list<ast_decl>* decls) noexcept {
     }
 }
 
+
 static void merge_namespaces_in(ast_namespace_decl* ns) noexcept {
     merge_namespaces(ns->declarations);
 }
 
-void xi_builder::semantic_check(/*error log info*/) noexcept {
+
+void xi_builder::semantic_check(/*options & error log info*/) noexcept {
     // merge namespaces
     merge_namespaces_in(this->global_namespace);
 
+    // type checking & synthesizing (all of the magic)
+    xi_decl_tcwalker    tc_decl;
+    xi_expr_tcvisitor   tc_expr(tc_decl);
+
+    tc_decl.visit(this->global_namespace, *this, tc_expr);
+}
+
+xi_decl_tcwalker::xi_decl_tcwalker() noexcept {
     //TODO: ...
 }
 

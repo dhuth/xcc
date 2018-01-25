@@ -200,16 +200,18 @@ struct tree_type_info {
 struct __tree_base {
 public:
 
+    static const tree_type_id type_id = tree_type_id::tree;
+
     explicit inline __tree_base()                noexcept : _type(tree_type_id::tree) { }
     explicit inline __tree_base(tree_type_id id) noexcept : _type(id)                 { }
     virtual ~__tree_base() = default;
 
     inline bool is(const tree_type_id tp) const noexcept { return tree_type::is_base_of(tp, this->_type); }
-    template<typename T, enable_if_tree_t<T> = 0>
-    inline bool is() const noexcept { return this->is(T::type_id); }
+    template<typename T>
+    inline enable_if_tree_t<T, bool> is() const noexcept { return this->is(T::type_id); }
 
-    template<typename T, enable_if_tree_t<T> = 0>
-    inline T* as() const noexcept { return dynamic_cast<T*>(const_cast<__tree_base*>(this)); }
+    template<typename T>
+    inline enable_if_tree_t<T, T*> as() const noexcept { return static_cast<T*>(const_cast<__tree_base*>(this)); }
     inline tree_type_id get_tree_type() const { return this->_type; }
 
     inline const char* get_tree_type_name() const { return __all_tree_types[(size_t) this->_type].name; };
@@ -248,7 +250,7 @@ protected:
 
 };
 
-template<tree_type_id VType, typename TBase = __tree_base, enable_if_tree_t<TBase> = 0>
+template<tree_type_id VType, typename TBase = __tree_base>
 struct __extend_tree : public TBase {
 private:
 
@@ -427,7 +429,7 @@ public:
     inline       iterator find(TFindElement* el) {
         auto itr = this->begin();
         while(itr != this->end()) {
-            if(*itr == dynamic_cast<element_t>(el)) {
+            if(*itr == static_cast<element_t>(el)) {
                 return itr;
             }
             ++itr;
@@ -481,7 +483,7 @@ inline T* first(ptr<__tree_list_tree<T>>& l) {
 }
 
 template<typename T>
-inline T* first(__tree_property_list<T>& p) {
+inline typename __tree_property_list<T>::element_t first(__tree_property_list<T>& p) {
     return p[0];
 }
 
@@ -585,12 +587,12 @@ public:
             : __tree_property_base(), _parent(other.shift_address(this)), _index(other._index) { }
 
     inline operator TTreeType*() const noexcept {
-        return dynamic_cast<TTreeType*>(this->__get());
+        return static_cast<TTreeType*>(this->__get());
     }
 
     template<typename TTargetType, typename std::enable_if<std::is_base_of<TTreeType, TTargetType>::value, int>::type = 0>
     inline operator TTargetType*() const noexcept {
-        return dynamic_cast<TTargetType*>(this->__get());
+        return static_cast<TTargetType*>(this->__get());
     }
 
     inline decltype(nullptr) operator=(decltype(nullptr) null) {
@@ -611,7 +613,7 @@ public:
     }
 
     inline TTreeType* operator->() const noexcept {
-        return dynamic_cast<TTreeType*>(this->__get());
+        return static_cast<TTreeType*>(this->__get());
     }
 
     inline bool operator==(decltype(nullptr)) {
@@ -661,10 +663,10 @@ public:
         return v;
     }
 
-    inline typename list_t::      iterator begin()       noexcept { return dynamic_cast<list_t*>(this->__get())->begin(); }
-    inline typename list_t::      iterator end()         noexcept { return dynamic_cast<list_t*>(this->__get())->end();   }
-    inline typename list_t::const_iterator begin() const noexcept { return dynamic_cast<list_t*>(this->__get())->begin(); }
-    inline typename list_t::const_iterator end()   const noexcept { return dynamic_cast<list_t*>(this->__get())->end();   }
+    inline typename list_t::      iterator begin()       noexcept { return static_cast<list_t*>(this->__get())->begin(); }
+    inline typename list_t::      iterator end()         noexcept { return static_cast<list_t*>(this->__get())->end();   }
+    inline typename list_t::const_iterator begin() const noexcept { return static_cast<list_t*>(this->__get())->begin(); }
+    inline typename list_t::const_iterator end()   const noexcept { return static_cast<list_t*>(this->__get())->end();   }
 
 };
 
@@ -794,7 +796,7 @@ protected:
              typename TTreeType>
     void addmethod(dispatch_method_type<TFuncReturnType, TClassType, TTreeType> func) {
         auto wfunc = [=](__tree_base* t, TParamTypes... args) -> TReturnType {
-            return (TReturnType) (dynamic_cast<TClassType*>(this)->*func)(t->as<TTreeType>(), args...);
+            return (TReturnType) (static_cast<TClassType*>(this)->*func)(t->as<TTreeType>(), args...);
         };
         this->_function_map[tree_type_id_from<TTreeType>()] = wfunc;
     }
@@ -845,7 +847,7 @@ protected:
              typename TTreeType>
     void addmethod(dispatch_method_type<TClassType, TTreeType> func) {
         auto wfunc = [=](__tree_base* t, TParamTypes... args) {
-            return (dynamic_cast<TClassType*>(this)->*func)(t->as<TTreeType>(), args...);
+            return (static_cast<TClassType*>(this)->*func)(t->as<TTreeType>(), args...);
         };
         this->_function_map[tree_type_id_from<TTreeType>()] = wfunc;
     }
@@ -917,7 +919,7 @@ public:
     template<typename TReturnType, typename TTreeType>
     inline void add(translate_func_t<TReturnType, TTreeType> func) {
         auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
-            *retv = dynamic_cast<__tree_base*>(
+            *retv = static_cast<__tree_base*>(
                     func(node->as<TTreeType>(), args...));
         };
         this->_functions[tree_type_id_from<TTreeType>()] = wfunc;
@@ -926,8 +928,8 @@ public:
     template<typename TReturnType, typename TTreeType, typename TClassType>
     inline void add(translate_method_t<TReturnType, TTreeType, TClassType> mtd) {
         auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
-            *retv = dynamic_cast<__tree_base*>(
-                    (dynamic_cast<TClassType*>(this)->*mtd)(node->as<TTreeType>(), args...));
+            *retv = static_cast<__tree_base*>(
+                    (static_cast<TClassType*>(this)->*mtd)(node->as<TTreeType>(), args...));
         };
         this->_functions[tree_type_id_from<TTreeType>()] = wfunc;
     }
@@ -935,17 +937,17 @@ public:
     template<typename TTreeType, typename TClassType>
     inline void add(visit_method_t<TTreeType, TClassType> mtd) {
         auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
-            (dynamic_cast<TClassType*>(this)->*mtd)(node->as<TTreeType>(), args...);
+            (static_cast<TClassType*>(this)->*mtd)(node->as<TTreeType>(), args...);
         };
         this->_functions[tree_type_id_from<TTreeType>()] = wfunc;
     }
 
     virtual void begin(tree_type_id, TBaseType*, TParamTypes...)     { }
     virtual void end(tree_type_id,   TBaseType*, TParamTypes...)     { }
-    virtual void postvisit(tree_type_id, TBaseType*, TParamTypes...) { }
+    virtual void postvisit(tree_type_id, TBaseType*, TParamTypes...) { } // ???
 
     TBaseType* visit(TBaseType* t, TParamTypes... args) {
-        return dynamic_cast<TBaseType*>(this->visit_internal(dynamic_cast<__tree_base*>(t), args...));
+        return static_cast<TBaseType*>(this->visit_internal(static_cast<__tree_base*>(t), args...));
     }
 
     inline void set(TBaseType* t, TBaseType* v) noexcept {
@@ -997,9 +999,8 @@ private:
             if(this->_visited.find(t) == this->_visited.end()) {
                 auto new_t = this->visit_impl(t, args...);
                 if(new_t != nullptr && t->is<TBaseType>()) {
-                    this->postvisit(new_t->get_tree_type(), dynamic_cast<TBaseType*>(new_t), args...);
+                    this->postvisit(new_t->get_tree_type(), static_cast<TBaseType*>(new_t), args...);
                 }
-                this->_visited[t] = new_t;
                 return new_t;
             }
             return this->_visited[t];
@@ -1012,7 +1013,7 @@ protected:
     virtual __tree_base* visit_impl(__tree_base*, TParamTypes...) = 0;
     inline void walk_children(__tree_base* t, TParamTypes... args) {
         if(t->is<TBaseType>()) {
-            this->begin(t->get_tree_type(), dynamic_cast<TBaseType*>(t), args...);
+            this->begin(t->get_tree_type(), static_cast<TBaseType*>(t), args...);
         }
         for(size_t i = 0; i < t->_child_nodes.size(); i++) {
             auto child = unbox(t->_child_nodes[i]);
@@ -1021,7 +1022,7 @@ protected:
             }
         }
         if(t->is<TBaseType>()) {
-            this->end(t->get_tree_type(), dynamic_cast<TBaseType*>(t), args...);
+            this->end(t->get_tree_type(), static_cast<TBaseType*>(t), args...);
         }
     }
 
@@ -1030,6 +1031,7 @@ protected:
         if(this->_functions.find(tpid) != this->_functions.end()) {
             __tree_base* retval = t;
             this->_functions[tpid](&retval, t, args...);
+            this->_visited[t] = retval;
             return retval;
         }
         return t;

@@ -9,9 +9,9 @@
 #include <iostream>
 #include <sstream>
 
-#include <exception>
 #include "ast_builder.hpp"
 #include "frontend.hpp"
+#include "error.hpp"
 
 
 namespace xcc {
@@ -120,8 +120,9 @@ ast_type* __ast_builder_impl::get_declaration_type(ast_decl* decl) noexcept {
             list<ast_type>*         plist = new list<ast_type>(pvec);
             return this->get_function_type(rtype, box(plist));
         }
+    default:
+        __throw_unhandled_tree_type(__FILE__, __LINE__, decl, "__ast_builder_impl::get_declaration_type");
     }
-    throw std::runtime_error(__FILE__ ":" + std::to_string(__LINE__) + " Unhandled " + std::string(decl->get_tree_type_name()) + "\n");
 }
 
 ast_decl* __ast_builder_impl::make_namespace_decl(const char* name, list<ast_decl>* decls) const noexcept {
@@ -183,8 +184,9 @@ ast_expr* __ast_builder_impl::make_zero(ast_type* tp) const noexcept {
             }
             return new ast_array(tp, exprlist);
         }
+    default:
+        __throw_unhandled_ast_type(__FILE__, __LINE__, tp, "__ast_builder_impl::make_zero");
     }
-    throw std::runtime_error("unhandled ast type " + std::to_string((uint32_t) tp->get_tree_type()));
 }
 
 ast_expr* __ast_builder_impl::make_cast_expr(ast_type* desttype, ast_expr* expr) const {
@@ -197,8 +199,9 @@ ast_expr* __ast_builder_impl::make_lower_cast_expr(ast_type* desttype, ast_expr*
     case tree_type_id::ast_real_type:               return this->cast_to(desttype->as<ast_real_type>(),    expr);
     case tree_type_id::ast_pointer_type:            return this->cast_to(desttype->as<ast_pointer_type>(), expr);
     case tree_type_id::ast_record_type:             return this->cast_to(desttype->as<ast_record_type>(),  expr);
+    default:
+        __throw_unhandled_ast_type(__FILE__, __LINE__, desttype, "__ast_builder_impl::make_zero");
     }
-    throw std::runtime_error("unhandled ast type " + std::string(desttype->get_tree_type_name()) + " in __ast_builder::make_lower_cast_expr");
 }
 
 static ast_expr* make_arithmetic_op_expr(__ast_builder_impl* builder, ast_op op, ast_expr* lhs, ast_expr* rhs) {
@@ -396,7 +399,7 @@ ast_expr* __ast_builder_impl::make_lower_op_expr(ast_op op, ast_expr* lhs, ast_e
         return make_shift_op_expr(this, op, lhs, rhs);
 
     default:
-        throw std::runtime_error("unhandled operator in __ast_builder_impl::make_op_expr(binary)");
+        __throw_unhandled_operator(__FILE__, __LINE__, op, "__ast_builder_impl::make_lower_op_expr(binary)");
     }
 }
 
@@ -424,8 +427,9 @@ ast_expr* __ast_builder_impl::make_op_expr(ast_op op, ast_expr* expr) {
         {
             return new ast_unary_op(expr->type, ast_op::bnot, expr);
         }
+    default:
+        __throw_unhandled_operator(__FILE__, __LINE__, op, "__ast_builder_impl::make_op_expr(unary)");
     }
-    throw std::runtime_error("unhandled operator in __ast_builder_imppl::make_op_expr(unary)");
 }
 
 ast_expr* __ast_builder_impl::make_declref_expr(ast_decl* decl) {
@@ -590,8 +594,9 @@ static ast_type* __maxtype(const __ast_builder_impl* builder, ast_integer_type* 
             return builder->get_real_type(
                     std::max(lhs_width, rhs_width));
         }
+    default:
+        __throw_unhandled_ast_type(__FILE__, __LINE__, rhs, "__maxtype(int)");
     }
-    throw std::runtime_error("unhandled type " + std::to_string((int) rhs->get_tree_type()) + " in maxtype(int)\n");
 }
 
 static ast_type* __maxtype(const __ast_builder_impl* builder, ast_real_type* lhs, ast_type* rhs) {
@@ -610,8 +615,9 @@ static ast_type* __maxtype(const __ast_builder_impl* builder, ast_real_type* lhs
 
             return builder->get_real_type(std::max(lhs_width, rhs_width));
         }
+    default:
+        __throw_unhandled_ast_type(__FILE__, __LINE__, rhs, "__maxtype(real)");
     }
-    throw std::runtime_error("unhandled type " + std::to_string((int) rhs->get_tree_type()) + " in maxtype(real)\n");
 }
 
 ast_type* __ast_builder_impl::maxtype(ast_type* lhs, ast_type* rhs) const {
@@ -673,8 +679,9 @@ ast_expr* __ast_builder_impl::cast_to(ast_integer_type* itype, ast_expr* expr) c
 
             return new ast_cast(itype, ast_op::utop, expr);
         }
+    default:
+        __throw_unhandled_ast_type(__FILE__, __LINE__, expr, "__ast_builder_impl::cast_to(int)");
     }
-    throw std::runtime_error("unhandled type " + std::to_string((int) expr->type->get_tree_type()) + " in cast_to(int)\n");
 }
 
 
@@ -713,8 +720,9 @@ ast_expr* __ast_builder_impl::cast_to(ast_real_type* rtype, ast_expr* expr) cons
                 return this->cast_to(rtype, this->cast_to(this->get_integer_type(to_bitwidth, from_is_unsigned), expr));
             }
         }
+    default:
+        __throw_unhandled_ast_type(__FILE__, __LINE__, expr, "__ast_builder_impl::cast_to(real)");
     }
-    throw std::runtime_error("unhandled type " + std::to_string((int) expr->type->get_tree_type()) + " in cast_to(real)\n");
 }
 
 ast_expr* __ast_builder_impl::cast_to(ast_pointer_type* ptype, ast_expr* expr) const {
@@ -732,8 +740,9 @@ ast_expr* __ast_builder_impl::cast_to(ast_pointer_type* ptype, ast_expr* expr) c
             }
             return new ast_cast(ptype, ast_op::utop, expr);
         }
+    default:
+        __throw_unhandled_ast_type(__FILE__, __LINE__, expr, "__ast_builder_impl::cast_to(pointer)");
     }
-    throw std::runtime_error("unhandled type " + std::string(expr->type->get_tree_type_name()) + " in __ast_builder_impl::cast_to(ptr)\n");
 }
 
 ast_expr* __ast_builder_impl::cast_to(ast_record_type* rtype, ast_expr* expr) const {
@@ -794,8 +803,9 @@ ast_expr* __ast_builder_impl::widen(ast_type* typedest, ast_expr* expr) const {
     case tree_type_id::ast_integer_type:        return this->cast_to(typedest->as<ast_integer_type>(), expr);
     case tree_type_id::ast_real_type:           return this->cast_to(typedest->as<ast_real_type>(),    expr);
     case tree_type_id::ast_pointer_type:        return this->cast_to(typedest->as<ast_pointer_type>(), expr);
+    default:
+        __throw_unhandled_ast_type(__FILE__, __LINE__, typedest, "__ast_builder_impl::widen");
     }
-    throw std::runtime_error("unhandled " + std::string(typedest->get_tree_type_name()) + " in __ast_builder_impl::widen\n");
 }
 
 void __ast_builder_impl::push_namespace(ast_namespace_decl* ns) noexcept {
@@ -809,8 +819,6 @@ void __ast_builder_impl::push_function(ast_function_decl* func) noexcept {
 void __ast_builder_impl::push_block(ast_block_stmt* block) noexcept {
     this->push_context<ast_block_context>(block);
 }
-
-void __ast_builder_impl::pop() noexcept { this->pop_context(); }
 
 void __ast_builder_impl::insert_at_global_scope(ast_decl* decl) noexcept {
     this->global_namespace->declarations->append(decl);

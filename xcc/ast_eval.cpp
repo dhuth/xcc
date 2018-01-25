@@ -68,14 +68,14 @@ static ptr<ast_expr> ast_eval_cast_sext(ast_type* tp, ast_expr* expr) {
 
 static const llvm::fltSemantics& __get_semantics(uint32_t bitwidth) {
     switch(bitwidth) {
-    case 16:    return llvm::APFloat::IEEEhalf;
-    case 32:    return llvm::APFloat::IEEEsingle;
-    case 64:    return llvm::APFloat::IEEEdouble;
-    case 128:   return llvm::APFloat::IEEEquad;
+    case 16:    return llvm::APFloat::IEEEhalf();
+    case 32:    return llvm::APFloat::IEEEsingle();
+    case 64:    return llvm::APFloat::IEEEdouble();
+    case 128:   return llvm::APFloat::IEEEquad();
     default:
         //TODO:
         assert(false);
-        return llvm::APFloat::Bogus;
+        return llvm::APFloat::Bogus();
     }
 }
 

@@ -18,6 +18,7 @@ namespace xcc {
 
 void    dump_managed_ptr_list(std::ostream& s);
 int32_t __refcount(void* p);
+bool    is_pinned(void* addr);
 
 
 #ifdef DEV_TRACE_MANAGED_PTRS
@@ -52,6 +53,13 @@ protected:
     int32_t incr_ref() const noexcept;
     int32_t decr_ref() const noexcept;
 
+    template<typename T>
+    inline void maybe_delete() {
+        if(!is_pinned(this->_internal_ptr)) {
+            delete reinterpret_cast<T*>(this->_internal_ptr);
+        }
+    }
+
     void*                                                       _internal_ptr;
 
 public:
@@ -82,7 +90,9 @@ struct managed_ptr final : __ptr_impl {
     inline managed_ptr<T>& operator=(managed_ptr<T>& other) {
         if(this->_internal_ptr != other._internal_ptr) {
             if(this->decr_ref() == 0) {
-                //TODO: delete
+                //TODO:
+                //      Needs some serious testing before deleting here...
+                //this->maybe_delete<T>();
             }
             this->_internal_ptr = other._internal_ptr;
         }
@@ -94,7 +104,9 @@ struct managed_ptr final : __ptr_impl {
     inline const managed_ptr<T>& operator=(const managed_ptr<T>& other) {
         if(this->_internal_ptr != other._internal_ptr) {
             if(this->decr_ref() == 0) {
-                //TODO: delete
+                //TODO:
+                //      Needs some serious testing before deleting here...
+                //this->maybe_delete<T>();
             }
             this->_internal_ptr = other._internal_ptr;
         }
@@ -135,8 +147,6 @@ template<typename T> inline void                watch(managed_ptr<T>& p)    { /*
 
 #endif
 
-
-bool is_pinned(void* addr);
 template<typename T>
 inline bool is_pinned(managed_ptr<T>& p) {
     return is_pinned((void*)(T*)p);

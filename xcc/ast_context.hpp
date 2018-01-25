@@ -13,6 +13,7 @@
 
 namespace xcc {
 
+
 /**
  * The base class for all contexts. Represents visibility in a location of code
  */
@@ -40,7 +41,7 @@ public:
     ptr<list<ast_decl>> findall(const char* name, bool search_parent = true);
 
     /**
-     * Convenience function for find. Returns the declataration casted to a base type
+     * Convenience function for find. Returns the declarations casted to a base type
      * @param name              the given name
      * @param search_parent     if true, search all parents for this name
      * @return                  a managed pointer to the declaration if one was found, otherwise a null managed pointer
@@ -64,9 +65,9 @@ public:
 
     /**
      * Convenience function for findall. Find all declarations with the given name, cast to a common base type
-     * @param name              the given name
-     * @param search_parent     if true, search all parents for this name
-     * @return                  a managed pointer to list of all declarations of the given name
+     * @param name              The given name
+     * @param search_parent     If true, search all parents for this name
+     * @return                  A managed pointer to list of all declarations of the given name
      */
     template<typename TTreeType,
              typename std::enable_if<std::is_base_of<ast_decl, TTreeType>::value, int>::type = 0>
@@ -86,7 +87,62 @@ public:
         return box<ast_context>(new TContext(this, std::forward<TArgs>(args)...));
     }
 
+    /**
+     * Leave this context, and return its parent
+     * @return                  The parent context
+     */
+    virtual ptr<ast_context> pop_context() noexcept;
+
 protected:
+
+    /**
+     * Helper function for finding the first declaration in a list
+     * @param l
+     * @param name
+     * @return
+     */
+    template<typename T>
+    static inline ptr<ast_decl> first_from_list(__tree_property_list<T>& l, const char* name) {
+        for(auto d: l) {
+            if(std::string(name) == (std::string) d->name) {
+                return box<ast_decl>(d);
+            }
+        }
+        return nullptr;
+    }
+
+    /**
+     * Helper function for finding all declarations in a list
+     * @param l
+     * @param olist
+     * @param name
+     */
+    template<typename T>
+    static inline void all_from_list(__tree_property_list<T>& l, ptr<list<ast_decl>> olist, const char* name) {
+        for(auto d: l) {
+            if(std::string(name) == (std::string) d->name) {
+                olist->append(d);
+            }
+        }
+    }
+
+    /**
+     * implementation of find_fist, searching only the current context
+     * @param name
+     * @return
+     */
+    virtual ptr<ast_decl> find_first_impl(const char* name) = 0;
+
+    /**
+     * implementation of find_all, searching only the current context
+     * @param
+     * @param
+     */
+    virtual void find_all_impl(ptr<list<ast_decl>>, const char*) = 0;
+
+    ptr<ast_context>                                                    parent;    //! The parent context
+
+private:
 
     void findall(ptr<list<ast_decl>> olist, const char* name, bool search_parent);
 
@@ -105,35 +161,21 @@ protected:
         }
     }
 
-    /**
-     * implementation of find_fist, searching only the current context
-     * @param name
-     * @return
-     */
-    virtual ptr<ast_decl> find_first_impl(const char* name) = 0;
-
-    /**
-     * implementation of find_all, searching only the current context
-     * @param
-     * @param
-     */
-    virtual void find_all_impl(ptr<list<ast_decl>>, const char*) = 0;
-
-    friend struct __ast_builder_impl;
-
-    ast_context*                                                         parent;    //! The parent context
-
 };
 
 
 /**
  * A namespace context
  */
-struct ast_namespace_context : public ast_context {
+struct ast_namespace_context final : public ast_context {
 public:
 
-    explicit ast_namespace_context();
-    explicit ast_namespace_context(ast_context*, ast_namespace_decl*);
+    explicit inline ast_namespace_context(ast_context* prev, ast_namespace_decl* ns) noexcept
+            : ast_context(prev),
+              _ns(ns),
+              _is_global(prev == nullptr) {
+        // do nothing
+    }
     virtual ~ast_namespace_context() = default;
 
 protected:
@@ -152,10 +194,14 @@ private:
 /**
  * A block context
  */
-struct ast_block_context : public ast_context {
+struct ast_block_context final : public ast_context {
 public:
 
-    explicit ast_block_context(ast_context*, ast_block_stmt*);
+    explicit inline ast_block_context(ast_context* prev, ast_block_stmt* block) noexcept
+            : ast_context(prev),
+              _block(block) {
+        // do nothing
+    }
     virtual ~ast_block_context() = default;
 
 protected:
@@ -173,10 +219,14 @@ private:
 /**
  * A function context
  */
-struct ast_function_context : public ast_context {
+struct ast_function_context final : public ast_context {
 public:
 
-    explicit ast_function_context(ast_context*, ast_function_decl*);
+    explicit inline ast_function_context(ast_context* prev, ast_function_decl* func) noexcept
+            : ast_context(prev),
+              _func(func) {
+        // do nothing
+    }
     virtual ~ast_function_context() = default;
 
 protected:

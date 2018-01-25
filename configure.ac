@@ -9,20 +9,23 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_RANLIB
 
-m4_esyscmd(env top_srcdir=. src_dir_expr=\$srcdir sh ./generate_front_ends.sh)
+dnl TODO: fix so this happens at configure
+m4_esyscmd([env top_srcdir=. src_dir_expr=\$srcdir sh ./generate_front_ends.sh])
+
+AC_ARG_WITH([llvm-prefix],  [AS_HELP_STRING([--llvm-prefix],    [Where llvm is installed])],
+        [llvm_prefix="$withval/"],
+        [])
 
 AC_SUBST([gtest_include],               [/home/derick/software/gtest/googletest/include])
 AC_SUBST([gtest_libdir],                [/home/derick/software/gtest/googletest/lib])
 
-AC_SUBST([llvm_prefix],                 [])
-AC_SUBST([llvm_version],                [3.8])
-AC_SUBST([llvm_version_expr],           [-${llvm_version}])
-AC_SUBST([llvm_config],                 [${llvm_prefix}llvm-config${llvm_version_expr}])
+AC_SUBST([llvm_config],                 [${llvm_prefix}llvm-config])
 AC_SUBST([CXXFLAGS],                    ['-g2 -O0'])
 
 AC_SUBST([llvm_libs],                   [`$llvm_config --libs core engine scalaropts`])
 AC_SUBST([llvm_syslibs],                [`$llvm_config --system-libs`])
 AC_SUBST([llvm_cppflags],               [`$llvm_config --cppflags`])
+AC_SUBST([llvm_cxxflags],               [`$llvm_config --cxxflags`])
 AC_SUBST([llvm_libdir],                 [`$llvm_config --libdir`])
 AC_SUBST([llvm_ldflags],                [`$llvm_config --ldflags`])
 

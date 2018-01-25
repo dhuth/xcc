@@ -34,72 +34,35 @@ void ast_context::findall(ptr<list<ast_decl>> olist, const char* name, bool sear
     }
 }
 
-
-ast_namespace_context::ast_namespace_context(ast_context* p, ast_namespace_decl* ns)
-        : ast_context(p), _ns(ns), _is_global(p == nullptr) {
-    // do nothing
+ptr<ast_context> ast_context::pop_context() noexcept {
+    return this->parent;
 }
 
+
 ptr<ast_decl> ast_namespace_context::find_first_impl(const char* name) {
-    for(auto d: this->_ns->declarations) {
-        if(((std::string) d->name) == std::string(name)) {
-            return box(d);
-        }
-    }
-    return box<ast_decl>(nullptr);
+    return first_from_list(this->_ns->declarations, name);
 }
 
 void ast_namespace_context::find_all_impl(ptr<list<ast_decl>> olist, const char* name) {
-    for(auto d: this->_ns->declarations) {
-        std::string dname = d->name;
-        if(dname == std::string(name)) {
-            olist->append(d);
-        }
-    }
+    all_from_list(this->_ns->declarations, olist, name);
 }
 
 
-ast_block_context::ast_block_context(ast_context* p, ast_block_stmt* block) : ast_context(p), _block(block) { }
-
 ptr<ast_decl> ast_block_context::find_first_impl(const char* name) {
-    for(auto decl: this->_block->decls) {
-        std::string dname = decl->name;
-        if(dname == std::string(name)) {
-            return box<ast_decl>(decl);
-        }
-    }
-    return box<ast_decl>(nullptr);
+    return first_from_list(this->_block->decls, name);
 }
 
 void ast_block_context::find_all_impl(ptr<list<ast_decl>> olist, const char* name) {
-    for(auto decl: this->_block->decls) {
-        std::string dname = decl->name;
-        if(dname == std::string(name)) {
-            olist->append(decl);
-        }
-    }
+    all_from_list(this->_block->decls, olist, name);
 }
 
 
-ast_function_context::ast_function_context(ast_context* p, ast_function_decl* func) : ast_context(p), _func(func) { }
-
 ptr<ast_decl> ast_function_context::find_first_impl(const char* name) {
-    for(auto param: this->_func->parameters) {
-        std::string pname = param->name;
-        if(pname == std::string(name)) {
-            return box<ast_decl>(param);
-        }
-    }
-    return box<ast_decl>(nullptr);
+    return first_from_list(this->_func->parameters, name);
 }
 
 void ast_function_context::find_all_impl(ptr<list<ast_decl>> olist, const char* name) {
-    for(auto param: this->_func->parameters) {
-        std::string pname = param->name;
-        if(pname == std::string(name)) {
-            olist->append(param);
-        }
-    }
+    all_from_list(this->_func->parameters, olist, name);
 }
 }
 

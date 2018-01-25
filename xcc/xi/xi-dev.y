@@ -142,10 +142,12 @@
 %type <decl>                                namespace-decl
 %type <decl>                                namespace-decl-cont
 %type <decl>                                global-function-decl
+%type <decl>                                global-function-forward-decl
 %type <parameter_list>                      global-parameter-decl-list-opt
 %type <parameter_list>                      global-parameter-decl-list
 %type <parameter>                           global-parameter-decl
 %type <decl>                                global-struct-decl
+%type <decl>                                global-struct-forward-decl
 %type <member_list>                         struct-member-decl-list-opt
 %type <member_list>                         struct-member-decl-list
 %type <member>                              struct-member-decl
@@ -270,11 +272,13 @@ global-decl-list
                         ;
 global-decl
                         : namespace-decl                                        { $$ = $1; }
+                        | global-function-forward-decl                          { $$ = $1; }
                         | global-function-decl                                  { $$ = $1; }
+                        | global-struct-forward-decl                            { $$ = $1; }
                         | global-struct-decl                                    { $$ = $1; }
                         ;
 
-/*       *
+/* ----- *
  * Qname *
  * ----- */
  
@@ -305,6 +309,15 @@ global-function-decl
                             global-function-return-type-decl
                             block-stmt                                          { $$ = builder.make_xi_function_decl($2, $6, $4, $7); }
                         ;
+global-function-forward-decl
+                        :           /* attributes */
+                          KW_FUNC
+                            TOK_IDENTIFIER
+                                    /* generics */
+                            OP_LPAREN global-parameter-decl-list-opt OP_RPAREN
+                            global-function-return-type-decl
+                            OP_SEMICOLON                                        { $$ = builder.make_xi_function_fwd_decl($2, $6, $4); }
+                        ;
 global-parameter-decl-list-opt
                         : global-parameter-decl-list                            { $$ = $1; }
                         | %empty                                                { $$ = make_list<parameter_t>(); }
@@ -330,6 +343,13 @@ global-struct-decl
                             OP_LBRACE
                                 struct-member-decl-list-opt
                             OP_RBRACE                                           { $$ = builder.make_xi_struct_decl($2, $4); }
+                        ;
+global-struct-forward-decl
+                        :           /* attributes */
+                          KW_STRUCT
+                            TOK_IDENTIFIER
+                                    /* generics */
+                            OP_SEMICOLON                                        { $$ = builder.make_xi_struct_fwd_decl($2); }
                         ;
 struct-member-decl-list-opt
                         : struct-member-decl-list                               { $$ = $1; }

@@ -59,7 +59,7 @@ protected:
     template<typename TClass, typename TTreeType>
     void add_write_method(llvm::MDTuple* (TClass::* mtd)(TTreeType*)) {
         auto wfunc = [=](tree_t* t) -> llvm::MDTuple* {
-            auto res = (dynamic_cast<TClass*>(this)->*mtd)(t->as<TTreeType>());
+            auto res = (static_cast<TClass*>(this)->*mtd)(t->as<TTreeType>());
             return res;
         };
         this->_write_funcs[tree_type_id_from<TTreeType>()] = writef_t(wfunc);
@@ -68,8 +68,8 @@ protected:
     template<typename TClass, typename TTreeType>
     void add_read_method(TTreeType* (TClass::* mtd)(llvm::MDTuple*)) {
         auto rfunc = [=](llvm::MDTuple* t) -> tree_t* {
-            auto res = (dynamic_cast<TClass*>(this)->*mtd)(t);
-            return dynamic_cast<tree_t*>(res);
+            auto res = (static_cast<TClass*>(this)->*mtd)(t);
+            return static_cast<tree_t*>(res);
         };
         this->_read_funcs[tree_type_id_from<TTreeType>()] = readf_t(rfunc);
     }

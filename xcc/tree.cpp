@@ -17,7 +17,7 @@ namespace xcc {
 template<typename T>
 static __tree_base* __clone_tree(const __tree_base* b) {
     if(b != nullptr) {
-        return new T(*dynamic_cast<const T*>(b));
+        return new T(*static_cast<const T*>(b));
     }
     return nullptr;
 }
