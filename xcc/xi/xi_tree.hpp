@@ -243,11 +243,27 @@ struct xi_function_decl : public implement_tree<tree_type_id::xi_function_decl> 
 public:
 
     explicit inline xi_function_decl(
-            std::string name,
-            ast_type* return_type,
-            list<xi_parameter_decl>* parameters,
-            ast_stmt* body) noexcept
+            std::string                 name,
+            ast_type*                   return_type,
+            list<xi_parameter_decl>*    parameters,
+            ast_stmt*                   body) noexcept
                     : base_type(name),
+                      return_type(this, return_type),
+                      parameters(this, parameters),
+                      body(this, body),
+                      is_extern(this, false),
+                      is_inline(this, false),
+                      is_forward_decl(this, false) {
+        /* do nothing */
+    }
+
+    explicit inline xi_function_decl(
+            tree_type_id                id,
+            std::string                 name,
+            ast_type*                   return_type,
+            list<xi_parameter_decl>*    parameters,
+            ast_stmt*                   body) noexcept
+                    : base_type(id, name),
                       return_type(this, return_type),
                       parameters(this, parameters),
                       body(this, body),
@@ -340,19 +356,51 @@ public:
 struct xi_method_decl : public implement_tree<tree_type_id::xi_method_decl> {
 public:
 
-    //TODO: incomplete
-    explicit inline xi_method_decl(std::string name, ast_type* parent, bool is_static) noexcept
-            : base_type(name, parent, is_static) {
+    explicit inline xi_method_decl(
+            std::string                 name,
+            ast_type*                   parent,
+            bool                        is_static,
+            ast_type*                   return_type,
+            list<xi_parameter_decl>*    parameters,
+            ast_stmt*                   body) noexcept
+                    : base_type(name, parent, is_static),
+                      return_type(this, return_type),
+                      parameters(this, parameters),
+                      body(this, body),
+                      is_forward_decl(this, false) {
         /* do nothing */
     }
 
-    //TODO: incomplete
+    explicit inline xi_method_decl(
+            tree_type_id                id,
+            std::string                 name,
+            ast_type*                   parent,
+            bool                        is_static,
+            ast_type*                   return_type,
+            list<xi_parameter_decl>*    parameters,
+            ast_stmt*                   body) noexcept
+                    : base_type(id, name, parent, is_static),
+                      return_type(this, return_type),
+                      parameters(this, parameters),
+                      body(this, body),
+                      is_forward_decl(this, false) {
+        /* do nothing */
+    }
+
     explicit inline xi_method_decl(const xi_method_decl& m) noexcept
-            : base_type((base_type&) m) {
+            : base_type((base_type&) m),
+              return_type(this, m.return_type),
+              parameters(this, m.parameters),
+              body(this, m.body),
+              is_forward_decl(this, m.is_forward_decl) {
         /* do nothing */
     }
 
-    //TODO: fields
+    property<bool>                                                  is_forward_decl;    //! is a forward declaration
+    property<ast_type>                                              return_type;        //! the return type of this function
+    property<list<xi_parameter_decl>>                               parameters;         //! function parameters
+    property<ast_stmt>                                              body;               //! function body
+
 };
 
 
@@ -730,6 +778,56 @@ public:
     property<ast_expr>                                              expression; //! the obj expression
     property<xi_member_decl>                                        member;     //! the member
 
+};
+
+
+struct xi_operator_function_decl : public implement_tree<tree_type_id::xi_operator_function_decl> {
+public:
+
+    explicit inline xi_operator_function_decl(
+            std::string                         name,
+            xi_op_expr::xi_operator             op,
+            ast_type*                           return_type,
+            list<xi_parameter_decl>*            parameters,
+            ast_stmt*                           body) noexcept
+                    : base_type(name, return_type, parameters, body),
+                      op(this, op) {
+        /* do nothing */
+    }
+
+    explicit inline xi_operator_function_decl(const xi_operator_function_decl& f) noexcept
+            : base_type((base_type&)f),
+              op(this, f.op) {
+        /* do nothing */
+    }
+
+    property<xi_op_expr::xi_operator>                       op;
+};
+
+
+struct xi_operator_method_decl : public implement_tree<tree_type_id::xi_operator_method_decl> {
+public:
+
+    explicit inline xi_operator_method_decl(
+            std::string                         name,
+            ast_type*                           parent,
+            bool                                is_static,
+            xi_op_expr::xi_operator             op,
+            ast_type*                           return_type,
+            list<xi_parameter_decl>*            parameters,
+            ast_stmt*                           body) noexcept
+                    : base_type(name, parent, is_static, return_type, parameters, body),
+                      op(this, op) {
+        /* do nothing */
+    }
+
+    explicit inline xi_operator_method_decl(const xi_operator_method_decl& m) noexcept
+            : base_type((base_type&)m),
+              op(this, op) {
+        /* do nothing */
+    }
+
+    property<xi_op_expr::xi_operator>                       op;
 };
 
 

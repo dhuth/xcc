@@ -97,6 +97,62 @@
         OP_ASSIGN_LOGICAL_OR                "or="
         OP_ASSIGN_LOGICAL_XOR               "xor="
         
+        OP_NAME_LOGICAL_AND                 "__and__"
+        OP_NAME_LOGICAL_OR                  "__or__"
+        OP_NAME_LOGICAL_XOR                 "__xor__"
+        OP_NAME_LOGICAL_NOT                 "__not__"
+        
+        OP_NAME_ADD                         "__add__"
+        OP_NAME_SUB                         "__sub__"
+        OP_NAME_MUL                         "__mul__"
+        OP_NAME_DIV                         "__div__"
+        OP_NAME_MOD                         "__mod__"
+        
+        OP_NAME_SL                          "__sl__"
+        OP_NAME_SR                          "__sr__"
+        
+        OP_NAME_LT                          "__lt__"
+        OP_NAME_LE                          "__le__"
+        OP_NAME_GT                          "__gt__"
+        OP_NAME_GE                          "__ge__"
+        OP_NAME_EQ                          "__eq__"
+        OP_NAME_NE                          "__ne__"
+        
+        OP_NAME_REVERSE_LOGICAL_AND         "__rand__"
+        OP_NAME_REVERSE_LOGICAL_OR          "__ror__"
+        OP_NAME_REVERSE_LOGICAL_XOR         "__rxor__"
+        
+        OP_NAME_REVERSE_ADD                 "__radd__"
+        OP_NAME_REVERSE_SUB                 "__rsub__"
+        OP_NAME_REVERSE_MUL                 "__rmul__"
+        OP_NAME_REVERSE_DIV                 "__rdiv__"
+        OP_NAME_REVERSE_MOD                 "__rmod__"
+        
+        OP_NAME_REVERSE_SL                  "__rsl__"
+        OP_NAME_REVERSE_SR                  "__rsr__"
+        
+        OP_NAME_REVERSE_LT                  "__rlt__"
+        OP_NAME_REVERSE_LE                  "__rle__"
+        OP_NAME_REVERSE_GT                  "__rgt__"
+        OP_NAME_REVERSE_GE                  "__rge__"
+        OP_NAME_REVERSE_EQ                  "__req__"
+        OP_NAME_REVERSE_NE                  "__rne__"
+        
+        OP_NAME_CTOR                        "__ctor__"
+        OP_NAME_DTOR                        "__dtor__"
+        OP_NAME_COPY                        "__copy__"
+        OP_NAME_MOVE                        "__move__"
+        
+        OP_NAME_ASSIGN                      "__assign__"
+        OP_NAME_ASSIGN_ADD                  "__iadd__"
+        OP_NAME_ASSIGN_SUB                  "__isub__"
+        OP_NAME_ASSIGN_MUL                  "__imul__"
+        OP_NAME_ASSIGN_DIV                  "__idiv__"
+        OP_NAME_ASSIGN_MOD                  "__imod__"
+        
+        OP_NAME_ASSIGN_SL                   "__isl__"
+        OP_NAME_ASSIGN_SR                   "__isr__"
+        
         KW_CONST                            "const"
         KW_FUNC                             "func"
         KW_NAMESPACE                        "namespace"
@@ -111,6 +167,8 @@
         KW_RETURN                           "return"
         KW_WHILE                            "while"
         KW_VAR                              "var"
+        
+        KW_SELF                             "self"
 ;
 
 %union {
@@ -222,6 +280,53 @@
 %type <op>                                  OP_ASSIGN_LOGICAL_AND
 %type <op>                                  OP_ASSIGN_LOGICAL_OR
 %type <op>                                  OP_ASSIGN_LOGICAL_XOR
+
+%type <op>                                  named-op
+%type <op>                                  OP_NAME_LOGICAL_AND
+%type <op>                                  OP_NAME_LOGICAL_OR
+%type <op>                                  OP_NAME_LOGICAL_XOR
+%type <op>                                  OP_NAME_LOGICAL_NOT
+%type <op>                                  OP_NAME_ADD
+%type <op>                                  OP_NAME_SUB
+%type <op>                                  OP_NAME_MUL
+%type <op>                                  OP_NAME_DIV
+%type <op>                                  OP_NAME_MOD
+%type <op>                                  OP_NAME_SL
+%type <op>                                  OP_NAME_SR
+%type <op>                                  OP_NAME_LT
+%type <op>                                  OP_NAME_LE
+%type <op>                                  OP_NAME_GT
+%type <op>                                  OP_NAME_GE
+%type <op>                                  OP_NAME_EQ
+%type <op>                                  OP_NAME_NE
+%type <op>                                  OP_NAME_REVERSE_LOGICAL_AND
+%type <op>                                  OP_NAME_REVERSE_LOGICAL_OR
+%type <op>                                  OP_NAME_REVERSE_LOGICAL_XOR
+%type <op>                                  OP_NAME_REVERSE_ADD
+%type <op>                                  OP_NAME_REVERSE_SUB
+%type <op>                                  OP_NAME_REVERSE_MUL
+%type <op>                                  OP_NAME_REVERSE_DIV
+%type <op>                                  OP_NAME_REVERSE_MOD
+%type <op>                                  OP_NAME_REVERSE_SL
+%type <op>                                  OP_NAME_REVERSE_SR
+%type <op>                                  OP_NAME_REVERSE_LT
+%type <op>                                  OP_NAME_REVERSE_LE
+%type <op>                                  OP_NAME_REVERSE_GT
+%type <op>                                  OP_NAME_REVERSE_GE
+%type <op>                                  OP_NAME_REVERSE_EQ
+%type <op>                                  OP_NAME_REVERSE_NE
+%type <op>                                  OP_NAME_CTOR
+%type <op>                                  OP_NAME_DTOR
+%type <op>                                  OP_NAME_COPY
+%type <op>                                  OP_NAME_MOVE
+%type <op>                                  OP_NAME_ASSIGN
+%type <op>                                  OP_NAME_ASSIGN_ADD
+%type <op>                                  OP_NAME_ASSIGN_SUB
+%type <op>                                  OP_NAME_ASSIGN_MUL
+%type <op>                                  OP_NAME_ASSIGN_DIV
+%type <op>                                  OP_NAME_ASSIGN_MOD
+%type <op>                                  OP_NAME_ASSIGN_SL
+%type <op>                                  OP_NAME_ASSIGN_SR
 
 %type <op>                                  assign-op
 
@@ -518,6 +623,7 @@ term-expr
                         | LITERAL_REAL                                          { $$ = $1; }
                         | LITERAL_BOOL                                          { $$ = $1; }
                         | qname                                                 { $$ = builder.make_xi_id_expr($1); }
+                        | KW_SELF                                               { $$ = builder.make_xi_id_expr(make_xi_qname("self")); }
                         ;
 assign-op
                         : OP_ASSIGN                                             { $$ = $1; }
@@ -534,6 +640,53 @@ assign-op
                         | OP_ASSIGN_LOGICAL_AND                                 { $$ = $1; }
                         | OP_ASSIGN_LOGICAL_OR                                  { $$ = $1; }
                         | OP_ASSIGN_LOGICAL_XOR                                 { $$ = $1; }
+                        ;
+named-op
+                        : OP_NAME_LOGICAL_AND                                   { $$ = $1; }
+                        | OP_NAME_LOGICAL_OR                                    { $$ = $1; }
+                        | OP_NAME_LOGICAL_XOR                                   { $$ = $1; }
+                        | OP_NAME_LOGICAL_NOT                                   { $$ = $1; }
+                        | OP_NAME_ADD                                           { $$ = $1; }
+                        | OP_NAME_SUB                                           { $$ = $1; }
+                        | OP_NAME_MUL                                           { $$ = $1; }
+                        | OP_NAME_DIV                                           { $$ = $1; }
+                        | OP_NAME_MOD                                           { $$ = $1; }
+                        | OP_NAME_SL                                            { $$ = $1; }
+                        | OP_NAME_SR                                            { $$ = $1; }
+                        | OP_NAME_LT                                            { $$ = $1; }
+                        | OP_NAME_LE                                            { $$ = $1; }
+                        | OP_NAME_GT                                            { $$ = $1; }
+                        | OP_NAME_GE                                            { $$ = $1; }
+                        | OP_NAME_EQ                                            { $$ = $1; }
+                        | OP_NAME_NE                                            { $$ = $1; }
+                        | OP_NAME_REVERSE_LOGICAL_AND                           { $$ = $1; }
+                        | OP_NAME_REVERSE_LOGICAL_OR                            { $$ = $1; }
+                        | OP_NAME_REVERSE_LOGICAL_XOR                           { $$ = $1; }
+                        | OP_NAME_REVERSE_ADD                                   { $$ = $1; }
+                        | OP_NAME_REVERSE_SUB                                   { $$ = $1; }
+                        | OP_NAME_REVERSE_MUL                                   { $$ = $1; }
+                        | OP_NAME_REVERSE_DIV                                   { $$ = $1; }
+                        | OP_NAME_REVERSE_MOD                                   { $$ = $1; }
+                        | OP_NAME_REVERSE_SL                                    { $$ = $1; }
+                        | OP_NAME_REVERSE_SR                                    { $$ = $1; }
+                        | OP_NAME_REVERSE_LT                                    { $$ = $1; }
+                        | OP_NAME_REVERSE_LE                                    { $$ = $1; }
+                        | OP_NAME_REVERSE_GT                                    { $$ = $1; }
+                        | OP_NAME_REVERSE_GE                                    { $$ = $1; }
+                        | OP_NAME_REVERSE_EQ                                    { $$ = $1; }
+                        | OP_NAME_REVERSE_NE                                    { $$ = $1; }
+                        | OP_NAME_CTOR                                          { $$ = $1; }
+                        | OP_NAME_DTOR                                          { $$ = $1; }
+                        | OP_NAME_COPY                                          { $$ = $1; }
+                        | OP_NAME_MOVE                                          { $$ = $1; }
+                        | OP_NAME_ASSIGN                                        { $$ = $1; }
+                        | OP_NAME_ASSIGN_ADD                                    { $$ = $1; }
+                        | OP_NAME_ASSIGN_SUB                                    { $$ = $1; }
+                        | OP_NAME_ASSIGN_MUL                                    { $$ = $1; }
+                        | OP_NAME_ASSIGN_DIV                                    { $$ = $1; }
+                        | OP_NAME_ASSIGN_MOD                                    { $$ = $1; }
+                        | OP_NAME_ASSIGN_SL                                     { $$ = $1; }
+                        | OP_NAME_ASSIGN_SR                                     { $$ = $1; }
                         ;
 
 /* ---- *
