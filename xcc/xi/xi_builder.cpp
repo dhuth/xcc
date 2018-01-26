@@ -48,24 +48,12 @@ xi_function_decl* xi_builder::make_xi_function_decl(const char* name, ast_type* 
     return new xi_function_decl(name, return_type, parameters, body);
 }
 
-xi_function_decl* xi_builder::make_xi_function_fwd_decl(const char* name, ast_type* return_type, list<xi_parameter_decl>* parameters) const noexcept {
-    auto func = this->make_xi_function_decl(name, return_type, parameters, nullptr);
-    func->is_forward_decl = true;
-    return func;
-}
-
 xi_parameter_decl* xi_builder::make_xi_parameter_decl(const char* name, ast_type* type) const noexcept {
     return new xi_parameter_decl(name, type);
 }
 
 xi_struct_decl* xi_builder::make_xi_struct_decl(const char* name, list<xi_member_decl>* members) const noexcept {
     return new xi_struct_decl(name, nullptr, members);
-}
-
-xi_struct_decl* xi_builder::make_xi_struct_fwd_decl(const char* name) const noexcept {
-    auto decl = this->make_xi_struct_decl(name, new list<xi_member_decl>());
-    decl->is_forward_decl = true;
-    return decl;
 }
 
 xi_field_decl* xi_builder::make_xi_field_decl(const char* name, ast_type* type) const noexcept {

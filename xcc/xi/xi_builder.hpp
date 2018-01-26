@@ -41,10 +41,8 @@ public:
     virtual ast_type*                           get_declaration_type(ast_decl*)                                                                               noexcept;
 
     xi_function_decl*                           make_xi_function_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*)                      const noexcept;
-    xi_function_decl*                           make_xi_function_fwd_decl(const char*, ast_type*, list<xi_parameter_decl>*)                             const noexcept;
     xi_parameter_decl*                          make_xi_parameter_decl(const char*, ast_type*)                                                          const noexcept;
     xi_struct_decl*                             make_xi_struct_decl(const char*, list<xi_member_decl>*)                                                 const noexcept;
-    xi_struct_decl*                             make_xi_struct_fwd_decl(const char*)                                                                    const noexcept;
     xi_field_decl*                              make_xi_field_decl(const char*, ast_type*)                                                              const noexcept;
 
     ast_expr*                                   make_xi_id_expr(xi_qname*)                                                                              const noexcept;
