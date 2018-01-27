@@ -57,7 +57,7 @@ llvm::Metadata* llvm_metadata_writer::write_node(tree_t* t) noexcept {
     llvm::MDTuple*  tree_body   = _write_functions[id](t);
 
     // pack tree node
-    std::vector<llvm::Metadata*> md_vec = { this->write((uint64_t)id), tree_body };
+    std::vector<llvm::Metadata*> md_vec = { this->write(id), tree_body };
     return llvm::MDTuple::get(this->llvm_context, md_vec);
 }
 

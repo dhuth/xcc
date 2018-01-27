@@ -52,11 +52,31 @@ static void merge_namespaces_in(ast_namespace_decl* ns) noexcept {
 }
 
 
+ast_type* dom_qname_resolver::resolve_id_type(xi_id_type* t, xi_builder& b) {
+    switch(t->get_tree_type()) {
+    case tree_type_id::ast_typedef_decl:                    return t->as<ast_typedef_decl>()->type;
+    case tree_type_id::xi_struct_decl:                      return b.get_object_type(t->as<xi_type_decl>());
+    default:
+        __throw_unsuported_tree_type(__FILE__, __LINE__, t, "dom_qname_resolver::resolve_id_type()");
+    }
+}
+
+
 bool xi_builder::dom_pass(/*options & error log info*/) noexcept {
     // merge namespaces
     merge_namespaces_in(this->global_namespace);
 
-    //...
+    // resolve top level qnames
+    dom_qname_resolver().visit(this->global_namespace, *this /* error log info */);
+
+    // merge type decls
+    // TODO: ...
+
+    // merge function decls
+    // TODO: ...
+
+    // merge method decls
+    // TODO: ...
     return true;
 }
 

@@ -176,7 +176,7 @@ ast_record_type* ast_metadata_reader::read_record_type(llvm::MDTuple* md) {
 ast_namespace_decl* ast_metadata_reader::read_namespace_decl(llvm::MDTuple* md) {
     std::string                 name;
     std::string                 generated_name;
-    source_location             location;
+    source_span                 location;
     list<ast_decl>*             declarations;
 
     this->read_tuple(md, name, generated_name, location, declarations);
@@ -191,7 +191,7 @@ ast_namespace_decl* ast_metadata_reader::read_namespace_decl(llvm::MDTuple* md) 
 ast_variable_decl* ast_metadata_reader::read_variable_decl(llvm::MDTuple* md) {
     std::string                 name;
     std::string                 generated_name;
-    source_location             location;
+    source_span                 location;
     ast_type*                   type;
 
     this->read_tuple(md, name, generated_name, location, type);
@@ -208,7 +208,7 @@ ast_variable_decl* ast_metadata_reader::read_variable_decl(llvm::MDTuple* md) {
 ast_parameter_decl* ast_metadata_reader::read_parameter_decl(llvm::MDTuple* md) {
     std::string                 name;
     std::string                 generated_name;
-    source_location             location;
+    source_span                 location;
     ast_type*                   type;
 
     this->read_tuple(md, name, generated_name, location, type);
@@ -222,7 +222,7 @@ ast_parameter_decl* ast_metadata_reader::read_parameter_decl(llvm::MDTuple* md) 
 ast_function_decl* ast_metadata_reader::read_function_decl(llvm::MDTuple* md) {
     std::string                 name;
     std::string                 generated_name;
-    source_location             location;
+    source_span                 location;
     ast_type*                   return_type;
     list<ast_parameter_decl>*   parameters;
 
@@ -239,7 +239,7 @@ ast_function_decl* ast_metadata_reader::read_function_decl(llvm::MDTuple* md) {
 ast_typedef_decl* ast_metadata_reader::read_typedef_decl(llvm::MDTuple* md) {
     std::string                 name;
     std::string                 generated_name;
-    source_location             location;
+    source_span                 location;
     ast_type*                   type;
 
     this->read_tuple(md, name, generated_name, location, type);

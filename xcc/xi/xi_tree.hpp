@@ -438,28 +438,6 @@ public:
 
 
 /**
- * (???)
- */
-struct xi_const_expr : public implement_tree<tree_type_id::xi_const_expr> {
-
-    inline xi_const_expr(ast_expr* expr) noexcept
-            : base_type(nullptr),
-              expr(this, expr) {
-        /* do nothing */
-    }
-
-    inline xi_const_expr(const xi_const_expr& e) noexcept
-            : base_type((base_type&) e),
-              expr(this, e.expr){
-        /* do nothing */
-    }
-
-    property<ast_expr>                                              expr;
-
-};
-
-
-/**
  * A name that should be resolved during semantic checks
  */
 struct xi_id_expr : public implement_tree<tree_type_id::xi_id_expr> {

@@ -58,7 +58,7 @@ bool xi_type_comparer::operator()(ast_type* const& lhs, ast_type* const& rhs) co
                     this->same_typelist(xilhs->types, xirhs->types);
         }
         break;
-    case tree_type_id::xi_object_type:
+    case tree_type_id::xi_decl_type:
         {
             auto xilhs = lhs->as<xi_decl_type>();
             auto xirhs = rhs->as<xi_decl_type>();
@@ -94,7 +94,7 @@ size_t xi_type_hasher::operator()(ast_type* const& tp) const {
         return prefix | this->operator()(tp->as<xi_reference_type>()->type);
     case tree_type_id::xi_tuple_type:
         return prefix | this->hash_typelist(tp->as<xi_tuple_type>()->types);
-    case tree_type_id::xi_object_type:
+    case tree_type_id::xi_decl_type:
         return prefix; // TODO: ???
     default:
         return ast_type_hasher::operator()(tp);

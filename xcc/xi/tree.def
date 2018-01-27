@@ -5,7 +5,7 @@ tree_type(xi_id_type,                   ast_type,           parse,              
 tree_type(xi_const_type,                ast_type,           parse,                              lower-ast)
 tree_type(xi_auto_type,                 ast_type,           parse,                              lower-ast)
 tree_type(xi_reference_type,            ast_type,           parse,                              lower-ast)
-tree_type(xi_object_type,               ast_type,           parse,                              lower-ast)
+tree_type(xi_decl_type,                 ast_type,           parse,                              lower-ast)
 tree_type(xi_tuple_type,                ast_type,           parse,                              lower-ast)
 
 tree_type(xi_using_decl,                ast_decl,           parse,                              dom-resolve-qnames)
