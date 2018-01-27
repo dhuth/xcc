@@ -58,29 +58,6 @@ public:
 
 
 /**
- * A group candidate of types
- */
-struct xi_group_type : public implement_tree<tree_type_id::xi_group_type> {
-public:
-
-    explicit inline xi_group_type(list<ast_type>* types) noexcept
-            : base_type(),
-              types(this, types) {
-        /* do nothing */
-    }
-
-    explicit inline xi_group_type(const xi_group_type& t) noexcept
-            : base_type((base_type&) t),
-              types(this, t.types) {
-        /* do nothing */
-    }
-
-    property<list<ast_type>>                                        types; //! Potential types to resolve to
-
-};
-
-
-/**
  * A const type
  */
 struct xi_const_type : public implement_tree<tree_type_id::xi_const_type> {
@@ -148,16 +125,16 @@ public:
 /**
  * An object type
  */
-struct xi_object_type : public implement_tree<tree_type_id::xi_object_type> {
+struct xi_decl_type : public implement_tree<tree_type_id::xi_decl_type> {
 public:
 
-    explicit inline xi_object_type(ast_decl* decl) noexcept
+    explicit inline xi_decl_type(ast_decl* decl) noexcept
             : base_type(),
               declaration(this, decl) {
         /* do nothing */
     }
 
-    explicit inline xi_object_type(const xi_object_type& t) noexcept
+    explicit inline xi_decl_type(const xi_decl_type& t) noexcept
             : base_type((base_type&) t),
               declaration(this, t.declaration) {
         /* do nothing */
@@ -547,34 +524,6 @@ public:
     property<ast_expr>                                              expr;   //! object expression
     property<xi_qname>                                              name;   //! member name
 
-};
-
-
-/**
- * A group of candidate expressions (usually a group of function overload candidates)
- */
-struct xi_group_expr : public implement_tree<tree_type_id::xi_group_expr> {
-public:
-
-    explicit inline xi_group_expr(list<ast_expr>* expressions) noexcept
-            : base_type(nullptr),
-              expressions(this, expressions) {
-        /* do nothing */
-    }
-
-    explicit inline xi_group_expr(ptr<list<ast_expr>> expressions) noexcept
-            : base_type(nullptr),
-              expressions(this, unbox(expressions)) {
-        /* do nothing */
-    }
-
-    explicit inline xi_group_expr(const xi_group_expr& d) noexcept
-            : base_type((base_type&) d),
-              expressions(this, d.expressions) {
-        /* do nothing */
-    }
-
-    property<list<ast_expr>>                                        expressions;    //! Candidate expressions
 };
 
 

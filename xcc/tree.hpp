@@ -212,9 +212,9 @@ public:
 
     template<typename T>
     inline enable_if_tree_t<T, T*> as() const noexcept { return static_cast<T*>(const_cast<__tree_base*>(this)); }
-    inline tree_type_id get_tree_type() const { return this->_type; }
+    inline tree_type_id get_tree_type() const noexcept { return this->_type; }
 
-    inline const char* get_tree_type_name() const { return __all_tree_types[(size_t) this->_type].name; };
+    inline const char* get_tree_type_name() const noexcept { return __all_tree_types[(size_t) this->_type].name; };
 
     explicit inline __tree_base(const __tree_base& other) noexcept
             : _type(other._type) {

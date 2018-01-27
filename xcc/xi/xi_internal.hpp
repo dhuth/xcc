@@ -16,6 +16,8 @@ typedef xcc::ast_stmt*                                          stmt_t;
 typedef xcc::ast_decl*                                          decl_t;
 typedef xcc::xi_qname*                                          qname_t;
 typedef xcc::xi_member_decl*                                    member_t;
+typedef xcc::xi_function_decl*                                  function_decl_t;
+typedef xcc::xi_struct_decl*                                    struct_decl_t;
 typedef xcc::xi_parameter_decl*                                 parameter_t;
 
 typedef xcc::list<xcc::ast_type>*                               type_list_t;

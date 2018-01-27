@@ -66,10 +66,12 @@ public:
     void                                        push_xi_struct(xi_struct_decl*)                                                                               noexcept;
     void                                        push_xi_method(xi_method_decl*)                                                                               noexcept;
 
-    //ast_expr*                                   const_eval(ast_expr*)                                                                                   const noexcept;
-    void                                        write_metadata(ircode_context&)                                                                               noexcept;
-    void                                        semantic_check(/* error log info*/)                                                                           noexcept;
-    void                                        lower(/* error log info*/)                                                                                    noexcept;
+    // Major compiler passes
+    bool                                        read_metadata_pass(ircode_context& /* input modules, error log info */)                                       noexcept;
+    bool                                        dom_pass(/* error log info*/)                                                                                 noexcept;
+    bool                                        write_metadata_pass(ircode_context& /* error log info */)                                                     noexcept;
+    bool                                        semantic_pass(/* error log info*/)                                                                            noexcept;
+    bool                                        lower_pass(/* error log info*/)                                                                               noexcept;
 
     ast_expr*                                   find_best_overload(xi_op_expr::xi_operator, list<ast_expr>*)                                            const noexcept;
 

@@ -13,11 +13,28 @@
 
 namespace xcc {
 
-struct xi_function_context final : public ast_context {
+
+struct xi_context : public ast_context {
+public:
+
+    explicit inline xi_context(ast_context* prev) noexcept
+            : ast_context(prev) {
+        // do nothing
+    }
+    virtual ~xi_context() = default;
+};
+
+//TODO: do we need this?
+struct xi_namespace_context final : public ast_namespace_context {
+
+};
+
+
+struct xi_function_context final : public xi_context {
 public:
 
     explicit inline xi_function_context(ast_context* prev, xi_function_decl* decl) noexcept
-            : ast_context(prev),
+            : xi_context(prev),
               func(decl) {
         // do nothing
     }
@@ -35,11 +52,11 @@ private:
 };
 
 
-struct xi_method_context final : public ast_context {
+struct xi_method_context final : public xi_context {
 public:
 
     explicit inline xi_method_context(ast_context* prev, xi_method_decl* methoddecl) noexcept
-            : ast_context(prev),
+            : xi_context(prev),
               methoddecl(methoddecl) {
         // do nothing
     }
@@ -57,11 +74,11 @@ private:
 };
 
 
-struct xi_using_context : public ast_context {
+struct xi_using_context : public xi_context {
 public:
 
     explicit inline xi_using_context(ast_context* prev, xi_using_decl* decl) noexcept
-            : ast_context(prev),
+            : xi_context(prev),
               usingdecl(decl) {
         // do nothing
     }
@@ -79,11 +96,11 @@ private:
 };
 
 
-struct xi_type_context : public ast_context {
+struct xi_type_context : public xi_context {
 public:
 
     inline xi_type_context(ast_context* prev, xi_type_decl* typedecl) noexcept
-            : ast_context(prev),
+            : xi_context(prev),
               typedecl(typedecl) {
         // do nothing
     }

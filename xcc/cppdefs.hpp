@@ -9,12 +9,11 @@
 #define XCC_CPPDEFS_HPP_
 
 
-#if 1
-#   define  __constexpr
-#   define  __constif(e)                if(e)
-#else
-#   define  __constexpr                 constexpr
+
+#if defined(__cpp_if_constexpr) &&  __cpp_if_constexpr >= 201606
 #   define  __constif(e)                if constexpr (e)
+#else
+#   define  __constif(e)                if (e)
 #endif
 
 

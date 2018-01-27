@@ -24,7 +24,7 @@ static void print_xi_reference_type(xi_reference_type* t, std::ostream& s) {
     ast_printer::print(s, "%0&", t->type);
 }
 
-static void print_xi_object_type(xi_object_type* t, std::ostream& s) {
+static void print_xi_object_type(xi_decl_type* t, std::ostream& s) {
     ast_printer::print(s, "%0", t->declaration->name);
 }
 

@@ -6,6 +6,7 @@
  */
 
 #include "xi_tree.hpp"
+#include "error.hpp"
 
 
 namespace xcc {
@@ -59,8 +60,8 @@ bool xi_type_comparer::operator()(ast_type* const& lhs, ast_type* const& rhs) co
         break;
     case tree_type_id::xi_object_type:
         {
-            auto xilhs = lhs->as<xi_object_type>();
-            auto xirhs = rhs->as<xi_object_type>();
+            auto xilhs = lhs->as<xi_decl_type>();
+            auto xirhs = rhs->as<xi_decl_type>();
 
             return
                     xilhs->declaration == xirhs->declaration; //TODO: should be smarter

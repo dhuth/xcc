@@ -7,6 +7,7 @@
 
 
 #include "ast.hpp"
+#include "error.hpp"
 
 namespace xcc {
 
@@ -84,8 +85,7 @@ bool ast_type_comparer::operator()(ast_type* const& lhs, ast_type* const& rhs) c
                     this->same_typelist(lhs_ptypes, rhs_ptypes);
         }
     default:
-        throw std::runtime_error(std::string("ast.cpp: ast_type_comparer::operator(): ") +
-                "unsuported type " + lhs->get_tree_type_name());
+        __throw_unsuported_tree_type(__FILE__, __LINE__, lhs, "ast_type_comparer::operator()");
     }
 }
 
@@ -128,8 +128,7 @@ size_t ast_type_hasher::operator()(ast_type* const& tp) const {
                 this->operator()(tp->as<ast_function_type>()->return_type) << 16 |
                 this->hash_typelist(tp->as<ast_function_type>()->parameter_types);
     default:
-        throw std::runtime_error(std::string("ast.cpp: ast_type_hasher::operator(): ") +
-                "unsuported type " + tp->get_tree_type_name());
+        __throw_unsuported_tree_type(__FILE__, __LINE__, tp, "ast_type_hasher::operator()");
     }
 }
 
@@ -140,13 +139,16 @@ bool ast_expr_comparer::operator()(ast_expr* const& lexpr, ast_expr* const& rexp
 
     switch(lexpr->get_tree_type()) {
     case tree_type_id::ast_integer:     return lexpr->as<ast_integer>()->value == rexpr->as<ast_integer>()->value;
-    case tree_type_id::ast_real:        break;
-    case tree_type_id::ast_string:      break;
-    case tree_type_id::ast_array:       break;
+    case tree_type_id::ast_real:        return ((llvm::APFloat) lexpr->as<ast_real>()->value).compare(rexpr->as<ast_real>()->value) == llvm::APFloat::cmpEqual;
+    case tree_type_id::ast_string:      return lexpr->as<ast_string>()->value == rexpr->as<ast_string>()->value;
+    case tree_type_id::ast_array:
+        return this->same_exprlist(
+                lexpr->as<ast_array>()->values,
+                rexpr->as<ast_array>()->values);
     case tree_type_id::ast_record:
         return this->same_exprlist(
-            lexpr->as<ast_record>()->values,
-            rexpr->as<ast_record>()->values);
+                lexpr->as<ast_record>()->values,
+                rexpr->as<ast_record>()->values);
     case tree_type_id::ast_cast:
         return this->operator()(lexpr->as<ast_cast>()->expr, rexpr->as<ast_cast>()->expr);
     case tree_type_id::ast_binary_op:
@@ -162,20 +164,23 @@ bool ast_expr_comparer::operator()(ast_expr* const& lexpr, ast_expr* const& rexp
         return
                 this->operator()(lexpr->as<ast_index>()->arr_expr, rexpr->as<ast_index>()->arr_expr) &&
                 this->operator()(lexpr->as<ast_index>()->index_expr, rexpr->as<ast_index>()->index_expr);
-    case tree_type_id::ast_declref:     break;
-    case tree_type_id::ast_memberref:   break;
+    //case tree_type_id::ast_declref:     //TODO: points to the same declaration
+    //case tree_type_id::ast_memberref:   //TODO: points to the same member
     case tree_type_id::ast_deref:
         return
                 this->operator()(lexpr->as<ast_deref>()->expr, rexpr->as<ast_deref>()->expr);
     case tree_type_id::ast_addressof:
         return
                 this->operator()(lexpr->as<ast_addressof>()->expr, rexpr->as<ast_addressof>()->expr);
-    case tree_type_id::ast_invoke:      break;
-    case tree_type_id::ast_call:        break;
-    case tree_type_id::ast_stmt_expr:   break;
+    case tree_type_id::ast_invoke:
+        return
+                this->operator()(lexpr->as<ast_invoke>()->funcexpr, rexpr->as<ast_invoke>()->funcexpr) &&
+                this->same_exprlist(lexpr->as<ast_invoke>()->arguments, rexpr->as<ast_invoke>()->arguments);
+    //case tree_type_id::ast_call:        //TODO: call same declarations with same arguments
+    //case tree_type_id::ast_stmt_expr:   //TODO: comopre stmts
+    default:
+        __throw_unsuported_tree_type(__FILE__, __LINE__, lexpr, "ast_expr_comparer::operator()");
     }
-    throw std::runtime_error(std::string("ast.cpp: ast_expr_comparer::operator(): ") +
-                "unsuported expr " + lexpr->get_tree_type_name());
 }
 
 bool ast_expr_comparer::same_exprlist(list<ast_expr>* l, list<ast_expr>* r) const noexcept {

@@ -22,271 +22,376 @@
 #include <llvm/ADT/APSInt.h>
 #include <llvm/ADT/APFloat.h>
 
-#include <set>
+#include <map>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 namespace xcc {
 
-struct ircode_context;
-struct llvm_metadata;
+struct llvm_metadata_reader;
+struct llvm_metadata_writer;
 
-template<typename T>
-struct __llvm_io {
-    static T                parse(llvm_metadata*, llvm::Metadata*);
-    static llvm::Metadata*  write(llvm_metadata*, T);
+template<typename T> struct __llvm_io_reader {
+    static inline T read(llvm::Metadata*, llvm_metadata_reader&);
+};
+template<typename T> struct __llvm_io_writer {
+    static inline llvm::Metadata* write(T, llvm_metadata_writer&);
 };
 
-struct llvm_metadata {
+
+
+/* ------------------------ *
+ * LLVM metadata base class *
+ * ------------------------ */
+
+struct __llvm_metadata_io_base {
 public:
 
-    explicit llvm_metadata(ircode_context&);
-    virtual ~llvm_metadata() = default;
+    explicit inline __llvm_metadata_io_base(llvm::LLVMContext& llvm_context) noexcept
+            : llvm_context(llvm_context),
+              _null(llvm::Constant::getNullValue(llvm::Type::getInt64Ty(this->llvm_context))),
+              _false(llvm::ConstantInt::getFalse(this->llvm_context)),
+              _true(llvm::ConstantInt::getTrue(this->llvm_context)) {
+        //...
+    }
+
+    bool                        is_null(llvm::Metadata*) const noexcept;
+    llvm::Metadata*             get_null() const noexcept;
+    llvm::Metadata*             get_true() const noexcept;
+    llvm::Metadata*             get_false() const noexcept;
+
+    llvm::LLVMContext&                                      llvm_context;
+
+private:
+
+    llvm::Metadata*                                         _null;
+    llvm::Metadata*                                         _false;
+    llvm::Metadata*                                         _true;
+
+};
+
+
+
+/* -------------------------- *
+ * LLVM metadata reader class *
+ * -------------------------- */
+
+struct llvm_metadata_reader : public __llvm_metadata_io_base {
+public:
+
+    explicit inline llvm_metadata_reader(llvm::LLVMContext& llvm_context) noexcept
+            : __llvm_metadata_io_base(llvm_context) {
+        // do nohting
+    }
 
 protected:
 
-    template<typename... TArgs>
-    llvm::MDTuple* write_tuple(TArgs&&... args) {
-        std::vector<llvm::Metadata*> mdvec = { __llvm_io<TArgs>::write(this, args)... };
-        return llvm::MDTuple::get(_context, mdvec);
-    }
+    template<typename _TClass,
+             typename _TReturnType>
+    void addmethod(_TReturnType*(_TClass::* mtd)(llvm::MDTuple*)) noexcept {
+        static_assert(is_tree<_TReturnType>::value, "return type must be a pointer to a tree node");
 
-    template<typename... TArgs>
-    void parse_tuple(llvm::MDTuple* t, TArgs&... args) {
-        std::tie(args...) = this->parse_tuple_impl<std::tuple<TArgs...>>(t, std::index_sequence_for<TArgs...>());
-    }
-
-    template<typename TClass, typename TTreeType>
-    void add_write_method(llvm::MDTuple* (TClass::* mtd)(TTreeType*)) {
-        auto wfunc = [=](tree_t* t) -> llvm::MDTuple* {
-            auto res = (static_cast<TClass*>(this)->*mtd)(t->as<TTreeType>());
-            return res;
+        auto rfunc = [=](llvm::MDTuple* t)->tree_t* {
+            return (static_cast<_TClass*>(this)->*mtd)(t);
         };
-        this->_write_funcs[tree_type_id_from<TTreeType>()] = writef_t(wfunc);
+        _read_functions[tree_type_id_from<_TReturnType>()] = rfunc;
     }
 
-    template<typename TClass, typename TTreeType>
-    void add_read_method(TTreeType* (TClass::* mtd)(llvm::MDTuple*)) {
-        auto rfunc = [=](llvm::MDTuple* t) -> tree_t* {
-            auto res = (static_cast<TClass*>(this)->*mtd)(t);
-            return static_cast<tree_t*>(res);
-        };
-        this->_read_funcs[tree_type_id_from<TTreeType>()] = readf_t(rfunc);
+    template<typename... T>
+    void read_tuple(llvm::Metadata* md, T&... args) noexcept {
+        auto md_tuple = llvm::dyn_cast<llvm::MDTuple>(md);
+        std::tie(args...) = this->__read_tuple_impl<std::tuple<T...>>(md_tuple, std::index_sequence_for<T...>());
     }
 
     template<typename T>
-    inline T parse(llvm::Metadata* md) {
-        return __llvm_io<T>::parse(this, md);
-    }
-
-    template<typename T>
-    inline llvm::Metadata* write(T v) {
-        return __llvm_io<T>::write(this, v);
+    inline T read(llvm::Metadata* md) noexcept {
+        return __llvm_io_reader<T>::read(md, *this);
     }
 
 private:
 
-    template<typename>  friend struct __llvm_io;
-    template<typename>  friend struct __llvm_io_int;
-    template<typename>  friend struct __llvm_io_read_tree;
-    template<typename>  friend struct __llvm_io_read_value_list;
-    template<typename>  friend struct __llvm_io_read_tree_list;
+    typedef std::function<tree_t*(llvm::MDTuple*)>          readf;
 
-    typedef std::function<tree_t*(llvm::MDTuple*)>                              readf_t;
-    typedef std::function<llvm::MDTuple*(tree_t*)>                              writef_t;
+    template<typename>
+    friend struct __llvm_io_tree_reader;
 
-    tree_t* read_node(llvm::Metadata* md);
-    llvm::Metadata* write_node(tree_t*);
+    template<size_t I, typename T>
+    inline T __read_tuple_item_impl(llvm::MDTuple* md_tuple) noexcept {
+        return this->read<T>(md_tuple->getOperand(I).get());
+    }
+
+    template<typename _Tuple, size_t... I>
+    inline _Tuple __read_tuple_impl(llvm::MDTuple* md_tuple, std::integer_sequence<size_t, I...>) {
+        return _Tuple(this->__read_tuple_item_impl<I, std::tuple_element_t<I, _Tuple>>(md_tuple)...);
+    }
+
+    tree_t* read_node(llvm::Metadata*) noexcept;
 
     template<typename T>
-    tree_t* read_value_list(llvm::Metadata* md) {
-        auto mdlist = llvm::dyn_cast<llvm::MDTuple>(md);
-        auto l      = new __tree_list_value<T>();
-        for(size_t i = 0; i < mdlist->getNumOperands(); i++) {
-            l->append(__llvm_io<T>::parse(this, mdlist->getOperand(i).get()));
+    list<T>* read_list(llvm::Metadata* md) {
+        auto md_tuple = llvm::dyn_cast<llvm::MDTuple>(md);
+        list<T>* olist = new list<T>();
+        for(size_t i = 0; i < md_tuple->getNumOperands(); i++) {
+            olist->append(this->read<T>(md_tuple->getOperand(i).get()));
         }
-        return l;
-    }
-    template<typename T>
-    tree_t* read_tree_list(llvm::Metadata* md) {
-        auto mdlist = llvm::dyn_cast<llvm::MDTuple>(md);
-        auto l      = new __tree_list_tree<T>();
-        for(size_t i = 0; i < mdlist->getNumOperands(); i++) {
-            l->append(this->read_node(mdlist->getOperand(i).get())->as<T>());
-        }
-        return l;
+        return olist;
     }
 
-    template<typename T>
-    llvm::Metadata* write_list(__tree_list_value<T>* l) {
-        std::vector<llvm::Metadata*> vec;
-        for(size_t i = 0; i < l->size(); i++) {
-            vec.push_back(__llvm_io<T>::write(this, (*l)[i]));
-        }
-        return llvm::MDTuple::get(_context, vec);
-    }
-    template<typename T>
-    llvm::Metadata* write_list(__tree_list_tree<T>* l) {
-        std::vector<llvm::Metadata*> vec;
-        for(auto itr = l->begin(); itr != l->end(); itr++) {
-            vec.push_back(this->write_node(*itr));
-        }
-        return llvm::MDTuple::get(_context, vec);
-    }
-
-    template<typename TTuple, size_t... I>
-    inline TTuple parse_tuple_impl(llvm::MDTuple* t, std::integer_sequence<size_t, I...>) {
-        return TTuple((__llvm_io<std::tuple_element_t<I, TTuple>>::parse(this, t->getOperand(I).get()))...);
-    }
-
-    inline bool is_null(llvm::Metadata* md) {
-        if(llvm::isa<llvm::ValueAsMetadata>(md)) {
-            auto value = llvm::dyn_cast<llvm::ValueAsMetadata>(md)->getValue();
-            if(llvm::isa<llvm::Constant>(value)) {
-                return llvm::dyn_cast<llvm::Constant>(value)->isNullValue();
-            }
-            return false;
-        }
-        return false;
-    }
-
-
-    llvm::LLVMContext&                                                          _context;
-    llvm::Value*                                                                _null_value;
-    llvm::ValueAsMetadata*                                                      _null_metadata;
-
-    std::map<tree_type_id, writef_t>                                            _write_funcs;
-    std::map<tree_type_id, readf_t>                                             _read_funcs;
-
-    std::map<tree_t*, llvm::Metadata*>                                          _written_nodes;
-    std::map<llvm::Metadata*, tree_t*>                                          _read_nodes;
-    std::vector<ptr<tree_t>>                                                    _managed_references;
+    std::map<tree_type_id, readf>                           _read_functions;
 
 };
 
 
-#define __ivalue(md)            llvm::dyn_cast<llvm::ConstantInt>(llvm::dyn_cast<llvm::ConstantAsMetadata>(md)->getValue())
-#define __fvalue(md)            llvm::dyn_cast<llvm::ConstantFP>(llvm::dyn_cast<llvm::ConstantAsMetadata>(md)->getValue())
 
-template<>
-struct __llvm_io<bool> {
-    static inline bool parse(llvm_metadata* md, llvm::Metadata* n) {
-        return !__ivalue(n)->isZero();
+/* -------------------------- *
+ * LLVM metadata writer class *
+ * -------------------------- */
+
+struct llvm_metadata_writer : public __llvm_metadata_io_base {
+public:
+
+    explicit inline llvm_metadata_writer(llvm::LLVMContext& llvm_context) noexcept
+            : __llvm_metadata_io_base(llvm_context) {
+        // do nothing
     }
-    static inline llvm::Metadata* write(llvm_metadata* md, bool v) {
-        if(v) { return llvm::ConstantAsMetadata::get(llvm::ConstantInt::getTrue(md->_context)); }
-        else  { return llvm::ConstantAsMetadata::get(llvm::ConstantInt::getFalse(md->_context)); }
+
+protected:
+
+    template<typename _TClass,
+             typename _TTreeType>
+    void addmethod(llvm::MDTuple*(_TClass::* mtd)(_TTreeType*)) noexcept {
+        static_assert(is_tree<_TTreeType>::value, "argument to method must a pointer to a tree node");
+
+        auto wfunc = [=](tree_t* t)->llvm::MDTuple* {
+            return (static_cast<_TClass>(this)->*mtd)(t);
+        };
+        _write_functions[tree_type_id_from<_TTreeType>()];
+    }
+
+    template<typename... T>
+    llvm::Metadata* write_tuple(T... args) noexcept {
+        std::vector<llvm::Metadata*> tvec = { this->write(args)... };
+        return llvm::MDTuple::get(this->llvm_context, tvec);
+    }
+
+    template<typename T>
+    inline llvm::Metadata* write(T v) noexcept {
+        return __llvm_io_writer<T>::write(v, *this);
+    }
+
+private:
+
+    typedef std::function<llvm::MDTuple*(tree_t*)>          writef;
+
+    template<typename> friend struct __llvm_io_writer;
+    template<typename> friend struct __llvm_io_tree_writer;
+
+    llvm::Metadata* write_node(tree_t* t) noexcept;
+
+    template<typename T>
+    llvm::Metadata* write_list(__tree_list_tree<T>* tlist) noexcept {
+        std::vector<llvm::Metadata*> vec;
+        for(auto t: (*tlist)) {
+            vec.push_back(this->write(t));
+        }
+        return llvm::MDTuple::get(this->llvm_context, vec);
+    }
+
+    std::map<tree_type_id, writef>                          _write_functions;
+};
+
+
+
+/* ------------ *
+ * LLVM readers *
+ * ------------ */
+
+#define __as_const_metadata_value(md)                       llvm::dyn_cast<llvm::ConstantAsMetadata>(md)
+#define __get_const_t_value(t, cmd)                         llvm::dyn_cast<t>(cmd->getValue())
+#define __get_api_value(md)                                 __get_const_t_value(llvm::ConstantInt, __as_const_metadata_value(md))->getValue()
+#define __get_apsi_value(md)                 (llvm::APSInt) __get_const_t_value(llvm::ConstantInt, __as_const_metadata_value(md))->getValue()
+#define __get_apf_value(md)                                 __get_const_t_value(llvm::ConstantFP,  __as_const_metadata_value(md))->getValueAPF()
+
+template<> struct __llvm_io_reader<llvm::APInt> {
+    static inline llvm::APInt read(llvm::Metadata* md, llvm_metadata_reader&) {
+        return __get_api_value(md);
     }
 };
 
-template<typename TInt>
-struct __llvm_io_int {
-    static inline TInt parse(llvm_metadata* md, llvm::Metadata* n) {
-        __constif(std::is_signed<TInt>::value) {
-            return (TInt) __ivalue(n)->getSExtValue();
+template<> struct __llvm_io_reader<llvm::APSInt> {
+    static inline llvm::APSInt read(llvm::Metadata* md, llvm_metadata_reader&) {
+        return __get_apsi_value(md);
+    }
+};
+
+template<> struct __llvm_io_reader<llvm::APFloat> {
+    static inline llvm::APFloat read(llvm::Metadata* md, llvm_metadata_reader&) {
+        return __get_apf_value(md);
+    }
+};
+
+template<> struct __llvm_io_reader<std::string> {
+    static inline std::string read(llvm::Metadata* md, llvm_metadata_reader&) {
+        return llvm::dyn_cast<llvm::MDString>(md)->getString();
+    }
+};
+
+template<typename T> struct __llvm_io_int_reader {
+    static inline T read(llvm::Metadata* md, llvm_metadata_reader&) {
+        __constif(std::is_signed<T>::value) {
+            return (T) __get_api_value(md).getSExtValue();
         }
         else {
-            return (TInt) __ivalue(n)->getZExtValue();
+            return (T) __get_api_value(md).getZExtValue();
         }
     }
+};
 
-    static inline llvm::Metadata* write(llvm_metadata* md, TInt v) {
-        return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(llvm::IntegerType::get(md->_context, sizeof(TInt)), v, std::is_signed<TInt>::value));
+template<> struct __llvm_io_reader< uint8_t> : public __llvm_io_int_reader< uint8_t> { };
+template<> struct __llvm_io_reader<uint16_t> : public __llvm_io_int_reader<uint16_t> { };
+template<> struct __llvm_io_reader<uint32_t> : public __llvm_io_int_reader<uint32_t> { };
+template<> struct __llvm_io_reader<uint64_t> : public __llvm_io_int_reader<uint64_t> { };
+template<> struct __llvm_io_reader<  int8_t> : public __llvm_io_int_reader<  int8_t> { };
+template<> struct __llvm_io_reader< int16_t> : public __llvm_io_int_reader< int16_t> { };
+template<> struct __llvm_io_reader< int32_t> : public __llvm_io_int_reader< int32_t> { };
+template<> struct __llvm_io_reader< int64_t> : public __llvm_io_int_reader< int64_t> { };
+
+template<> struct __llvm_io_reader<float> {
+    static inline float read(llvm::Metadata* md, llvm_metadata_reader&) {
+        return __get_apf_value(md).convertToFloat();
     }
 };
 
-template<> struct __llvm_io<uint32_t> : __llvm_io_int<uint32_t> { };
-template<> struct __llvm_io<uint64_t> : __llvm_io_int<uint64_t> { };
-template<> struct __llvm_io<int32_t>  : __llvm_io_int<int32_t> { };
-template<> struct __llvm_io<int64_t>  : __llvm_io_int<int64_t> { };
-
-template<>
-struct __llvm_io<float> {
-    static inline float parse(llvm_metadata* md, llvm::Metadata* n) {
-        return __fvalue(n)->getValueAPF().convertToFloat();
-    }
-    static inline llvm::Metadata* write(llvm_metadata* md, float f) {
-        return llvm::ConstantAsMetadata::get(llvm::ConstantFP::get(llvm::Type::getFloatTy(md->_context), f));
-    }
-};
-
-template<>
-struct __llvm_io<double> {
-    static inline double parse(llvm_metadata* md, llvm::Metadata* n) {
-        return __fvalue(n)->getValueAPF().convertToDouble();
-    }
-    static inline llvm::Metadata* write(llvm_metadata* md, double f) {
-        return llvm::ConstantAsMetadata::get(llvm::ConstantFP::get(llvm::Type::getDoubleTy(md->_context), f));
-    }
-};
-
-template<>
-struct __llvm_io<std::string> {
-    static inline std::string parse(llvm_metadata* md, llvm::Metadata* n) {
-        return llvm::dyn_cast<llvm::MDString>(n)->getString();
-    }
-    static inline llvm::Metadata* write(llvm_metadata* md, std::string v) {
-        return llvm::MDString::get(md->_context, v);
-    }
-};
-
-template<>
-struct __llvm_io<nullptr_t> {
-    static inline llvm::Metadata* write(llvm_metadata* md, nullptr_t) {
-        return md->_null_metadata;
+template<> struct __llvm_io_reader<double> {
+    static inline double read(llvm::Metadata* md, llvm_metadata_reader&) {
+        return __get_apf_value(md).convertToDouble();
     }
 };
 
 template<typename T>
-struct __llvm_io<__tree_property_value<T>&> {
-    static inline llvm::Metadata* write(llvm_metadata* md, __tree_property_value<T>& r) {
-        return __llvm_io<T>::write(md, r);
+struct __llvm_io_tree_reader {
+    static inline T* read(llvm::Metadata* md, llvm_metadata_reader& r) {
+        if(!r.is_null(md)) {
+            return r.read_node(md)->as<T>();
+        }
+        return nullptr;
+    }
+};
+
+template<typename T> struct __llvm_io_reader<T*> : public __llvm_io_tree_reader<T> { };
+
+
+
+/* ------------ *
+ * LLVM writers *
+ * ------------ */
+
+#define __mk_const_api(v, ctx)                              llvm::ConstantInt::get(ctx, v)
+#define __mk_const_apsi(v, ctx)                             llvm::ConstantInt::get(ctx, v)
+#define __mk_const_apf(v, ctx)                              llvm::ConstantFP::get(ctx, v)
+#define __mk_const_as_md(c)                                 llvm::ConstantAsMetadata::get(c)
+
+template<> struct __llvm_io_writer<llvm::APInt> {
+    static inline llvm::Metadata* write(llvm::APInt v, llvm_metadata_writer& w) {
+        return __mk_const_as_md(__mk_const_api(v, w.llvm_context));
+    }
+};
+
+template<> struct __llvm_io_writer<llvm::APSInt> {
+    static inline llvm::Metadata* write(llvm::APSInt v, llvm_metadata_writer& w) {
+        return __mk_const_as_md(__mk_const_apsi(v, w.llvm_context));
+    }
+};
+
+template<> struct __llvm_io_writer<llvm::APFloat> {
+    static inline llvm::Metadata* write(llvm::APFloat v, llvm_metadata_writer& w) {
+        return __mk_const_as_md(__mk_const_apf(v, w.llvm_context));
+    }
+};
+
+template<typename T> struct __llvm_io_int_writer {
+    static inline llvm::Metadata* write(T v, llvm_metadata_writer& w) {
+        __constif(std::is_unsigned<T>::value) {
+            return __mk_const_as_md(llvm::ConstantInt::get(llvm::IntegerType::get(w.llvm_context, sizeof(T)), (uint64_t)v, false));
+        }
+        else {
+            return __mk_const_as_md(llvm::ConstantInt::getSigned(llvm::IntegerType::get(w.llvm_context, sizeof(T)), (int64_t)v));
+        }
+    }
+};
+
+template<> struct __llvm_io_writer< uint8_t> : public __llvm_io_int_writer< uint8_t> { };
+template<> struct __llvm_io_writer<uint16_t> : public __llvm_io_int_writer<uint16_t> { };
+template<> struct __llvm_io_writer<uint32_t> : public __llvm_io_int_writer<uint32_t> { };
+template<> struct __llvm_io_writer<uint64_t> : public __llvm_io_int_writer<uint64_t> { };
+template<> struct __llvm_io_writer<  int8_t> : public __llvm_io_int_writer<  int8_t> { };
+template<> struct __llvm_io_writer< int16_t> : public __llvm_io_int_writer< int16_t> { };
+template<> struct __llvm_io_writer< int32_t> : public __llvm_io_int_writer< int32_t> { };
+template<> struct __llvm_io_writer< int64_t> : public __llvm_io_int_writer< int64_t> { };
+
+template<> struct __llvm_io_writer<float> {
+    static inline llvm::Metadata* write(float v, llvm_metadata_writer& w) {
+        auto fvalue = llvm::ConstantFP::get(llvm::Type::getFloatTy(w.llvm_context), v);
+        return __mk_const_as_md(fvalue);
+    }
+};
+
+template<> struct __llvm_io_writer<double> {
+    static inline llvm::Metadata* write(double v, llvm_metadata_writer& w) {
+        auto dvalue = llvm::ConstantFP::get(llvm::Type::getDoubleTy(w.llvm_context), v);
+        return __mk_const_as_md(dvalue);
+    }
+};
+
+template<> struct __llvm_io_writer<nullptr_t> {
+    static inline llvm::Metadata* write(nullptr_t, llvm_metadata_writer& w) {
+        return w.get_null();
     }
 };
 
 template<typename T>
-struct __llvm_io<__tree_property_tree<T>&> {
-    static inline llvm::Metadata* write(llvm_metadata* md, __tree_property_tree<T>& r) {
-        return md->write_node(r);
+struct __llvm_io_tree_writer {
+    static inline llvm::Metadata* write(T* t, llvm_metadata_writer& w) {
+        if(t == nullptr) {
+            return w.get_null();
+        }
+        return w.write_node(t);
     }
 };
 
 template<typename T>
-struct __llvm_io_read_tree {
-    static inline T* parse(llvm_metadata* md, llvm::Metadata* n) {
-        return md->read_node(n)->as<T>();
+struct __llvm_io_writer<__tree_property_value<T>&> {
+    static inline llvm::Metadata* write(__tree_property_value<T>& p, llvm_metadata_writer& w) {
+        return __llvm_io_writer<T>::write((T) p, w);
     }
 };
 
 template<typename T>
-struct __llvm_io<__tree_property_list<T>&> {
-    static inline llvm::Metadata* write(llvm_metadata* md, __tree_property_list<T>& r) {
-        return md->write_list((typename __tree_property_list<T>::list_t*) r);
+struct __llvm_io_writer<__tree_property_tree<T>&> {
+    static inline llvm::Metadata* write(__tree_property_tree<T>& p, llvm_metadata_writer& w) {
+        return __llvm_io_tree_writer<T>::write((T*) p, w);
     }
 };
 
 template<typename T>
-struct __llvm_io_read_value_list {
-    static inline __tree_list_value<T>* parse(llvm_metadata* md, llvm::Metadata* n) {
-        return md->read_value_list<T>(n)->template as<__tree_list_value<T>>();
+struct __llvm_io_writer<__tree_property_list<T>&> {
+    typedef typename __tree_property_list<T>::list_t        list_t;
+    static inline llvm::Metadata* write(__tree_property_list<T>& p, llvm_metadata_writer& w) {
+        return w.write_list((list_t*) p);
     }
 };
 
-template<typename T>
-struct __llvm_io_read_tree_list {
-    static inline __tree_list_tree<T>* parse(llvm_metadata* md, llvm::Metadata* n) {
-        return md->read_tree_list<T>(n)->template as<__tree_list_tree<T>>();
-    }
-};
+#undef  __as_const_metadata_value
+#undef  __get_const_t_value
+#undef  __get_api_value
+#undef  __get_apsi_value
+#undef  __get_apf_value
+#undef  __mk_const_api
+#undef  __mk_const_apsi
+#undef  __mk_const_apf
+#undef  __mk_const_as_md
 
-template<typename T> struct __llvm_io<__tree_list_value<T>*> : __llvm_io_read_value_list<T> { };
-template<typename T> struct __llvm_io<__tree_list_tree<T>*>  : __llvm_io_read_tree_list<T>  { };
-//TODO: more strict check that T is a tree_type
-template<typename T> struct __llvm_io<T*>                    : __llvm_io_read_tree<T>       { };
-
-
-#undef __ivalue
-#undef __fvalue
 }
 
 #endif /* XCC_LLVM_METADATA_HPP_ */

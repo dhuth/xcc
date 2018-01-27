@@ -5,243 +5,251 @@
  *      Author: derick
  */
 
-// TODO: source file location info (And other debug goodies)
-
 #include "ast_metadata.hpp"
 
 
 namespace xcc {
 
-ast_metadata::ast_metadata(ircode_context& ctx, __ast_builder_impl& builder_impl)
-        : llvm_metadata(ctx),
-          _ast_builder(builder_impl) {
+ast_metadata_writer::ast_metadata_writer(llvm::LLVMContext& llvm_context, __ast_builder_impl& builder) noexcept
+        : llvm_metadata_writer(llvm_context),
+          _ast_builder(builder) {
 
-    this->add_write_method(&ast_metadata::write_void_type);
-    this->add_write_method(&ast_metadata::write_integer_type);
-    this->add_write_method(&ast_metadata::write_real_type);
-    this->add_write_method(&ast_metadata::write_pointer_type);
-    this->add_write_method(&ast_metadata::write_array_type);
-    this->add_write_method(&ast_metadata::write_function_type);
-    this->add_write_method(&ast_metadata::write_record_type);
+    // Types
+    this->addmethod(&ast_metadata_writer::write_void_type);
+    this->addmethod(&ast_metadata_writer::write_integer_type);
+    this->addmethod(&ast_metadata_writer::write_real_type);
+    this->addmethod(&ast_metadata_writer::write_pointer_type);
+    this->addmethod(&ast_metadata_writer::write_array_type);
+    this->addmethod(&ast_metadata_writer::write_function_type);
+    this->addmethod(&ast_metadata_writer::write_record_type);
 
-    this->add_write_method(&ast_metadata::write_namespace_decl);
-    this->add_write_method(&ast_metadata::write_variable_decl);
-    this->add_write_method(&ast_metadata::write_local_decl);
-    this->add_write_method(&ast_metadata::write_parameter_decl);
-    this->add_write_method(&ast_metadata::write_function_decl);
-    this->add_write_method(&ast_metadata::write_typedef_decl);
-
-    this->add_read_method(&ast_metadata::read_void_type);
-    this->add_read_method(&ast_metadata::read_integer_type);
-    this->add_read_method(&ast_metadata::read_real_type);
-    this->add_read_method(&ast_metadata::read_pointer_type);
-    this->add_read_method(&ast_metadata::read_array_type);
-    this->add_read_method(&ast_metadata::read_function_type);
-
-    this->add_read_method(&ast_metadata::read_namespace_decl);
-    this->add_read_method(&ast_metadata::read_variable_decl);
-    this->add_read_method(&ast_metadata::read_local_decl);
-    this->add_read_method(&ast_metadata::read_parameter_decl);
-    this->add_read_method(&ast_metadata::read_function_decl);
-    this->add_read_method(&ast_metadata::read_typedef_decl);
+    // Declarations
+    this->addmethod(&ast_metadata_writer::write_namespace_decl);
+    this->addmethod(&ast_metadata_writer::write_variable_decl);
+    this->addmethod(&ast_metadata_writer::write_parameter_decl);
+    this->addmethod(&ast_metadata_writer::write_function_decl);
+    this->addmethod(&ast_metadata_writer::write_typedef_decl);
 
 }
 
-// ===== //
-// Types //
-// ===== //
-
-llvm::MDTuple* ast_metadata::write_void_type(ast_void_type*) {
+llvm::MDTuple* ast_metadata_writer::write_void_type(ast_void_type*) {
     return this->write_tuple();
 }
-ast_void_type* ast_metadata::read_void_type(llvm::MDTuple*) {
+
+llvm::MDTuple* ast_metadata_writer::write_integer_type(ast_integer_type* i) {
+    return this->write_tuple(i->bitwidth, i->is_unsigned);
+}
+
+llvm::MDTuple* ast_metadata_writer::write_real_type(ast_real_type* r) {
+    return this->write_tuple(r->bitwidth);
+}
+
+llvm::MDTuple* ast_metadata_writer::write_pointer_type(ast_pointer_type* p) {
+    return this->write_tuple(p->element_type);
+}
+
+llvm::MDTuple* ast_metadata_writer::write_array_type(ast_array_type* a) {
+    return this->write_tuple(a->element_type, a->size);
+}
+
+llvm::MDTuple* ast_metadata_writer::write_function_type(ast_function_type* f) {
+    return this->write_tuple(f->return_type, f->parameter_types);
+}
+
+llvm::MDTuple* ast_metadata_writer::write_record_type(ast_record_type* r) {
+    return this->write_tuple(r->field_types, r->is_packed);
+}
+
+llvm::MDTuple* ast_metadata_writer::write_namespace_decl(ast_namespace_decl* n) {
+    return this->write_tuple(
+            n->name,
+            n->generated_name,
+            n->source_location,
+            n->declarations);
+}
+
+llvm::MDTuple* ast_metadata_writer::write_variable_decl(ast_variable_decl* v) {
+    return this->write_tuple(
+            v->name,
+            v->generated_name,
+            v->source_location,
+            v->type);
+}
+
+llvm::MDTuple* ast_metadata_writer::write_parameter_decl(ast_parameter_decl* p) {
+    return this->write_tuple(
+            p->name,
+            p->generated_name,
+            p->source_location,
+            p->type);
+}
+
+llvm::MDTuple* ast_metadata_writer::write_function_decl(ast_function_decl* f) {
+    return this->write_tuple(
+            f->name,
+            f->generated_name,
+            f->source_location,
+            f->return_type,
+            f->parameters);
+}
+
+llvm::MDTuple* ast_metadata_writer::write_typedef_decl(ast_typedef_decl* t) {
+    return this->write_tuple(
+            t->name,
+            t->generated_name,
+            t->source_location,
+            t->type);
+}
+
+
+ast_metadata_reader::ast_metadata_reader(llvm::LLVMContext& llvm_context, __ast_builder_impl& builder) noexcept
+        : llvm_metadata_reader(llvm_context),
+          _ast_builder(builder) {
+
+    // Types
+    this->addmethod(&ast_metadata_reader::read_void_type);
+    this->addmethod(&ast_metadata_reader::read_integer_type);
+    this->addmethod(&ast_metadata_reader::read_real_type);
+    this->addmethod(&ast_metadata_reader::read_pointer_type);
+    this->addmethod(&ast_metadata_reader::read_array_type);
+    this->addmethod(&ast_metadata_reader::read_function_type);
+    this->addmethod(&ast_metadata_reader::read_record_type);
+
+    // Declarations
+    this->addmethod(&ast_metadata_reader::read_namespace_decl);
+    this->addmethod(&ast_metadata_reader::read_variable_decl);
+    this->addmethod(&ast_metadata_reader::read_parameter_decl);
+    this->addmethod(&ast_metadata_reader::read_function_decl);
+    this->addmethod(&ast_metadata_reader::read_typedef_decl);
+}
+
+ast_void_type* ast_metadata_reader::read_void_type(llvm::MDTuple*) {
     return _ast_builder.get_void_type();
 }
 
+ast_integer_type* ast_metadata_reader::read_integer_type(llvm::MDTuple* md) {
+    uint32_t            bitwidth;
+    bool                is_unsigned;
 
-llvm::MDTuple* ast_metadata::write_integer_type(ast_integer_type* itype) {
-    return this->write_tuple(itype->bitwidth, itype->is_unsigned);
-}
-ast_integer_type* ast_metadata::read_integer_type(llvm::MDTuple* itype) {
-    uint32_t    bitwidth;
-    bool        is_unsigned;
-
-    this->parse_tuple(itype, bitwidth, is_unsigned);
+    this->read_tuple(md, bitwidth, is_unsigned);
     return _ast_builder.get_integer_type(bitwidth, is_unsigned);
 }
 
+ast_real_type* ast_metadata_reader::read_real_type(llvm::MDTuple* md) {
+    uint32_t            bitwidth;
 
-llvm::MDTuple* ast_metadata::write_real_type(ast_real_type* rtype) {
-    return this->write_tuple(rtype->bitwidth);
-}
-ast_real_type* ast_metadata::read_real_type(llvm::MDTuple* rtype) {
-    uint32_t    bitwidth;
-
-    this->parse_tuple(rtype, bitwidth);
+    this->read_tuple(md, bitwidth);
     return _ast_builder.get_real_type(bitwidth);
 }
 
+ast_pointer_type* ast_metadata_reader::read_pointer_type(llvm::MDTuple* md) {
+    ast_type*           t;
 
-llvm::MDTuple* ast_metadata::write_pointer_type(ast_pointer_type* ptype) {
-    return this->write_tuple(ptype->element_type);
-}
-ast_pointer_type* ast_metadata::read_pointer_type(llvm::MDTuple* ptype) {
-    ast_type*   eltype;
-
-    this->parse_tuple(ptype, eltype);
-    return _ast_builder.get_pointer_type(eltype);
+    this->read_tuple(md, t);
+    return _ast_builder.get_pointer_type(t);
 }
 
+ast_array_type* ast_metadata_reader::read_array_type(llvm::MDTuple* md) {
+    ast_type*           t;
+    uint32_t            size;
 
-llvm::MDTuple* ast_metadata::write_array_type(ast_array_type* atype) {
-    return this->write_tuple(atype->element_type, atype->size);
-}
-ast_array_type* ast_metadata::read_array_type(llvm::MDTuple* atype) {
-    ast_type*   eltype;
-    uint32_t    size;
-
-    this->parse_tuple(atype, eltype, size);
-    return _ast_builder.get_array_type(eltype, size);
+    this->read_tuple(md, t, size);
+    return _ast_builder.get_array_type(t, size);
 }
 
+ast_function_type* ast_metadata_reader::read_function_type(llvm::MDTuple* md) {
+    ast_type*           ret;
+    list<ast_type>*     args;
 
-llvm::MDTuple* ast_metadata::write_function_type(ast_function_type* ftype) {
-    return this->write_tuple(ftype->return_type, ftype->parameter_types);
-}
-ast_function_type* ast_metadata::read_function_type(llvm::MDTuple* ftype) {
-    ast_type*       rtype;
-    list<ast_type>* param_types;
-
-    this->parse_tuple(ftype, rtype, param_types);
-    return _ast_builder.get_function_type(rtype, param_types);
+    this->read_tuple(md, ret, args);
+    return _ast_builder.get_function_type(ret, args);
 }
 
+ast_record_type* ast_metadata_reader::read_record_type(llvm::MDTuple* md) {
+    list<ast_type>*     types;
+    bool                is_packed;
 
-llvm::MDTuple* ast_metadata::write_record_type(ast_record_type* rtype) {
-    return this->write_tuple(rtype->is_packed, rtype->field_types);
-}
-ast_record_type* ast_metadata::read_record_type(llvm::MDTuple* rtype) {
-    list<ast_type>* ftypes;
-    bool            is_packed;
-
-    this->parse_tuple(rtype, ftypes, is_packed);
-    return _ast_builder.get_record_type(ftypes);
+    this->read_tuple(md, types, is_packed);
+    return _ast_builder.get_record_type(types);
 }
 
-// ============ //
-// Declarations //
-// ============ //
-
-llvm::MDTuple* ast_metadata::write_namespace_decl(ast_namespace_decl* ns) {
-    return this->write_tuple(ns->name, ns->declarations);
-}
-ast_namespace_decl* ast_metadata::read_namespace_decl(llvm::MDTuple* ns) {
+ast_namespace_decl* ast_metadata_reader::read_namespace_decl(llvm::MDTuple* md) {
     std::string                 name;
+    std::string                 generated_name;
+    source_location             location;
     list<ast_decl>*             declarations;
 
-    this->parse_tuple(ns, name, declarations);
-    return new ast_namespace_decl(name, declarations);
+    this->read_tuple(md, name, generated_name, location, declarations);
+
+    auto ns = new ast_namespace_decl(name, declarations);
+    ns->generated_name          = generated_name;
+    ns->source_location         = location;
+
+    return ns;
 }
 
-
-llvm::MDTuple* ast_metadata::write_variable_decl(ast_variable_decl* var) {
-    //TODO: Initial value?
-    //TODO: generated name
-    return this->write_tuple(var->name, var->is_extern, var->is_extern_visible, var->type);
-}
-ast_variable_decl* ast_metadata::read_variable_decl(llvm::MDTuple* var) {
-    //TODO: Initial value?
-    //TODO: generated name
+ast_variable_decl* ast_metadata_reader::read_variable_decl(llvm::MDTuple* md) {
     std::string                 name;
-    bool                        is_extern;
-    bool                        is_extern_visible;
+    std::string                 generated_name;
+    source_location             location;
     ast_type*                   type;
 
-    this->parse_tuple(var, name, is_extern, is_extern_visible, type);
-    auto newv = new ast_variable_decl(name, type);
-    newv->is_extern         =   is_extern;
-    newv->is_extern_visible =   is_extern_visible;
-    return newv;
+    this->read_tuple(md, name, generated_name, location, type);
+
+    auto v = new ast_variable_decl(name, type);
+    v->generated_name           = generated_name;
+    v->source_location          = location;
+    v->is_extern                = true;
+    v->is_extern_visible        = true;
+
+    return v;
 }
 
-
-//TODO: is this needed?
-llvm::MDTuple* ast_metadata::write_local_decl(ast_local_decl* loc) {
-    //TODO: Initial value?
-    //TODO: generated name
-    return this->write_tuple(loc->name, loc->type);
-}
-//TODO: is this needed?
-ast_local_decl* ast_metadata::read_local_decl(llvm::MDTuple* loc) {
-    //TODO: Initial value?
-    //TODO: generated name
+ast_parameter_decl* ast_metadata_reader::read_parameter_decl(llvm::MDTuple* md) {
     std::string                 name;
+    std::string                 generated_name;
+    source_location             location;
     ast_type*                   type;
 
-    this->parse_tuple(loc, name, type);
-    return new ast_local_decl(name, type, nullptr);
+    this->read_tuple(md, name, generated_name, location, type);
+    auto p = new ast_parameter_decl(name, type);
+    p->generated_name           = generated_name;
+    p->source_location          = location;
+
+    return p;
 }
 
-
-llvm::MDTuple* ast_metadata::write_parameter_decl(ast_parameter_decl* param) {
-    //TODO: generated name
-    return this->write_tuple(param->name, param->type);
-}
-ast_parameter_decl* ast_metadata::read_parameter_decl(llvm::MDTuple* param) {
-    //TODO: generated name
+ast_function_decl* ast_metadata_reader::read_function_decl(llvm::MDTuple* md) {
     std::string                 name;
-    ast_type*                   type;
-
-    this->parse_tuple(param, name, type);
-    return new ast_parameter_decl(name, type);
-}
-
-
-llvm::MDTuple* ast_metadata::write_function_decl(ast_function_decl* func) {
-    //TODO: Body?
-    //TODO: generated name
-    return this->write_tuple(
-            func->name,
-            func->is_c_extern,
-            func->is_extern,
-            func->is_extern_visible,
-            func->return_type,
-            func->parameters);
-}
-ast_function_decl* ast_metadata::read_function_decl(llvm::MDTuple* func) {
-    //TODO: Body?
-    //TODO: generated name
-    std::string                 name;
-    bool                        is_c_extern;
-    bool                        is_extern;
-    bool                        is_extern_visible;
+    std::string                 generated_name;
+    source_location             location;
     ast_type*                   return_type;
     list<ast_parameter_decl>*   parameters;
 
-    this->parse_tuple(func, name, is_c_extern, is_extern, is_extern_visible, return_type, parameters);
-    auto newf = new ast_function_decl(name, return_type, parameters, nullptr);
-    newf->is_c_extern       =   is_c_extern;
-    newf->is_extern         =   is_extern;
-    newf->is_extern_visible =   is_extern_visible;
+    this->read_tuple(md, name, generated_name, location, return_type, parameters);
+    auto f = new ast_function_decl(name, return_type, parameters, nullptr);
+    f->generated_name           = generated_name;
+    f->source_location          = location;
+    f->is_c_extern              = true;
+    f->is_extern_visible        = true;
 
-    return newf;
+    return f;
 }
 
-
-llvm::MDTuple* ast_metadata::write_typedef_decl(ast_typedef_decl* tdef) {
-    //TODO: generated name
-    return this->write_tuple(tdef->name, tdef->type);
-}
-ast_typedef_decl* ast_metadata::read_typedef_decl(llvm::MDTuple* tdef) {
-    //TODO: generated name
+ast_typedef_decl* ast_metadata_reader::read_typedef_decl(llvm::MDTuple* md) {
     std::string                 name;
+    std::string                 generated_name;
+    source_location             location;
     ast_type*                   type;
 
-    this->parse_tuple(tdef, name, type);
-    return new ast_typedef_decl(name, type);
-}
-}
+    this->read_tuple(md, name, generated_name, location, type);
+    auto d = new ast_typedef_decl(name, type);
+    d->generated_name           = generated_name;
+    d->source_location          = location;
 
+    return d;
+}
+}
 
 
 

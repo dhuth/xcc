@@ -10,62 +10,55 @@
 
 namespace xcc {
 
-llvm_metadata::llvm_metadata(ircode_context& ircode_context)
-        : _context(ircode_context.llvm_context),
-          _null_value(llvm::Constant::getNullValue(llvm::Type::getInt32PtrTy(_context))),
-          _null_metadata(llvm::ValueAsMetadata::get(_null_value)) {
-    // do nothing .... yet
+bool __llvm_metadata_io_base::is_null(llvm::Metadata* md) const noexcept {
+    if(llvm::isa<llvm::ConstantAsMetadata>(md)) {
+        return llvm::dyn_cast<llvm::ConstantAsMetadata>(md)->getValue()->isNullValue();
+    }
+    return false;
 }
 
-tree_t* llvm_metadata::read_node(llvm::Metadata* md) {
+llvm::Metadata* __llvm_metadata_io_base::get_null() const noexcept {
+    return _null;
+}
 
-    // -- check if null --
+llvm::Metadata* __llvm_metadata_io_base::get_true() const noexcept {
+    return _true;
+}
+
+llvm::Metadata* __llvm_metadata_io_base::get_false() const noexcept {
+    return _false;
+}
+
+tree_t* llvm_metadata_reader::read_node(llvm::Metadata* md) noexcept {
     if(this->is_null(md)) {
         return nullptr;
     }
 
-    if(this->_read_nodes.find(md) == this->_read_nodes.end()) {
+    // unpack tree node
+    llvm::MDTuple*  md_tuple    = llvm::dyn_cast<llvm::MDTuple>(md);
+    tree_type_id    id          = (tree_type_id)    this->read<uint64_t>(md_tuple->getOperand(0).get());
+    llvm::MDTuple*  tree_body   = llvm::dyn_cast<llvm::MDTuple>(md_tuple->getOperand(1).get());
 
-        // -- read header --
-        llvm::MDTuple*  tmd         = llvm::dyn_cast<llvm::MDTuple>(md);
-        tree_type_id    id          = (tree_type_id) this->parse<uint64_t>(tmd->getOperand(0).get());
-        llvm::MDTuple*  data        = llvm::dyn_cast<llvm::MDTuple>(tmd->getOperand(1).get());
+    // read body
+    // TODO: check if read already
 
-        // -- read data --
-        readf_t         rdfunc      = this->_read_funcs[id];
-        tree_t*         res         = rdfunc(data);
-
-        this->_read_nodes[md]       = res;
-        this->_written_nodes[res]   = md;
-        this->_managed_references.push_back(box(res));
-    }
-    return this->_read_nodes[md];
+    return _read_functions[id](tree_body);
 }
 
-llvm::Metadata* llvm_metadata::write_node(tree_t* t) {
-
-    // -- check if null --
+llvm::Metadata* llvm_metadata_writer::write_node(tree_t* t) noexcept {
     if(t == nullptr) {
-        return this->write(nullptr);
+        return this->get_null();
     }
 
-    // -- check if written --
-    if(this->_written_nodes.find(t) == this->_written_nodes.end()) {
+    // write body
+    tree_type_id    id          = t->get_tree_type();
+    // TODO: check if written already
 
-        // -- write data --
-        tree_type_id    id          = t->get_tree_type();
-        writef_t        wtfunc      = this->_write_funcs[id];
-        llvm::MDTuple*  data        = wtfunc(t);
+    llvm::MDTuple*  tree_body   = _write_functions[id](t);
 
-        // -- write header --
-        std::vector<llvm::Metadata*> vec = { this->write((uint64_t)id), data };
-        llvm::Metadata* md          = llvm::MDTuple::get(_context, vec);
-
-        this->_written_nodes[t]     = md;
-        this->_read_nodes[md]       = t;
-        this->_managed_references.push_back(box(t));
-    }
-    return this->_written_nodes[t];
+    // pack tree node
+    std::vector<llvm::Metadata*> md_vec = { this->write((uint64_t)id), tree_body };
+    return llvm::MDTuple::get(this->llvm_context, md_vec);
 }
 
 }

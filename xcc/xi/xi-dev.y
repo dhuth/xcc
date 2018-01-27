@@ -416,7 +416,7 @@ global-function-decl-header
                                     /* generics */
                             OP_LPAREN global-parameter-decl-list-opt OP_RPAREN
                             global-function-return-type-decl                    { $$ = builder.make_xi_function_decl($2, $6, $4, nullptr); }
-                        ;
+                        |
 global-function-forward-decl
                         : global-function-decl-header OP_SEMICOLON              { $1->is_forward_decl = true; $$ = $1; }
                         ;

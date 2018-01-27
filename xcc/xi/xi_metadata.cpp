@@ -11,11 +11,14 @@
 namespace xcc {
 
 
-void xi_builder::write_metadata(ircode_context& ctx) noexcept {
+bool xi_builder::read_metadata_pass(ircode_context& ir) noexcept {
+    //TODO: ...
+    return true;
+}
 
-    for(auto decl: this->global_namespace->declarations) {
-        //...
-    }
+bool xi_builder::write_metadata_pass(ircode_context& ir) noexcept {
+    //TODO: ...
+    return true;
 }
 
 

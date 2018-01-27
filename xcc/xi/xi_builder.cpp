@@ -24,7 +24,7 @@ ast_type* xi_builder::get_reference_type(ast_type* type) noexcept {
 }
 
 ast_type* xi_builder::get_object_type(ast_decl* decl) noexcept {
-    return this->_object_types.get_new<xi_object_type>(decl);
+    return this->_object_types.get_new<xi_decl_type>(decl);
 }
 
 ast_type* xi_builder::get_declaration_type(ast_decl* decl) noexcept {

@@ -25,6 +25,24 @@ namespace xcc {
 
 extern void setup_xi_printer();
 
+// compiler phases:
+//  [x] parse                               parse input file
+//  [ ] read-llvm-metadata
+//      dom:
+//  [x]     merge-namespaces                merge namespaces with the same name
+//  [ ]     resolve-qnames                  resolve qnames for declarations
+//  [ ]     merge-type-decls                merge type declarations & definitions (structs, concepts, ...)
+//  [ ]     merge-function-decls            merge function declarations & definitions (including operator overloads)
+//  [ ]     merge-method-decls              merge method declarations & definitions (including operator overloads)
+//  [ ] write-llvm-metadata
+//      semantic:
+//  [ ]     resolve-qnames                  resolve qnames for expressins (should remove id_exprs)
+//  [ ]     type-check                      TODO: this is big. should expand
+//      lower:
+//  [ ]     promote-closures                TODO: need lambda and whatnot
+//  [ ]     methods                         lower xi_method_decls to xi_function_decls (including operators overloads)
+//  [ ]     functions                       lower xi_function_decls to ast_function_decls (including operators and overloads and function bodies)
+
 int ximain(const char* input_filename_list, const char* output_filename, std::vector<std::string>& args) {
     setup_xi_printer();
 

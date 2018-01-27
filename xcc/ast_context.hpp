@@ -167,7 +167,7 @@ private:
 /**
  * A namespace context
  */
-struct ast_namespace_context final : public ast_context {
+struct ast_namespace_context : public ast_context {
 public:
 
     explicit inline ast_namespace_context(ast_context* prev, ast_namespace_decl* ns) noexcept
@@ -180,8 +180,8 @@ public:
 
 protected:
 
-    ptr<ast_decl> find_first_impl(const char*) final override;
-    void find_all_impl(ptr<list<ast_decl>>, const char*) final override;
+    ptr<ast_decl> find_first_impl(const char*) override;
+    void find_all_impl(ptr<list<ast_decl>>, const char*) override;
 
 private:
 

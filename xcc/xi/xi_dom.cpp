@@ -5,8 +5,8 @@
  *      Author: derick
  */
 
-#include "xi_semantic.hpp"
 #include "error.hpp"
+#include "xi_dom.hpp"
 
 namespace xcc {
 
@@ -52,19 +52,12 @@ static void merge_namespaces_in(ast_namespace_decl* ns) noexcept {
 }
 
 
-void xi_builder::semantic_check(/*options & error log info*/) noexcept {
+bool xi_builder::dom_pass(/*options & error log info*/) noexcept {
     // merge namespaces
     merge_namespaces_in(this->global_namespace);
 
-    // type checking & synthesizing (all of the magic)
-    xi_decl_tcwalker    tc_decl;
-    xi_expr_tcvisitor   tc_expr(tc_decl);
-
-    tc_decl.visit(this->global_namespace, *this, tc_expr);
-}
-
-xi_decl_tcwalker::xi_decl_tcwalker() noexcept {
-    //TODO: ...
+    //...
+    return true;
 }
 
 }
