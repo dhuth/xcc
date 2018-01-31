@@ -14,7 +14,7 @@
 #define     YYLTYPE                         XILTYPE
 #define     YY_DECL                         int yylex(YYSTYPE* yylval_param, XILTYPE* yyloc, xi_builder_t& builder)
 
-#define     YYLTYPE_IS_DECLARED             1
+//#define     YYLTYPE_IS_DECLARED             1
 /*
 #define     YYLLOC_DEFAULT(current, rhs, n)             \
     do                                                  \
@@ -28,7 +28,7 @@
         }                                               \
    while(0)
 */
-#define SETLOC(e,n)                          xcc::setloc(e, xcc::source_span($##n))
+#define SETLOC(e, ...)                      setloc(e, __VA_ARGS__)
 }
 
 %token
@@ -107,6 +107,7 @@
         OP_NAME_MUL                         "__mul__"
         OP_NAME_DIV                         "__div__"
         OP_NAME_MOD                         "__mod__"
+        OP_NAME_NEG                         "__neg__"
         
         OP_NAME_SL                          "__sl__"
         OP_NAME_SR                          "__sr__"
@@ -295,6 +296,7 @@
 %type <op>                                  OP_NAME_MUL
 %type <op>                                  OP_NAME_DIV
 %type <op>                                  OP_NAME_MOD
+%type <op>                                  OP_NAME_NEG
 %type <op>                                  OP_NAME_SL
 %type <op>                                  OP_NAME_SR
 %type <op>                                  OP_NAME_LT
@@ -337,6 +339,7 @@
 %type <stmt>                                block-stmt
 %type <decl>                                var-decl-stmt
 %type <stmt>                                non-decl-stmt
+%type <stmt>                                assign-stmt
 %type <stmt>                                expr-stmt
 %type <stmt>                                if-stmt
 %type <stmt>                                else-stmt
@@ -355,6 +358,8 @@ extern YY_DECL;
 void yyerror(XILTYPE* loc, xi::parser&, xi_builder_t& builder, const char* msg);
 
 }
+
+%parse-param                        {std::string            input_filename}
 %param                              {xi_builder_t&          builder}
 
 %start  translation-unit
@@ -380,11 +385,11 @@ global-decl-list
                         | global-decl                                           { $$ = make_list<decl_t>($1); }
                         ;
 global-decl
-                        : namespace-decl                                        { $$ = $1; }
-                        | global-function-forward-decl                          { $$ = $1; }
-                        | global-function-decl                                  { $$ = $1; }
-                        | global-struct-forward-decl                            { $$ = $1; }
-                        | global-struct-decl                                    { $$ = $1; }
+                        : namespace-decl                                        { $$ = SETLOC($1, @1); }
+                        | global-function-forward-decl                          { $$ = SETLOC($1, @1); }
+                        | global-function-decl                                  { $$ = SETLOC($1, @1); }
+                        | global-struct-forward-decl                            { $$ = SETLOC($1, @1); }
+                        | global-struct-decl                                    { $$ = SETLOC($1, @1); }
                         ;
 
 /* ----- *
@@ -416,6 +421,12 @@ global-function-decl-header
                                     /* generics */
                             OP_LPAREN global-parameter-decl-list-opt OP_RPAREN
                             global-function-return-type-decl                    { $$ = builder.make_xi_function_decl($2, $6, $4, nullptr); }
+                        |           /* attributes */
+                          KW_FUNC
+                            named-op
+                                    /* generics */
+                            OP_LPAREN global-parameter-decl-list-opt OP_RPAREN
+                            global-function-return-type-decl                    { $$ = builder.make_xi_operator_function_decl($2, $6, $4, nullptr); }
                         ;
 global-function-forward-decl
                         : global-function-decl-header OP_SEMICOLON              { $1->is_forward_decl = true; $$ = $1; }
@@ -433,8 +444,9 @@ global-parameter-decl-list
                         | global-parameter-decl                                 { $$ = make_list<parameter_t>($1); }
                         ;
 global-parameter-decl
-                        : TOK_IDENTIFIER OP_COLON type                          { $$ = builder.make_xi_parameter_decl($1,      $3); }
-                        |                OP_COLON type                          { $$ = builder.make_xi_parameter_decl(nullptr, $2); }
+                        : TOK_IDENTIFIER OP_COLON type                          { $$ = SETLOC(builder.make_xi_parameter_decl($1,      $3), @$); }
+                        |                OP_COLON type                          { $$ = SETLOC(builder.make_xi_parameter_decl(nullptr, $2), @$); }
+                        |                         type                          { $$ = SETLOC(builder.make_xi_parameter_decl(nullptr, $1), @$); }
                         ;
 global-function-return-type-decl
                         : OP_ARROW type                                         { $$ = $2; }
@@ -497,6 +509,7 @@ var-decl-stmt
                         ;
 non-decl-stmt
                         : block-stmt                                            { $$ = $1; }
+                        | assign-stmt                                           { $$ = $1; }
                         | expr-stmt                                             { $$ = $1; }
                         | if-stmt                                               { $$ = $1; }
                         | while-stmt                                            { $$ = $1; }
@@ -523,8 +536,11 @@ while-stmt
 s-body-stmt
                         :  block-stmt                                           { $$ = $1; }
                         ;
+assign-stmt
+                        : assign-expr-only OP_SEMICOLON                         { $$ = builder.make_expr_stmt($1); }
+                        ;
 expr-stmt
-                        : assign-expr OP_SEMICOLON                              { $$ = builder.make_expr_stmt($1); }
+                        : expr OP_SEMICOLON                                     { $$ = builder.make_expr_stmt($1); }
                         ;
 break-stmt
                         : KW_BREAK OP_SEMICOLON                                 { $$ = builder.make_break_stmt(); }
@@ -612,6 +628,7 @@ postfix-expr
 prefix-expr
                         : OP_MUL        prefix-expr                             { $$ = builder.make_xi_op(operator_t::__deref__, $2); }
                         | OP_BINARY_AND prefix-expr                             { $$ = builder.make_xi_op(operator_t::__address_of__, $2); }
+                        | OP_SUB        prefix-expr                             { $$ = builder.make_xi_op(operator_t::__neg__, $2); }
                         | term-expr                                             { $$ = $1; }
                         ;
 term-expr
@@ -650,6 +667,7 @@ named-op
                         | OP_NAME_MUL                                           { $$ = $1; }
                         | OP_NAME_DIV                                           { $$ = $1; }
                         | OP_NAME_MOD                                           { $$ = $1; }
+                        | OP_NAME_NEG                                           { $$ = $1; }
                         | OP_NAME_SL                                            { $$ = $1; }
                         | OP_NAME_SR                                            { $$ = $1; }
                         | OP_NAME_LT                                            { $$ = $1; }

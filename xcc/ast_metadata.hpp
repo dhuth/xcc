@@ -18,6 +18,20 @@ public:
 
     explicit ast_metadata_reader(llvm::LLVMContext&, __ast_builder_impl&) noexcept;
 
+protected:
+
+    inline void set_decl_data(ast_decl* decl, std::string& generated_name, source_span& location) noexcept {
+        decl->generated_name    = generated_name;
+        decl->source_location   = location;
+    }
+    //TODO: is_extern_visible might be an option
+    inline void set_externable_data(ast_externable* e) {
+        e->is_extern            = true;
+        e->is_extern_visible    = true;
+    }
+
+private:
+
     // Types
     ast_void_type*              read_void_type(llvm::MDTuple*);
     ast_integer_type*           read_integer_type(llvm::MDTuple*);
@@ -34,8 +48,6 @@ public:
     ast_function_decl*          read_function_decl(llvm::MDTuple*);
     ast_typedef_decl*           read_typedef_decl(llvm::MDTuple*);
 
-private:
-
     __ast_builder_impl&                                     _ast_builder;
 
 };
@@ -44,6 +56,8 @@ struct ast_metadata_writer : public llvm_metadata_writer {
 public:
 
     explicit ast_metadata_writer(llvm::LLVMContext&, __ast_builder_impl&) noexcept;
+
+private:
 
     // Types
     llvm::MDTuple*              write_void_type(ast_void_type*);
@@ -60,8 +74,6 @@ public:
     llvm::MDTuple*              write_parameter_decl(ast_parameter_decl*);
     llvm::MDTuple*              write_function_decl(ast_function_decl*);
     llvm::MDTuple*              write_typedef_decl(ast_typedef_decl*);
-
-private:
 
     __ast_builder_impl&                                     _ast_builder;
 

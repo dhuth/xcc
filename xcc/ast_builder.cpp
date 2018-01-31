@@ -19,29 +19,26 @@ namespace xcc {
 __ast_builder_impl::__ast_builder_impl(
         translation_unit& tu,
         ast_name_mangler* mangler,
-        ast_type_comparer* type_comparer,
-        ast_type_hasher* type_hasher) noexcept
+        ast_typeset_base* ts) noexcept
             : _mangler_ptr(mangler),
-              _type_comparer_ptr(type_comparer),
-              _type_hasher_ptr(type_hasher),
               get_mangled_name(*mangler),
               tu(tu),
               global_namespace(new ast_namespace_decl("global")),
               _the_nop_stmt(new ast_nop_stmt()),
               _the_break_stmt(new ast_break_stmt()),
               _the_continue_stmt(new ast_continue_stmt()),
-              _pointer_types(*type_hasher, *type_comparer),
-              _array_types(*type_hasher, *type_comparer),
-              _function_types(*type_hasher, *type_comparer),
-              _record_types(*type_hasher, *type_comparer) {
+              _the_type_set(ts),
+              _pointer_types(*ts),
+              _array_types(*ts),
+              _function_types(*ts),
+              _record_types(*ts) {
 
     this->context = new ast_namespace_context(nullptr, this->global_namespace);
     this->create_default_types();
 }
 
 __ast_builder_impl::~__ast_builder_impl() noexcept {
-    delete this->_type_comparer_ptr;
-    delete this->_type_hasher_ptr;
+    delete this->_the_type_set;
     delete this->_mangler_ptr;
 }
 
@@ -570,7 +567,7 @@ ast_stmt* __ast_builder_impl::make_for_stmt(ast_stmt* init_stmt, ast_expr* cond,
 }
 
 bool __ast_builder_impl::sametype(ast_type* lhs, ast_type* rhs) const {
-    return this->_type_comparer_ptr->operator()(lhs, rhs);
+    return _the_type_set->compare(lhs, rhs);
 }
 
 static ast_type* __maxtype(const __ast_builder_impl* builder, ast_integer_type* lhs, ast_type* rhs) {

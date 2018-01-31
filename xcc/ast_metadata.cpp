@@ -182,8 +182,7 @@ ast_namespace_decl* ast_metadata_reader::read_namespace_decl(llvm::MDTuple* md) 
     this->read_tuple(md, name, generated_name, location, declarations);
 
     auto ns = new ast_namespace_decl(name, declarations);
-    ns->generated_name          = generated_name;
-    ns->source_location         = location;
+    this->set_decl_data(ns, generated_name, location);
 
     return ns;
 }
@@ -197,10 +196,8 @@ ast_variable_decl* ast_metadata_reader::read_variable_decl(llvm::MDTuple* md) {
     this->read_tuple(md, name, generated_name, location, type);
 
     auto v = new ast_variable_decl(name, type);
-    v->generated_name           = generated_name;
-    v->source_location          = location;
-    v->is_extern                = true;
-    v->is_extern_visible        = true;
+    this->set_decl_data(v, generated_name, location);
+    this->set_externable_data(v);
 
     return v;
 }
@@ -213,8 +210,7 @@ ast_parameter_decl* ast_metadata_reader::read_parameter_decl(llvm::MDTuple* md) 
 
     this->read_tuple(md, name, generated_name, location, type);
     auto p = new ast_parameter_decl(name, type);
-    p->generated_name           = generated_name;
-    p->source_location          = location;
+    this->set_decl_data(p, generated_name, location);
 
     return p;
 }
@@ -228,10 +224,9 @@ ast_function_decl* ast_metadata_reader::read_function_decl(llvm::MDTuple* md) {
 
     this->read_tuple(md, name, generated_name, location, return_type, parameters);
     auto f = new ast_function_decl(name, return_type, parameters, nullptr);
-    f->generated_name           = generated_name;
-    f->source_location          = location;
+    this->set_decl_data(f, generated_name, location);
+    this->set_externable_data(f);
     f->is_c_extern              = true;
-    f->is_extern_visible        = true;
 
     return f;
 }
@@ -244,8 +239,7 @@ ast_typedef_decl* ast_metadata_reader::read_typedef_decl(llvm::MDTuple* md) {
 
     this->read_tuple(md, name, generated_name, location, type);
     auto d = new ast_typedef_decl(name, type);
-    d->generated_name           = generated_name;
-    d->source_location          = location;
+    this->set_decl_data(d, generated_name, location);
 
     return d;
 }

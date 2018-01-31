@@ -33,32 +33,44 @@ tree_t* llvm_metadata_reader::read_node(llvm::Metadata* md) noexcept {
     if(this->is_null(md)) {
         return nullptr;
     }
+    if(_read_metadata.find(md) == _read_metadata.end()) {
+        // unpack tree node
+        llvm::MDTuple*  md_tuple    = llvm::dyn_cast<llvm::MDTuple>(md);
+        tree_type_id    id          = (tree_type_id)    this->read<uint64_t>(md_tuple->getOperand(0).get());
+        llvm::MDTuple*  tree_body   = llvm::dyn_cast<llvm::MDTuple>(md_tuple->getOperand(1).get());
 
-    // unpack tree node
-    llvm::MDTuple*  md_tuple    = llvm::dyn_cast<llvm::MDTuple>(md);
-    tree_type_id    id          = (tree_type_id)    this->read<uint64_t>(md_tuple->getOperand(0).get());
-    llvm::MDTuple*  tree_body   = llvm::dyn_cast<llvm::MDTuple>(md_tuple->getOperand(1).get());
-
-    // read body
-    // TODO: check if read already
-
-    return _read_functions[id](tree_body);
+        auto read_tree = _read_functions[id](tree_body);
+        _read_metadata[md] = read_tree;
+        return read_tree;
+    }
+    return _read_metadata[md];
 }
 
 llvm::Metadata* llvm_metadata_writer::write_node(tree_t* t) noexcept {
     if(t == nullptr) {
         return this->get_null();
     }
+    if(_written_nodes.find(t) == _written_nodes.end()) {
+        // write body
+        tree_type_id    id          = t->get_tree_type();
+        llvm::MDTuple*  tree_body   = _write_functions[id](t);
 
-    // write body
-    tree_type_id    id          = t->get_tree_type();
-    // TODO: check if written already
+        // pack tree node
+        std::vector<llvm::Metadata*> md_vec = { this->write(id), tree_body };
+        return llvm::MDTuple::get(this->llvm_context, md_vec);
+    }
+    return _written_nodes[t];
+}
 
-    llvm::MDTuple*  tree_body   = _write_functions[id](t);
+void llvm_metadata_writer::write_to_named_metadata(llvm::NamedMDNode* md_named_node, tree_t* t) {
+    auto md_tree_node  = this->write_node(t);
+    assert(md_tree_node == nullptr || llvm::isa<llvm::MDNode>(md_tree_node));
+    md_named_node->addOperand(llvm::dyn_cast<llvm::MDNode>(md_tree_node));
+}
 
-    // pack tree node
-    std::vector<llvm::Metadata*> md_vec = { this->write(id), tree_body };
-    return llvm::MDTuple::get(this->llvm_context, md_vec);
+void llvm_metadata_writer::write_to_named_metadata(llvm::Module& m, std::string name, tree_t* t) {
+    auto md_named_node = m.getOrInsertNamedMetadata(name);
+    this->write_to_named_metadata(md_named_node, t);
 }
 
 }

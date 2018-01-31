@@ -23,6 +23,18 @@
 
 namespace xcc {
 
+struct ast_externable {
+
+    explicit inline ast_externable(tree_t* p, bool is_extern = false, bool is_extern_visible = false) noexcept
+            : is_extern(p, is_extern),
+              is_extern_visible(p, is_extern_visible) {
+        // do nothing
+    }
+
+    property<bool>                                  is_extern;          //!< is defined externally
+    property<bool>                                  is_extern_visible;  //!< is visible outside of this module
+};
+
 
 /**
  * Base class for all ast nodes
@@ -34,7 +46,7 @@ public:
      * Passing constructor for ast_tree
      * @param id overriding tree type id
      */
-    inline ast_tree(tree_type_id id) noexcept
+    explicit inline ast_tree(tree_type_id id) noexcept
             : base_type(id),
               source_location(this) {
         // do nothing
@@ -43,7 +55,7 @@ public:
     /**
      * Passing cloning constructor for ast_tree
      */
-    inline ast_tree(const ast_tree& t) noexcept
+    explicit inline ast_tree(const ast_tree& t) noexcept
             : base_type(t._type),
               source_location(this, t.source_location) {
         // do nothing
@@ -219,7 +231,8 @@ public:
 /**
  * Global variable declaration
  */
-struct ast_variable_decl final : public extend_tree<tree_type_id::ast_variable_decl, ast_decl> {
+struct ast_variable_decl final : public extend_tree<tree_type_id::ast_variable_decl, ast_decl>,
+                                 public ast_externable {
 public:
 
     /**
@@ -227,31 +240,27 @@ public:
      * @param type
      * @param initial_value
      */
-    inline ast_variable_decl(std::string name, ast_type* type, ast_expr* initial_value = nullptr) noexcept
+    explicit inline ast_variable_decl(std::string name, ast_type* type, ast_expr* initial_value = nullptr) noexcept
             : base_type(name),
+              ast_externable(this, false, true),
               type(this, type),
-              initial_value(this, initial_value),
-              is_extern(this, false),
-              is_extern_visible(this, true) {
+              initial_value(this, initial_value) {
         // do nothing
     }
 
     /**
      * Passing constructor for cloning
      */
-    inline ast_variable_decl(const ast_variable_decl& v) noexcept
+    explicit inline ast_variable_decl(const ast_variable_decl& v) noexcept
             : base_type((base_type&) v),
+              ast_externable(v),
               type(this, v.type),
-              initial_value(this, v.initial_value),
-              is_extern(this, v.is_extern),
-              is_extern_visible(this, v.is_extern_visible) {
+              initial_value(this, v.initial_value) {
         // do nothing
     }
 
     property<ast_type>                                          type;               //!< variable type
     property<ast_expr>                                          initial_value;      //!< initial value
-    property<bool>                                              is_extern;          //!< is defined externally
-    property<bool>                                              is_extern_visible;  //!< is visible outside of this module
 
 };
 
@@ -266,7 +275,7 @@ public:
      * @param name
      * @param type
      */
-    inline ast_parameter_decl(std::string name, ast_type* type) noexcept
+    explicit inline ast_parameter_decl(std::string name, ast_type* type) noexcept
             : base_type(name),
               type(this, type) {
         // do nothing
@@ -275,7 +284,7 @@ public:
     /**
      * Passing constructor for cloning
      */
-    inline ast_parameter_decl(const ast_parameter_decl& p) noexcept
+    explicit inline ast_parameter_decl(const ast_parameter_decl& p) noexcept
             : base_type((base_type&) p),
               type(this, p.type) {
         // do nothing
@@ -334,33 +343,32 @@ public:
 /**
  * Function declaration
  */
-struct ast_function_decl final : public extend_tree<tree_type_id::ast_function_decl, ast_decl> {
+struct ast_function_decl final : public extend_tree<tree_type_id::ast_function_decl, ast_decl>,
+                                 public ast_externable {
 public:
 
     /**
      * @param name function name
      * @param return_type the function return type
-     * @param parameters list of parameter declartions
-     * @param body the fnction body
+     * @param parameters list of parameter declarations
+     * @param body the function body
      */
     inline ast_function_decl(std::string name, ast_type* return_type, list<ast_parameter_decl>* parameters, ast_stmt* body) noexcept
             : base_type(name),
+              ast_externable(this, false, true),
               return_type(this, return_type),
               parameters(this, parameters),
               body(this, body),
-              is_extern(this, false),
-              is_extern_visible(this, true),
               is_c_extern(this, false) {
         // do nothing
     }
 
     inline ast_function_decl(const ast_function_decl& f) noexcept
             : base_type((base_type&) f),
+              ast_externable(f),
               return_type(this, f.return_type),
               parameters(this, f.parameters),
               body(this, f.body),
-              is_extern(this, f.is_extern),
-              is_extern_visible(this, f.is_extern_visible),
               is_c_extern(this, f.is_c_extern) {
         // do nothing
     }
@@ -368,8 +376,6 @@ public:
     property<ast_type>                                          return_type;        //!<
     property<list<ast_parameter_decl>>                          parameters;         //!<
     property<ast_stmt>                                          body;               //!<
-    property<bool>                                              is_extern;          //!< is defined externally
-    property<bool>                                              is_extern_visible;  //!< is visible outside of this module
     property<bool>                                              is_c_extern;        //!< use c style mangling (none)
 
 };
@@ -1714,30 +1720,23 @@ protected:
 /**
  * A mapped set of ast_types indexed by pointer
  */
-struct ast_typeset {
+struct ast_typeset_base {
 
-    inline explicit ast_typeset(ast_type_hasher& hasher, ast_type_comparer& comparer)
-            : _map(0, hasher, comparer) {
-        //...
-    }
-
-    std::unordered_map<ast_type*, ptr<ast_type>, ast_type_hasher, ast_type_comparer>
-                                                            _map;
+    virtual ~ast_typeset_base() = default;
 
     /**
      * Get a pointer to the same type. If the type does not exist in the set, it is placed in the set
      * @param p     the type to look for
      * @return      the given new type, or one already in the set
      */
-    inline ast_type* get(ast_type* p) noexcept {
-        if(this->_map.find(p) == this->_map.end()) {
-            this->_map[p] = box<ast_type>(p);
-            return p;
-        }
-        else {
-            return unbox(this->_map[p]);
-        }
-    }
+    virtual ast_type* get(ast_type*) noexcept = 0;
+    /**
+     * Compare to types.
+     * @param l
+     * @param r
+     * @return true if both types are the same
+     */
+    virtual bool      compare(ast_type*, ast_type*) noexcept = 0;
 
     /**
      * Convenience function for calling ast_typeset::get
@@ -1770,6 +1769,30 @@ struct ast_typeset {
         return this->get_new<TTarget>(args...)-> template as<TTarget>();
     }
 };
+
+
+template<typename THasher           = ast_type_hasher,
+         typename TPred             = ast_type_comparer>
+struct ast_typeset_impl final : public ast_typeset_base {
+
+    ast_type* get(ast_type* tp) noexcept override final {
+        auto iter = _map.find(tp);
+        if(iter == _map.end()) {
+            _map[tp] = box<ast_type>(tp);
+            return tp;
+        }
+        return iter->first;
+    }
+
+    bool compare(ast_type* l, ast_type* r) noexcept override final {
+        return _comparer(l, r);
+    }
+
+    TPred                                                       _comparer;
+    std::unordered_map<ast_type*,ptr<ast_type>,THasher,TPred>   _map;
+};
+
+typedef ast_typeset_impl<>                                  ast_typeset;
 
 }
 

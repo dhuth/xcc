@@ -17,7 +17,7 @@
 
 #define     BEGIN_LOC                                   yyloc->step();
 #define     RETURN_VALUE(tp,name,valname,val)           { SHIFTLOC yylval->valname = val; return xi::parser::token::tp##_##name; }
-#define     RETURN_LOCATED_VALUE(tp,name,valname,val)   { SHIFTLOC yylval->valname = xcc::setloc(val, *yyloc); return xi::parser::token::tp##_##name; }
+#define     RETURN_LOCATED_VALUE(tp,name,valname,val)   { SHIFTLOC yylval->valname = setloc(val, *yyloc); return xi::parser::token::tp##_##name; }
 #define     RETURN_VOID(tp,name)                        { SHIFTLOC return xi::parser::token::tp##_##name; }
 
 #define     RETURN_LITERAL(tp,val)                      RETURN_VALUE(LITERAL,tp,expr,val)
@@ -144,6 +144,7 @@ __sub__                                                 RETURN_OP_NAME(SUB,     
 __mul__                                                 RETURN_OP_NAME(MUL,                 mul)
 __div__                                                 RETURN_OP_NAME(DIV,                 div)
 __mod__                                                 RETURN_OP_NAME(MOD,                 mod)
+__neg__                                                 RETURN_OP_NAME(NEG,                 neg)
 __sl__                                                  RETURN_OP_NAME(SL,                  sl)
 __sr__                                                  RETURN_OP_NAME(SR,                  sr)
 __lt__                                                  RETURN_OP_NAME(LT,                  lt)

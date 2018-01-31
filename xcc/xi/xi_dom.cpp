@@ -53,11 +53,19 @@ static void merge_namespaces_in(ast_namespace_decl* ns) noexcept {
 
 
 ast_type* dom_qname_resolver::resolve_id_type(xi_id_type* t, xi_builder& b) {
-    switch(t->get_tree_type()) {
-    case tree_type_id::ast_typedef_decl:                    return t->as<ast_typedef_decl>()->type;
-    case tree_type_id::xi_struct_decl:                      return b.get_object_type(t->as<xi_type_decl>());
-    default:
-        __throw_unsuported_tree_type(__FILE__, __LINE__, t, "dom_qname_resolver::resolve_id_type()");
+    auto dlist = b.find_all_declarations(t->name);
+    if(dlist->size() == 0) {
+        //TODO: throw an error or log an error or something
+        assert(false);
+        return nullptr;
+    }
+    else {
+        auto decl = first(dlist);
+        switch(decl->get_tree_type()) {
+        case tree_type_id::xi_struct_decl:      return b.get_object_type(decl);
+        default:
+            __throw_unhandled_tree_type(__FILE__, __LINE__, decl, "dom_qname_resolver::resolve_id_type()");
+        }
     }
 }
 

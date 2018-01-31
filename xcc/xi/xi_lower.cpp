@@ -9,6 +9,9 @@
 
 namespace xcc {
 
-
+bool xi_builder::lower_pass() noexcept {
+    //TODO: ...
+    return true;
+}
 
 }

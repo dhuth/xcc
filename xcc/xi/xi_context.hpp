@@ -24,11 +24,6 @@ public:
     virtual ~xi_context() = default;
 };
 
-//TODO: do we need this?
-struct xi_namespace_context final : public ast_namespace_context {
-
-};
-
 
 struct xi_function_context final : public xi_context {
 public:
@@ -70,28 +65,6 @@ protected:
 private:
 
     ptr<xi_method_decl>                                     methoddecl;
-
-};
-
-
-struct xi_using_context : public xi_context {
-public:
-
-    explicit inline xi_using_context(ast_context* prev, xi_using_decl* decl) noexcept
-            : xi_context(prev),
-              usingdecl(decl) {
-        // do nothing
-    }
-    virtual ~xi_using_context() = default;
-
-protected:
-
-    virtual ptr<ast_decl> find_first_impl(const char*) override;
-    virtual void          find_all_impl(ptr<list<ast_decl>>, const char*) override;
-
-private:
-
-    ptr<xi_using_decl>                                      usingdecl;
 
 };
 

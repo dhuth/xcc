@@ -53,10 +53,11 @@ int ximain(const char* input_filename_name, const char* output_filename, std::ve
     ircode_context ctx(output_filename);
     xi_builder builder(unit);
 
+    // TODO: loop over included library objects
     builder.read_metadata_pass(ctx);
 
     // Parse input file
-    xi::parser p(builder);
+    xi::parser p(std::string(input_filename_name), builder);
     xiin = fopen(input_filename_name, "r");
     p.parse();
     fclose(xiin);

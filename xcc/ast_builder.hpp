@@ -88,8 +88,7 @@ public:
     __ast_builder_impl(
             translation_unit& tu,
             ast_name_mangler* mangler,
-            ast_type_comparer* type_comparer,
-            ast_type_hasher* type_hasher) noexcept;
+            ast_typeset_base* ts) noexcept;
     virtual ~__ast_builder_impl() noexcept;
 
 
@@ -180,8 +179,7 @@ protected:
     translation_unit&                                                   tu;                                         //! The translation unit
     ptr<ast_namespace_decl>                                             global_namespace;                           //! The unnamed global namespace
 
-    ast_type_comparer*                                                  _type_comparer_ptr;                         //! A pointer to the type comparer function
-    ast_type_hasher*                                                    _type_hasher_ptr;                           //! A pointer to the type hasher function
+    ast_typeset_base*                                                   _the_type_set;                              //! A pointer to the main typeset
 
 public:
 
@@ -268,10 +266,10 @@ private:
     std::map<uint32_t, ptr<ast_integer_type>>                           _signed_integer_types;                      //! Signed integer types by bitwidth
     std::map<uint32_t, ptr<ast_real_type>>                              _real_types;                                //! Floating point types by bitwidth
 
-    ast_typeset                                                         _pointer_types;                             //! The pointer type set
-    ast_typeset                                                         _function_types;                            //! The function type set
-    ast_typeset                                                         _array_types;                               //! The array type set
-    ast_typeset                                                         _record_types;                              //! The record type set
+    ast_typeset_base&                                                   _pointer_types;                             //! The pointer type set
+    ast_typeset_base&                                                   _function_types;                            //! The function type set
+    ast_typeset_base&                                                   _array_types;                               //! The array type set
+    ast_typeset_base&                                                   _record_types;                              //! The record type set
 
     ast_name_mangler*                                                   _mangler_ptr;                               //! A pointer to the name mangling function
 };
@@ -281,8 +279,7 @@ private:
  * The base class for abstract syntax builders
  */
 template<typename TMangler              = ast_default_name_mangler,
-         typename TTypeComparer         = ast_type_comparer,
-         typename TTypeHasher           = ast_type_hasher,
+         typename TTypeSet              = ast_typeset,
          typename std::enable_if<std::is_base_of<ast_name_mangler, TMangler>::value, int>::type = 0>
 struct ast_builder : public __ast_builder_impl {
 public:
@@ -295,8 +292,7 @@ public:
             : __ast_builder_impl(
                     tu,
                     new TMangler(),
-                    new TTypeComparer(),
-                    new TTypeHasher()) { }
+                    new TTypeSet()) { }
     virtual ~ast_builder() noexcept = default;
 
 };

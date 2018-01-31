@@ -94,6 +94,7 @@ protected:
         static_assert(is_tree<_TReturnType>::value, "return type must be a pointer to a tree node");
 
         auto rfunc = [=](llvm::MDTuple* t)->tree_t* {
+            //TODO: maybe handle null node
             return (static_cast<_TClass*>(this)->*mtd)(t);
         };
         _read_functions[tree_type_id_from<_TReturnType>()] = rfunc;
@@ -140,6 +141,7 @@ private:
     }
 
     std::map<tree_type_id, readf>                           _read_functions;
+    std::map<llvm::Metadata*, ptr<tree_t>>                  _read_metadata;
 
 };
 
@@ -157,6 +159,22 @@ public:
         // do nothing
     }
 
+    template<typename T>
+    inline void write_to_module(ptr<llvm::Module> m, std::string name, __tree_list_tree<T>* nlist) {
+        auto md_named = m->getOrInsertNamedMetadata(name);
+        for(auto t: *nlist) {
+            this->write_to_named_metadata(md_named, t);
+        }
+    }
+
+    template<typename T>
+    inline void write_to_module(ptr<llvm::Module> m, std::string name, __tree_property_list<T>& plist) {
+        auto md_named = m->getOrInsertNamedMetadata(name);
+        for(auto t: plist) {
+            this->write_to_named_metadata(md_named, t);
+        }
+    }
+
 protected:
 
     template<typename _TClass,
@@ -168,7 +186,7 @@ protected:
             //TODO: maybe handle null tree?
             return (static_cast<_TClass*>(this)->*mtd)(t->as<_TTreeType>());
         };
-        _write_functions[tree_type_id_from<_TTreeType>()];
+        _write_functions[tree_type_id_from<_TTreeType>()] = wfunc;
     }
 
     template<typename... T>
@@ -181,6 +199,9 @@ protected:
     inline llvm::Metadata* write(T& v) noexcept {
         return __llvm_io_writer<typename std::remove_reference<T>::type>::write(v, *this);
     }
+
+    void write_to_named_metadata(llvm::Module&, std::string, tree_t*);
+    void write_to_named_metadata(llvm::NamedMDNode*, tree_t*);
 
 private:
 
@@ -201,6 +222,7 @@ private:
     }
 
     std::map<tree_type_id, writef>                          _write_functions;
+    std::map<tree_t*, llvm::Metadata*>                      _written_nodes;
 };
 
 
@@ -372,10 +394,10 @@ template<> struct __llvm_io_writer<std::string> {
 template<typename T> struct __llvm_io_int_writer {
     static inline llvm::Metadata* write(T v, llvm_metadata_writer& w) {
         if(std::is_unsigned<T>::value) {
-            return __mk_const_as_md(llvm::ConstantInt::get(llvm::IntegerType::get(w.llvm_context, sizeof(T)), (uint64_t)v, false));
+            return __mk_const_as_md(llvm::ConstantInt::get(llvm::IntegerType::get(w.llvm_context, 8 * sizeof(T)), (uint64_t)v, false));
         }
         else {
-            return __mk_const_as_md(llvm::ConstantInt::getSigned(llvm::IntegerType::get(w.llvm_context, sizeof(T)), (int64_t)v));
+            return __mk_const_as_md(llvm::ConstantInt::getSigned(llvm::IntegerType::get(w.llvm_context, 8 * sizeof(T)), (int64_t)v));
         }
     }
 };

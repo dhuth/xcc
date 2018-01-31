@@ -71,12 +71,35 @@ inline xcc::xi_qname* make_xi_qname(xcc::xi_qname* qname, const char* name) {
 template<typename Tptr>
 inline Tptr setloc(Tptr e, const xi::location& loc) {
     xcc::source_span span;
-    span.first.filename = *(loc.begin.filename);
-    span.first.line_number = loc.begin.line;
-    span.first.column_number = loc.begin.column;
-    span.last.filename = *(loc.end.filename);
-    span.last.line_number = loc.end.line;
-    span.last.column_number = loc.end.column;
+    span.first.line_number      = loc.begin.line;
+    span.first.column_number    = loc.begin.column;
+    span.last.line_number       = loc.end.line;
+    span.last.column_number     = loc.end.column;
+
+    if(loc.begin.filename != nullptr) {
+        span.first.filename = *(loc.begin.filename);
+    }
+    if(loc.end.filename != nullptr) {
+        span.last.filename = *(loc.end.filename);
+    }
+
+    return xcc::setloc(e, span);
+}
+
+template<typename Tptr>
+inline Tptr setloc(Tptr e, const xi::location& begin, const xi::location& end) {
+    xcc::source_span span;
+    span.first.line_number      = begin.begin.line;
+    span.first.column_number    = begin.begin.column;
+    span.last.line_number       = end.end.line;
+    span.last.column_number     = end.end.column;
+
+    if(begin.begin.filename != nullptr) {
+        span.first.filename = *(begin.begin.filename);
+    }
+    if(end.end.filename != nullptr) {
+        span.last.filename = *(end.end.filename);
+    }
 
     return xcc::setloc(e, span);
 }
