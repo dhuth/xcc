@@ -1,13 +1,17 @@
 
 
 //        name,                         base,               in,                                 out
-tree_type(xi_id_type,                   ast_type,           parse,                              semantic-resolve-simple-names)
+tree_type(xi_qname,                     tree,               parse,                              semantic-type-check)
+
+tree_type(xi_id_type,                   ast_type,           parse,                              dom-resolve-names)
 tree_type(xi_const_type,                ast_type,           parse,                              lower-ast)
 tree_type(xi_auto_type,                 ast_type,           parse,                              lower-ast)
 tree_type(xi_reference_type,            ast_type,           parse,                              lower-ast)
 tree_type(xi_decl_type,                 ast_type,           parse,                              lower-ast)
 tree_type(xi_tuple_type,                ast_type,           parse,                              lower-ast)
 
+tree_type(xi_namespace_decl,            ast_namespace_decl, parse,                              lower-ast)
+//tree_type(xi_parameter_decl,            ast_parameter_decl, parse,                              lower-ast)
 tree_type(xi_parameter_decl,            ast_decl,           parse,                              lower-ast)
 tree_type(xi_function_decl,             ast_decl,           parse,                              lower-ast)
 tree_type(xi_operator_function_decl,    xi_function_decl,   parse,                              lower-operator-overrides)
@@ -18,11 +22,12 @@ tree_type(xi_operator_method_decl,      xi_method_decl,     parse,              
 tree_type(xi_type_decl,                 xi_member_decl,     *,                                  *)
 tree_type(xi_struct_decl,               xi_type_decl,       parse,                              lower-ast)
 
-tree_type(xi_qname,                     tree,               parse,                              semantic-resolve-simple-names)
-
-tree_type(xi_id_expr,                   ast_expr,           parse,                              semantic-resolve-simple-names)
+tree_type(xi_id_expr,                   ast_expr,           parse,                              semantic-type-check)
 tree_type(xi_member_id_expr,            ast_expr,           parse,                              semantic-type-check)
 tree_type(xi_type_expr,                 ast_expr,           semantic-resolve-simple-names,      semantic-type-check)
-tree_type(xi_op_expr,                   ast_expr,           parse,                              semantic-type-check)
+tree_type(xi_op_expr,                   ast_expr,           parse,                              semantic-type-check)            // This might not resolve right away
+tree_type(xi_invoke_expr,               ast_expr,           parse,                              semantic-type-check)
+tree_type(xi_index_expr,                ast_expr,           parse,                              semantic-type-check)
 tree_type(xi_tuple_expr,                ast_expr,           parse,                              lower-ast)
 tree_type(xi_member_expr,               ast_expr,           semantic-type-check,                lower-ast)
+tree_type(xi_deref_expr,                ast_expr,           semantic-type-check,                lower-ast)

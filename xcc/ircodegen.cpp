@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include "ircodegen.hpp"
+#include "error.hpp"
 
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
@@ -270,8 +271,9 @@ llvm::Value* ircode_expr_generator::generate_call(ast_call* e) {
 }
 
 llvm::Value* ircode_expr_generator::generate_stmt_expr(ast_stmt_expr* expr) {
-    context.generate_stmtlist(expr->statements);
-    return this->visit(expr->expr);
+    context.add_declaration((ast_decl*) expr->temp, context.generate_expr(expr->temp->value));
+    context.generate_stmt(expr->statement);
+    return context.find((ast_decl*) expr->temp);
 }
 
 
@@ -444,6 +446,18 @@ void ircode_context::generate_function_body(ast_function_decl* decl) {
     }
 }
 
+void ircode_context::generate_stmt(ast_stmt* stmt) {
+    //TODO: setup and cleanup ???
+
+    switch(stmt->get_tree_type()) {
+    case tree_type_id::ast_assign_stmt:     this->generate_assign_stmt(stmt->as<ast_assign_stmt>());    break;
+    case tree_type_id::ast_expr_stmt:       this->generate_expr_stmt(stmt->as<ast_expr_stmt>());        break;
+    case tree_type_id::ast_return_stmt:     this->generate_return_stmt(stmt->as<ast_return_stmt>());    break;
+    default:
+        __throw_unhandled_tree_type(__FILE__, __LINE__, stmt, "ircode_context::generate_stmt()");
+    }
+}
+
 void ircode_context::generate_stmtlist(list<ast_stmt>* stmts) {
     for(auto stmt: stmts) {
         this->generate_stmt(stmt, nullptr, nullptr);
@@ -465,7 +479,7 @@ void ircode_context::generate_stmt(ast_stmt* stmt, llvm::BasicBlock* continue_ta
     case tree_type_id::ast_return_stmt:     this->generate_return_stmt(stmt->as<ast_return_stmt>());                                    break;
     case tree_type_id::ast_while_stmt:      this->generate_while_stmt(stmt->as<ast_while_stmt>(), continue_target, break_target);       break;
     default:
-        throw std::runtime_error(std::string("unhandled ") + std::string(stmt->get_tree_type_name()) + std::string(" in ircode_context::generate_stmt"));
+        __throw_unhandled_tree_type(__FILE__, __LINE__, stmt, "ircode_context::generate_stmt()");
     }
 }
 

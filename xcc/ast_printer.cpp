@@ -224,6 +224,10 @@ static void print_local_decl(ast_local_decl* local, std::ostream& s) {
     ast_printer::print(s, "local %0 %1 = %2;", local->type, local->name, local->init_value);
 }
 
+static void print_temp_decl(ast_temp_decl* temp, std::ostream& s) {
+    ast_printer::print(s, "temp %0 %1 = %2;", temp->type, temp->name, temp->value);
+}
+
 static void print_parameter_decl(ast_parameter_decl* p, std::ostream& s) {
     ast_printer::print(s, "%0 %1", p->type, p->name);
 }
@@ -334,6 +338,10 @@ static void print_invoke_expr(ast_invoke* e, std::ostream& s) {
     ast_printer::print(s, "([%0] call: %1, (%{2:, }))", e->type, e->funcexpr, e->arguments);
 }
 
+static void print_stmt_expr(ast_stmt_expr* e, std::ostream& s) {
+    ast_printer::print(s, "([%0] %1 %2 ref: %3)", e->type, e->temp, e->statement, e->temp->name);
+}
+
 ast_printer::ast_printer()
         : dispatch_visitor<void, std::ostream&>(), _current_indent(0) {
 
@@ -348,6 +356,7 @@ ast_printer::ast_printer()
     ast_printer::add(&print_namespace_decl);
     ast_printer::add(&print_variable_decl);
     ast_printer::add(&print_local_decl);
+    ast_printer::add(&print_temp_decl);
     ast_printer::add(&print_parameter_decl);
     ast_printer::add(&print_function_decl);
     ast_printer::add(&print_typedef_decl);
@@ -376,6 +385,7 @@ ast_printer::ast_printer()
     ast_printer::add(&print_deref_expr);
     ast_printer::add(&print_addressof_expr);
     ast_printer::add(&print_invoke_expr);
+    ast_printer::add(&print_stmt_expr);
 }
 
 void ast_printer::handle_null_tree(std::ostream& s) {

@@ -627,9 +627,59 @@ typedef xi_op_expr::xi_operator                                     xi_operator;
 
 
 /**
+ * A function call expression
+ */
+struct xi_invoke_expr final : public implement_tree<tree_type_id::xi_invoke_expr> {
+public:
+
+    explicit inline xi_invoke_expr(ast_expr* funcexpr, list<ast_expr>* args) noexcept
+            : base_type(nullptr),
+              funcexpr(this, funcexpr),
+              args(this, args) {
+        /* do nothing */
+    }
+
+    explicit inline xi_invoke_expr(const xi_invoke_expr& i) noexcept
+            : base_type((base_type&) i),
+              funcexpr(this, i.funcexpr),
+              args(this, i.args) {
+        /* do nothing */
+    }
+
+    property<ast_expr>                                              funcexpr;
+    property<list<ast_expr>>                                        args;
+};
+
+
+/**
+ * An index expression
+ */
+struct xi_index_expr final : public implement_tree<tree_type_id::xi_index_expr> {
+public:
+
+    explicit inline xi_index_expr(ast_expr* expression, list<ast_expr>* args) noexcept
+            : base_type(nullptr),
+              expression(this, expression),
+              args(this, args) {
+        /* do nothing */
+    }
+
+    explicit inline xi_index_expr(const xi_index_expr& i) noexcept
+            : base_type((base_type&)i),
+              expression(this, i.expression),
+              args(this, i.args) {
+        /* do nothing */
+    }
+
+    property<ast_expr>                                              expression;
+    property<list<ast_expr>>                                        args;
+};
+
+
+/**
  * A tuple expression
  */
-struct xi_tuple_expr : public implement_tree<tree_type_id::xi_tuple_expr> {
+struct xi_tuple_expr final : public implement_tree<tree_type_id::xi_tuple_expr> {
 public:
 
     explicit inline xi_tuple_expr(list<ast_expr>* expressions) noexcept
@@ -661,8 +711,8 @@ public:
 struct xi_member_expr : public implement_tree<tree_type_id::xi_member_expr> {
 public:
 
-    explicit inline xi_member_expr(ast_expr* expression, xi_member_decl* member) noexcept
-            : base_type(nullptr),
+    explicit inline xi_member_expr(ast_type* type, ast_expr* expression, xi_member_decl* member) noexcept
+            : base_type(type),
               expression(this, expression),
               member(this, member) {
         /* do nothing */
@@ -675,12 +725,37 @@ public:
         /* do nothing */
     }
 
-    property<ast_expr>                                              expression; //! the obj expression
+    property<ast_expr>                                              expression; //! the object expression
     property<xi_member_decl>                                        member;     //! the member
 
 };
 
 
+/**
+ * Dereferencing a reference type as aposed to a pointer type
+ */
+struct xi_deref_expr : public implement_tree<tree_type_id::xi_deref_expr> {
+public:
+
+    explicit inline xi_deref_expr(ast_type* type, ast_expr* expression) noexcept
+            : base_type(type),
+              expression(this, expression) {
+        /* do nothing */
+    }
+
+    explicit inline xi_deref_expr(const xi_deref_expr& d) noexcept
+            : base_type((base_type&) d),
+              expression(this, d.expression) {
+        /* do nothing */
+    }
+
+    property<ast_expr>                                              expression; //! the reference expression
+};
+
+
+/**
+ * An operator overload function
+ */
 struct xi_operator_function_decl : public implement_tree<tree_type_id::xi_operator_function_decl> {
 public:
 
@@ -708,6 +783,9 @@ public:
 };
 
 
+/**
+ * An operator overload method
+ */
 struct xi_operator_method_decl : public implement_tree<tree_type_id::xi_operator_method_decl> {
 public:
 
@@ -732,6 +810,29 @@ public:
     }
 
     property<xi_operator>                                           op;
+};
+
+
+/**
+ * A more expressive namespace object
+ */
+struct xi_namespace_decl final : public implement_tree<tree_type_id::xi_namespace_decl> {
+public:
+
+    explicit inline xi_namespace_decl(std::string name) noexcept
+            : base_type(name) {
+        /* do nothing */
+    }
+
+    explicit inline xi_namespace_decl(std::string name, list<ast_decl>* declarations) noexcept
+            : base_type(name, declarations) {
+        /* do nothing */
+    }
+
+    explicit inline xi_namespace_decl(const xi_namespace_decl& n) noexcept
+            : base_type((base_type&)n) {
+        /* do nothing */
+    }
 };
 
 

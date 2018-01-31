@@ -27,10 +27,12 @@ private:
     ast_expr*           tc_id_expr(xi_id_expr*,                                         xi_builder&);
     ast_expr*           tc_member_id_expr(xi_member_id_expr*,                           xi_builder&);
     ast_expr*           tc_op_expr(xi_op_expr*,                                         xi_builder&);
+    ast_expr*           tc_invoke_expr(xi_invoke_expr*,                                 xi_builder&);
 
 };
 
 ast_expr* tc_single_expr(ast_expr*, xi_builder&);
+ast_expr* tc_call_expr(ast_expr*, list<ast_expr>*, xi_builder&);
 
 }
 

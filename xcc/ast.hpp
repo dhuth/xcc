@@ -202,22 +202,34 @@ inline bool is_stmt(tree_t* t) { return t->is<ast_stmt>(); }
 /**
  * A Namespace
  */
-struct ast_namespace_decl final : public extend_tree<tree_type_id::ast_namespace_decl, ast_decl> {
+struct ast_namespace_decl : public extend_tree<tree_type_id::ast_namespace_decl, ast_decl> {
 public:
 
-    inline ast_namespace_decl(std::string name)
+    explicit inline ast_namespace_decl(std::string name) noexcept
             : base_type(name),
               declarations(this, new list<ast_decl>()) {
         // do nothing
     }
 
-    inline ast_namespace_decl(std::string name, list<ast_decl>* declarations)
+    explicit inline ast_namespace_decl(std::string name, list<ast_decl>* declarations) noexcept
             : base_type(name),
               declarations(this, declarations) {
         // do nothing
     }
 
-    inline ast_namespace_decl(const ast_namespace_decl& n) noexcept
+    explicit inline ast_namespace_decl(tree_type_id id, std::string name) noexcept
+            : base_type(id, name),
+              declarations(this, new list<ast_decl>()) {
+        // do nothing
+    }
+
+    explicit inline ast_namespace_decl(tree_type_id id, std::string name, list<ast_decl>* declarations) noexcept
+            : base_type(id, name),
+              declarations(this, declarations) {
+        // do nothing
+    }
+
+    explicit inline ast_namespace_decl(const ast_namespace_decl& n) noexcept
             : base_type((base_type&) n),
               declarations(this, n.declarations) {
         // do nothing
@@ -341,9 +353,35 @@ public:
 
 
 /**
+ * Holds a temporary value
+ */
+struct ast_temp_decl final : public implement_tree<tree_type_id::ast_temp_decl> {
+public:
+
+    explicit inline ast_temp_decl(std::string name, ast_type* type, ast_expr* value) noexcept
+            : base_type(name),
+              type(this, type),
+              value(this, value) {
+        /* do nothing */
+    }
+
+    explicit inline ast_temp_decl(const ast_temp_decl& t) noexcept
+            : base_type((base_type&) t),
+              type(this, t.type),
+              value(this, t.value) {
+        /* do nothing */
+    }
+
+    property<ast_type>                                          type;       //!
+    property<ast_expr>                                          value;      //!
+
+};
+
+
+/**
  * Function declaration
  */
-struct ast_function_decl final : public extend_tree<tree_type_id::ast_function_decl, ast_decl>,
+struct ast_function_decl final : public implement_tree<tree_type_id::ast_function_decl>,
                                  public ast_externable {
 public:
 
@@ -353,7 +391,7 @@ public:
      * @param parameters list of parameter declarations
      * @param body the function body
      */
-    inline ast_function_decl(std::string name, ast_type* return_type, list<ast_parameter_decl>* parameters, ast_stmt* body) noexcept
+    explicit inline ast_function_decl(std::string name, ast_type* return_type, list<ast_parameter_decl>* parameters, ast_stmt* body) noexcept
             : base_type(name),
               ast_externable(this, false, true),
               return_type(this, return_type),
@@ -363,7 +401,7 @@ public:
         // do nothing
     }
 
-    inline ast_function_decl(const ast_function_decl& f) noexcept
+    explicit inline ast_function_decl(const ast_function_decl& f) noexcept
             : base_type((base_type&) f),
               ast_externable(f),
               return_type(this, f.return_type),
@@ -1154,27 +1192,23 @@ public:
 struct ast_stmt_expr final : public extend_tree<tree_type_id::ast_stmt_expr, ast_expr> {
 public:
 
-    /**
-     * @param type
-     * @param statements
-     * @param expr
-     */
-    inline ast_stmt_expr(ast_type* type, list<ast_stmt>* statements, ast_expr* expr) noexcept
+
+    inline ast_stmt_expr(ast_type* type, ast_temp_decl* temp, ast_stmt* statement) noexcept
             : base_type(type),
-              statements(this, statements),
-              expr(this, expr) {
+              temp(this, temp),
+              statement(this, statement) {
         // do nothing
     }
 
     inline ast_stmt_expr(const ast_stmt_expr& s) noexcept
             : base_type((base_type&) s),
-              statements(this, s.statements),
-              expr(this, s.expr) {
+              temp(this, s.temp),
+              statement(this, s.statement) {
         // do nothing
     }
 
-    property<list<ast_stmt>>                                    statements; //!<
-    property<ast_expr>                                          expr;       //!<
+    property<ast_temp_decl>                                     temp;       //!< A temporary variable with an initial value
+    property<ast_stmt>                                          statement;  //!< A statement to to run after computing temp
 
 };
 

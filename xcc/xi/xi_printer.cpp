@@ -33,12 +33,21 @@ static void print_xi_tuple_type(xi_tuple_type* t, std::ostream& s) {
 }
 
 
+static void print_xi_namespace_decl(xi_namespace_decl* ns, std::ostream& s) {
+    ast_printer::print(s, "namespace %0 {\\>\\n%{1:\\n}\\<\\n}", ns->name, ns->declarations);
+}
+
 static void print_xi_parameter_decl(xi_parameter_decl* p, std::ostream& s) {
     ast_printer::print(s, "%0: %1", p->name, p->type);
 }
 
 static void print_xi_function_decl(xi_function_decl* f, std::ostream& s) {
-    ast_printer::print(s, "func %0(%{1:, })->%2 %3", f->name, f->parameters, f->return_type, f->body);
+    ast_printer::print(s, "func %0(%{1:, }) -> %2 %3", f->name, f->parameters, f->return_type, f->body);
+}
+
+static void print_xi_operator_function_decl(xi_operator_function_decl* f, std::ostream& s) {
+    auto opstr = std::to_string((xi_operator) f->op);
+    ast_printer::print(s, "func %0(%{1:, }) -> %2 %3", opstr, f->parameters, f->return_type, f->body);
 }
 
 static void print_xi_struct_decl(xi_struct_decl* d, std::ostream& s) {
@@ -56,8 +65,16 @@ static void print_xi_id_expr(xi_id_expr* e, std::ostream& s) {
 }
 
 static void print_xi_op_expr(xi_op_expr* e, std::ostream& s) {
-    auto opstr = std::to_string((xi_op_expr::xi_operator) e->op);
+    auto opstr = std::to_string((xi_operator) e->op);
     ast_printer::print(s, "([%0] op%1 %{2:, })", e->type, opstr, e->operands);
+}
+
+static void print_xi_member_expr(xi_member_expr* e, std::ostream& s) {
+    ast_printer::print(s, "([%0] member: %2 %1)", e->type, e->expression, e->member->name);
+}
+
+static void print_xi_deref_expr(xi_deref_expr* e, std::ostream& s) {
+    ast_printer::print(s, "([%0] deref: %1)", e->type, e->expression);
 }
 
 void setup_xi_printer() {
@@ -67,13 +84,17 @@ void setup_xi_printer() {
     ast_printer::add(print_xi_object_type);
     ast_printer::add(print_xi_tuple_type);
 
+    ast_printer::add(print_xi_namespace_decl);
     ast_printer::add(print_xi_parameter_decl);
     ast_printer::add(print_xi_function_decl);
+    ast_printer::add(print_xi_operator_function_decl);
     ast_printer::add(print_xi_struct_decl);
     ast_printer::add(print_xi_field_decl);
 
     ast_printer::add(print_xi_id_expr);
     ast_printer::add(print_xi_op_expr);
+    ast_printer::add(print_xi_member_expr);
+    ast_printer::add(print_xi_deref_expr);
 }
 
 }

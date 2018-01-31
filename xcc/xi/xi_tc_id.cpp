@@ -11,27 +11,41 @@
 
 namespace xcc {
 
-static inline ptr<ast_context> __push_context(ptr<ast_context> ctx, ast_decl* decl) {
+static ptr<ast_context> push_context(ptr<ast_context> ctx, ast_decl* decl) {
+    //TODO: visibility
     switch(decl->get_tree_type()) {
-    case tree_type_id::ast_namespace_decl:      return ctx->push_context<ast_namespace_context>(decl->as<ast_namespace_decl>());
+    case tree_type_id::xi_namespace_decl:       return ctx->push_context<ast_namespace_context>(decl->as<ast_namespace_decl>());
     case tree_type_id::xi_struct_decl:          return ctx->push_context<xi_struct_context>(decl->as<xi_struct_decl>());
     default:
         __throw_unhandled_tree_type(__FILE__, __LINE__, decl, "push_context");
     }
 }
 
-static ptr<ast_decl> __find_declaration(ptr<ast_context> ctx, list<std::string>::iterator iter_start, list<std::string>::iterator iter_end, bool search_parent) {
+static ptr<ast_context> push_context(ptr<ast_context> ctx, ast_type* type) {
+    //TODO: visibility
+    switch(type->get_tree_type()) {
+    case tree_type_id::xi_decl_type:            return push_context(ctx, type->as<xi_decl_type>()->declaration);
+    case tree_type_id::xi_reference_type:       return push_context(ctx, type->as<xi_reference_type>()->type);
+    default:
+        __throw_unhandled_tree_type(__FILE__, __LINE__, type, "push_context");
+    }
+}
+
+static ptr<ast_decl> find_declaration(ptr<ast_context> ctx, list<std::string>::iterator iter_start, list<std::string>::iterator iter_end, bool search_parent) {
+    //TODO: visibility
     auto decl = ctx->find((*iter_start).c_str(), search_parent);
     iter_start++;
     if(iter_start == iter_end) {
         return decl;
     }
     else {
-        return __find_declaration(__push_context(ctx, decl), iter_start, iter_end, false);
+        return find_declaration(push_context(ctx, decl), iter_start, iter_end, false);
     }
 }
 
-static ptr<list<ast_decl>> __find_all_declarations(ptr<ast_context> ctx, list<std::string>::iterator iter_start, list<std::string>::iterator iter_end, bool search_parent) {
+static ptr<list<ast_decl>> find_all_declarations(ptr<ast_context> ctx, list<std::string>::iterator iter_start, list<std::string>::iterator iter_end, bool search_parent) {
+    //TODO: visibility
+    //TODO: change to breadth first
     ptr<list<ast_decl>> ilist = ctx->findall((*iter_start).c_str(), search_parent);
     iter_start++;
     if(iter_start == iter_end) {
@@ -40,7 +54,7 @@ static ptr<list<ast_decl>> __find_all_declarations(ptr<ast_context> ctx, list<st
     else {
         ptr<list<ast_decl>> olist = new list<ast_decl>();
         for(auto d: ilist) {
-            auto res = __find_all_declarations(__push_context(ctx, d), iter_start, iter_end, false);
+            auto res = find_all_declarations(push_context(ctx, d), iter_start, iter_end, false);
             for(auto r: res) {
                 olist->append(r);
             }
@@ -51,56 +65,35 @@ static ptr<list<ast_decl>> __find_all_declarations(ptr<ast_context> ctx, list<st
 
 
 ast_decl* xi_builder::find_declaration(xi_qname* qname) const noexcept {
-    return __find_declaration(this->context, begin(qname->names), end(qname->names), true);
+    return xcc::find_declaration(this->context, begin(qname->names), end(qname->names), true);
 }
 
 ptr<list<ast_decl>> xi_builder::find_all_declarations(xi_qname* qname) const noexcept {
-    return __find_all_declarations(this->context, begin(qname->names), end(qname->names), true);
+    return xcc::find_all_declarations(this->context, begin(qname->names), end(qname->names), true);
 }
 
-static xi_member_decl* find_first_member(ast_type*, std::string, xi_builder&);
-
-static xi_member_decl* find_first_struct_member(xi_struct_decl* sdecl, std::string name, xi_builder& b) {
-    for(auto m: sdecl->members) {
-        if(m->name == name) {
-            return m;
-        }
-    }
-    for(auto bt: sdecl->base_types) {
-        auto bt_member = find_first_member(bt, name, b);
-        if(bt_member != nullptr) {
-            return bt_member;
-        }
-    }
-    return nullptr;
+xi_member_decl* xi_builder::find_member(ast_type* tp, xi_qname* name) const noexcept {
+    //TODO: visibility
+    //TODO: look for extension members (???)
+    return xcc::find_declaration(xcc::push_context(this->context, tp), begin(name->names), end(name->names), false)->as<xi_member_decl>();
 }
 
-static xi_member_decl* find_first_member(ast_decl* decl, std::string name, xi_builder& b) {
-    switch(decl->get_tree_type()) {
-    case tree_type_id::xi_struct_decl:          return find_first_struct_member(decl->as<xi_struct_decl>(), name, b);
-    default:
-        __throw_unhandled_tree_type(__FILE__, __LINE__, decl, "find_first_member()");
-    }
-}
-
-static xi_member_decl* find_first_member(ast_type* tp, std::string name, xi_builder& b) {
-    switch(tp->get_tree_type()) {
-    case tree_type_id::xi_reference_type:       return find_first_member(tp->as<xi_reference_type>()->type, name, b);
-    case tree_type_id::xi_decl_type:            return find_first_member(tp->as<xi_decl_type>()->declaration, name, b);
-    default:
-        __throw_unhandled_tree_type(__FILE__, __LINE__, tp, "find_first_member()");
-    }
+ptr<list<xi_member_decl>> xi_builder::find_all_members(ast_type* tp, xi_qname* name) const noexcept {
+    //TODO: visibility
+    //TODO: look for extension members (???)
+    return map(xcc::find_all_declarations(xcc::push_context(this->context, tp), begin(name->names), end(name->names), false),
+            [=](ast_decl* d) -> xi_member_decl* { return d->as<xi_member_decl>(); });
 }
 
 static ast_expr* __tc_single_expr(xi_id_expr* e, xi_builder& b) {
-    auto dlist = b.find_all_declarations(e->name);
-    if(dlist->size() == 0) {
+    auto decl = b.find_declaration(e->name);
+    if(decl == nullptr) {
         //TODO: error
         assert(false);
         return nullptr;
     }
     else {
-        return copyloc(b.make_declref_expr(first(dlist)), e);
+        return copyloc(b.make_declref_expr(decl), e);
     }
 }
 
@@ -108,10 +101,10 @@ static ast_expr* __tc_single_expr(xi_member_id_expr* e, xi_builder& b) {
     ast_expr* objexpr           = tc_single_expr(e->expr, b);
     ast_type* objtype           = objexpr->type;
 
-    auto member = find_first_member(objtype, first(e->name->names), b);
+    auto member = b.find_member(objtype, e->name);
     //TODO: check member found
     auto rexpr = copyloc(b.make_xi_member_expr(objexpr, member), e);
-
+    return rexpr;
 }
 
 ast_expr* tc_single_expr(ast_expr* e, xi_builder& b) {

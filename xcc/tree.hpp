@@ -526,6 +526,13 @@ inline ptr<__tree_list_tree<_TDestEl>> map(ptr<__tree_list_tree<TSrcEl>>& slist,
 template<typename TSrcEl,
          typename TFunc,
          typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
+inline ptr<__tree_list_tree<_TDestEl>> map(ptr<__tree_list_tree<TSrcEl>>&& slist, TFunc f) {
+    return box(__map(unbox(slist), std::function<_TDestEl*(TSrcEl*)>(f)));
+}
+
+template<typename TSrcEl,
+         typename TFunc,
+         typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
 inline ptr<__tree_list_tree<_TDestEl>> map(__tree_list_tree<TSrcEl>* slist, TFunc f) {
     return box(__map(slist, std::function<_TDestEl*(TSrcEl*)>(f)));
 }
@@ -558,9 +565,16 @@ inline ptr<__tree_list_tree<TTreeType>> filter(ptr<__tree_list_tree<TTreeType>>&
 
 template<typename TTreeType,
          typename TPred>
+inline ptr<__tree_list_tree<TTreeType>> filter(ptr<__tree_list_tree<TTreeType>>&& slist, TPred pred) {
+    return filter(unbox(slist), pred);
+}
+
+template<typename TTreeType,
+         typename TPred>
 inline ptr<__tree_list_tree<TTreeType>> filter(__tree_property_list<TTreeType>& slist, TPred pred) {
     return filter((__tree_list_tree<TTreeType>*) slist, pred);
 }
+
 
 /* =============== *
  * Property Access *

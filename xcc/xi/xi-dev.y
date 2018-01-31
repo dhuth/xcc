@@ -228,7 +228,6 @@
 
 %type <expr>                                expr
 %type <expr>                                assign-expr
-%type <expr>                                assign-expr-only
 %type <expr>                                logical-or-expr
 %type <expr>                                logical-and-expr
 %type <expr>                                binary-or-expr
@@ -339,7 +338,6 @@
 %type <stmt>                                block-stmt
 %type <decl>                                var-decl-stmt
 %type <stmt>                                non-decl-stmt
-%type <stmt>                                assign-stmt
 %type <stmt>                                expr-stmt
 %type <stmt>                                if-stmt
 %type <stmt>                                else-stmt
@@ -509,7 +507,6 @@ var-decl-stmt
                         ;
 non-decl-stmt
                         : block-stmt                                            { $$ = $1; }
-                        | assign-stmt                                           { $$ = $1; }
                         | expr-stmt                                             { $$ = $1; }
                         | if-stmt                                               { $$ = $1; }
                         | while-stmt                                            { $$ = $1; }
@@ -535,9 +532,6 @@ while-stmt
                         ;
 s-body-stmt
                         :  block-stmt                                           { $$ = $1; }
-                        ;
-assign-stmt
-                        : assign-expr-only OP_SEMICOLON                         { $$ = builder.make_expr_stmt($1); }
                         ;
 expr-stmt
                         : expr OP_SEMICOLON                                     { $$ = builder.make_expr_stmt($1); }
@@ -567,15 +561,12 @@ expr-list
                         | expr                                                  { $$ = make_list<expr_t>($1); }
                         ;
 
-assign-expr-only        : expr assign-op expr                                   { $$ = builder.make_xi_op($2, $1, $3); }
-                        ;
-
-assign-expr             : expr assign-op expr                                   { $$ = builder.make_xi_op($2, $1, $3); }
-                        | expr                                                  { $$ = $1; }
-                        ;
-
 expr
-                        : logical-or-expr                                       { $$ = $1; }
+                        : assign-expr                                           { $$ = $1; }
+                        ;
+assign-expr
+                        : assign-expr assign-op logical-or-expr                 { $$ = builder.make_xi_op($2, $1, $3); }
+                        | logical-or-expr                                       { $$ = $1; }
                         ;
 logical-or-expr
                         : logical-or-expr OP_LOGICAL_OR logical-and-expr        { $$ = builder.make_xi_op($2, $1, $3); }
@@ -618,9 +609,9 @@ mul-expr
                         ;
 postfix-expr
                         : postfix-expr
-                            OP_LPAREN   expr-list-opt OP_RPAREN                 { $$ = builder.make_xi_op(operator_t::__invoke__, $3); }
+                            OP_LPAREN   expr-list-opt OP_RPAREN                 { $$ = SETLOC(builder.make_xi_invoke($1, $3), @$); }
                         | postfix-expr
-                            OP_LBRACKET expr-list     OP_RBRACKET               { $$ = builder.make_xi_op(operator_t::__index__, $3); }
+                            OP_LBRACKET expr-list     OP_RBRACKET               { $$ = SETLOC(builder.make_xi_index($1, $3), @$); }
                         | postfix-expr OP_DOT   TOK_IDENTIFIER                  { $$ = builder.make_xi_member_id_expr($1, make_xi_qname($3)); }
                         | postfix-expr OP_ARROW TOK_IDENTIFIER                  { $$ = builder.make_xi_deref_member_id_expr($1, make_xi_qname($3)); }
                         | prefix-expr                                           { $$ = $1; }
@@ -638,8 +629,8 @@ term-expr
                         | LITERAL_INTEGER                                       { $$ = $1; }
                         | LITERAL_REAL                                          { $$ = $1; }
                         | LITERAL_BOOL                                          { $$ = $1; }
-                        | qname                                                 { $$ = builder.make_xi_id_expr($1); }
-                        | KW_SELF                                               { $$ = builder.make_xi_id_expr(make_xi_qname("self")); }
+                        | qname                                                 { $$ = SETLOC(builder.make_xi_id_expr($1), @$); }
+                        | KW_SELF                                               { $$ = SETLOC(builder.make_xi_id_expr(make_xi_qname("self")), @$); }
                         ;
 assign-op
                         : OP_ASSIGN                                             { $$ = $1; }
@@ -727,7 +718,7 @@ non-const-prefix-type
                         ;
 term-type
                         : TOK_TYPE                                              { $$ = $1; }
-                        | TOK_IDENTIFIER                                        { $$ = builder.get_id_type(make_xi_qname($1)); }
+                        | TOK_IDENTIFIER                                        { $$ = SETLOC(builder.get_id_type(make_xi_qname($1)), @$); }
                         | OP_LPAREN type OP_RPAREN                              { $$ = $2; }
                         | OP_LPAREN
                             type OP_COMA type-list-opt

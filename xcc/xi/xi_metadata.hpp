@@ -41,6 +41,7 @@ private:
     xi_tuple_type*                  read_xi_tuple_type(llvm::MDTuple*);
 
     //Declarations
+    xi_namespace_decl*              read_xi_namespace_decl(llvm::MDTuple*);
     xi_parameter_decl*              read_xi_parameter_decl(llvm::MDTuple*);
     xi_function_decl*               read_xi_function_decl(llvm::MDTuple*);
     xi_field_decl*                  read_xi_field_decl(llvm::MDTuple*);
@@ -74,6 +75,7 @@ private:
     llvm::MDTuple*                  write_xi_tuple_type(xi_tuple_type*);
 
     //Declarations
+    llvm::MDTuple*                  write_xi_namespace_decl(xi_namespace_decl*);
     llvm::MDTuple*                  write_xi_parameter_decl(xi_parameter_decl*);
     llvm::MDTuple*                  write_xi_function_decl(xi_function_decl*);
     llvm::MDTuple*                  write_xi_field_decl(xi_field_decl*);

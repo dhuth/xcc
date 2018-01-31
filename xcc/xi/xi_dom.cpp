@@ -5,21 +5,23 @@
  *      Author: derick
  */
 
-#include "error.hpp"
+
+#include <iostream>
 #include "xi_dom.hpp"
+#include "error.hpp"
 
 namespace xcc {
 
-static void merge_namespaces_in(ast_namespace_decl*) noexcept;
+static void merge_namespaces_in(xi_namespace_decl*) noexcept;
 
 
-static void merge_namespaces_into(ast_namespace_decl* ns, list<ast_decl>::iterator rest, list<ast_decl>* list) {
+static void merge_namespaces_into(xi_namespace_decl* ns, list<ast_decl>::iterator rest, list<ast_decl>* list) {
     auto itr = rest;
     while(itr != list->end()) {
         auto decl = *itr;
-        if(decl->is<ast_namespace_decl>() && (decl->name == ns->name)) {
+        if(decl->is<xi_namespace_decl>() && (decl->name == ns->name)) {
             list->remove(itr);
-            for(auto d: decl->as<ast_namespace_decl>()->declarations) {
+            for(auto d: decl->as<xi_namespace_decl>()->declarations) {
                 ns->declarations->append(d);
             }
         }
@@ -35,8 +37,8 @@ static void merge_namespaces(list<ast_decl>* decls) noexcept {
     list<ast_decl>::iterator itr = decls->begin();
 
     while(itr != decls->end()) {
-        if((*itr)->is<ast_namespace_decl>()) {
-            auto ns = (*itr)->as<ast_namespace_decl>();
+        if((*itr)->is<xi_namespace_decl>()) {
+            auto ns = (*itr)->as<xi_namespace_decl>();
             itr++;
             merge_namespaces_into(ns, itr, decls);
         }
@@ -47,7 +49,7 @@ static void merge_namespaces(list<ast_decl>* decls) noexcept {
 }
 
 
-static void merge_namespaces_in(ast_namespace_decl* ns) noexcept {
+static void merge_namespaces_in(xi_namespace_decl* ns) noexcept {
     merge_namespaces(ns->declarations);
 }
 
@@ -56,6 +58,8 @@ ast_type* dom_qname_resolver::resolve_id_type(xi_id_type* t, xi_builder& b) {
     auto dlist = b.find_all_declarations(t->name);
     if(dlist->size() == 0) {
         //TODO: throw an error or log an error or something
+        std::cout << "unknown name " << first(t->name->names) << " at line " << t->source_location->first.line_number << "\n";
+
         assert(false);
         return nullptr;
     }
@@ -72,7 +76,7 @@ ast_type* dom_qname_resolver::resolve_id_type(xi_id_type* t, xi_builder& b) {
 
 bool xi_builder::dom_pass(/*options & error log info*/) noexcept {
     // merge namespaces
-    merge_namespaces_in(this->global_namespace);
+    merge_namespaces_in(this->global_namespace->as<xi_namespace_decl>());
 
     // resolve top level qnames
     dom_qname_resolver().visit(this->global_namespace, *this /* error log info */);

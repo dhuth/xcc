@@ -82,8 +82,7 @@ public:
      * __ast_builder_impl constructor
      * @param tu                the translation unit where top level nodes will be placed
      * @param mangler           the name mangler function
-     * @param type_comparer     the type comparer used in typesets
-     * @param type_hasher       the type hasher used in typesets
+     * @param ts                the underlying typeset
      */
     __ast_builder_impl(
             translation_unit& tu,
@@ -91,14 +90,54 @@ public:
             ast_typeset_base* ts) noexcept;
     virtual ~__ast_builder_impl() noexcept;
 
-
+            /**
+             * Get the universal void type node
+             * @return
+             */
             ast_void_type*                      get_void_type()                                                     const noexcept;
+            /**
+             * Get an integer type node
+             * @param bitwidth
+             * @param is_unsigned
+             * @return
+             */
             ast_integer_type*                   get_integer_type(uint32_t bitwidth, bool is_unsigned)               const noexcept;
+            /**
+             * Get a boolean type node
+             * @return
+             */
             ast_integer_type*                   get_bool_type()                                                     const noexcept;
+            /**
+             * Get a floating point type node
+             * @param bitwidth
+             * @return
+             */
             ast_real_type*                      get_real_type(uint32_t bitwidth)                                    const noexcept;
+            /**
+             * Get a pointer type node
+             * @param eltype
+             * @return
+             */
             ast_pointer_type*                   get_pointer_type(ast_type* eltype)                                        noexcept;
+            /**
+             * Get an array type node
+             * @param artype
+             * @param size
+             * @return
+             */
             ast_array_type*                     get_array_type(ast_type* artype, uint32_t size)                           noexcept;
+            /**
+             * Get a function type node
+             * @param
+             * @param
+             * @return
+             */
             ast_function_type*                  get_function_type(ast_type*, ptr<list<ast_type>>)                         noexcept;
+            /**
+             * Get a record type node
+             * @param
+             * @return
+             */
             ast_record_type*                    get_record_type(ptr<list<ast_type>>)                                      noexcept;
 
     /**
@@ -109,39 +148,55 @@ public:
      */
     virtual ast_type*                           get_declaration_type(ast_decl*)                                           noexcept;
 
-    // Declarations
-    virtual ast_decl*                           make_namespace_decl(const char*, list<ast_decl>*)                   const noexcept;
-    virtual ast_decl*                           make_local_decl(const char*, ast_type*, ast_expr*)                  const noexcept;
 
-    // Constant values
+    /* ================= *
+     * Make Declarations *
+     * ================= */
+
+    virtual ast_namespace_decl*                 make_namespace_decl(const char*, list<ast_decl>*)                   const noexcept;
+    virtual ast_decl*                           make_local_decl(const char*, ast_type*, ast_expr*)                  const noexcept;
+    virtual ast_temp_decl*                      make_temp_decl(ast_expr*)                                           const noexcept;
+
+
+    /* =============================== *
+     * Make Constant Value Expressions *
+     * =============================== */
+
     virtual ast_expr*                           make_integer(const char* txt, uint8_t radix)                        const noexcept;
     virtual ast_expr*                           make_real(const char* txt)                                          const noexcept;
-
     virtual ast_expr*                           make_true()                                                         const noexcept;
     virtual ast_expr*                           make_false()                                                        const noexcept;
     virtual ast_expr*                           make_zero(ast_type* tp)                                             const noexcept;
 
-    // Expressions
-    virtual ast_expr*                           make_op_expr(ast_op, ast_expr*);
-    virtual ast_expr*                           make_op_expr(ast_op, ast_expr*, ast_expr*);
-            ast_expr*                           make_lower_op_expr(ast_op, ast_expr*, ast_expr*);
-    virtual ast_expr*                           make_cast_expr(ast_type*, ast_expr*)                                const;
-            ast_expr*                           make_lower_cast_expr(ast_type*, ast_expr*)                          const;
-    virtual ast_expr*                           make_declref_expr(ast_decl*);
-    virtual ast_expr*                           make_memberref_expr(ast_expr*, uint32_t);
-    virtual ast_expr*                           make_deref_expr(ast_expr*)                                          const;
-    virtual ast_expr*                           make_addressof_expr(ast_expr*);
-            ast_expr*                           make_lower_addressof_expr(ast_expr*);
-    virtual ast_expr*                           make_index_expr(ast_expr*, ast_expr*)                               const;
-    virtual ast_expr*                           make_call_expr(ast_expr*, list<ast_expr>*)                          const;
-            ast_expr*                           make_lower_call_expr(ast_expr*, list<ast_expr>*)                    const;
-    virtual ast_expr*                           make_stmt_expr(list<ast_stmt>* stmts, ast_expr*)                    const noexcept;
 
-    // Statments
+    /* ================ *
+     * Make Expressions *
+     * ================ */
+
+    virtual ast_expr*                           make_op_expr(ast_op, ast_expr*)                                           noexcept;
+    virtual ast_expr*                           make_op_expr(ast_op, ast_expr*, ast_expr*)                                noexcept;
+            ast_expr*                           make_lower_op_expr(ast_op, ast_expr*, ast_expr*)                          noexcept;
+    virtual ast_expr*                           make_cast_expr(ast_type*, ast_expr*)                                const noexcept;
+            ast_expr*                           make_lower_cast_expr(ast_type*, ast_expr*)                          const noexcept;
+    virtual ast_expr*                           make_declref_expr(ast_decl*)                                              noexcept;
+    virtual ast_expr*                           make_memberref_expr(ast_expr*, uint32_t)                                  noexcept;
+    virtual ast_expr*                           make_deref_expr(ast_expr*)                                          const noexcept;
+    virtual ast_expr*                           make_addressof_expr(ast_expr*)                                            noexcept;
+            ast_expr*                           make_lower_addressof_expr(ast_expr*)                                      noexcept;
+    virtual ast_expr*                           make_index_expr(ast_expr*, ast_expr*)                               const noexcept;
+    virtual ast_expr*                           make_call_expr(ast_expr*, list<ast_expr>*)                          const noexcept;
+            ast_expr*                           make_lower_call_expr(ast_expr*, list<ast_expr>*)                    const noexcept;
+            ast_expr*                           make_assign_expr(ast_expr*, ast_expr*)                                    noexcept;
+
+
+    /* =============== *
+     * Make Statements *
+     * =============== */
+
     virtual ast_stmt*                           make_nop_stmt()                                                     const noexcept;
     virtual ast_stmt*                           make_expr_stmt(ast_expr*)                                           const noexcept;
-    virtual ast_stmt*                           make_assign_stmt(ast_expr* lhs, ast_expr* rhs)                            noexcept;
-            ast_stmt*                           make_lower_assign_stmt(ast_expr*, ast_expr*)                              noexcept;
+    virtual ast_stmt*                           make_assign_stmt(ast_expr* lhs, ast_expr* rhs)                      const noexcept;
+            ast_stmt*                           make_lower_assign_stmt(ast_expr*, ast_expr*)                        const noexcept;
     virtual ast_stmt*                           make_block_stmt(list<ast_stmt>*)                                    const noexcept;
     virtual ast_stmt*                           make_block_stmt(ast_local_decl*, list<ast_stmt>*)                   const noexcept;
     virtual ast_stmt*                           make_block_stmt(list<ast_local_decl>*, list<ast_stmt>*)             const noexcept;
@@ -152,17 +207,20 @@ public:
     virtual ast_stmt*                           make_break_stmt()                                                   const noexcept;
     virtual ast_stmt*                           make_continue_stmt()                                                const noexcept;
 
-    // Anylasis
-            ast_name_mangler&                   get_mangled_name;
-    virtual bool                                sametype(ast_type*, ast_type*)                                      const;
-    virtual ast_type*                           maxtype(ast_type*, ast_type*)                                       const;
-    virtual bool                                widens(ast_type*, ast_type*)                                        const;
+
+    /* ================= *
+     * Semantic Analysis *
+     * ================= */
+
+            bool                                sametype(ast_type*, ast_type*)                                      const noexcept;
+    virtual ast_type*                           maxtype(ast_type*, ast_type*)                                       const noexcept;
+            bool                                widens(ast_type*, ast_type*)                                        const;
+    virtual bool                                widens(ast_type*, ast_type*, int&)                                  const;
     virtual ast_expr*                           widen(ast_type*, ast_expr*)                                         const;
 
+            ast_name_mangler&                   get_mangled_name;
+
 protected:
-
-    virtual void                                create_default_types()                                                    noexcept;
-
 
     // Building context
     ptr<ast_context>                                                    context;                                    //! Current context
@@ -178,8 +236,6 @@ protected:
 
     translation_unit&                                                   tu;                                         //! The translation unit
     ptr<ast_namespace_decl>                                             global_namespace;                           //! The unnamed global namespace
-
-    ast_typeset_base*                                                   _the_type_set;                              //! A pointer to the main typeset
 
 public:
 
@@ -247,10 +303,15 @@ public:
 
 private:
 
+            // Low level cast functions
             ast_expr*                           cast_to(ast_integer_type*, ast_expr*)                               const;
             ast_expr*                           cast_to(ast_real_type*,    ast_expr*)                               const;
             ast_expr*                           cast_to(ast_pointer_type*, ast_expr*)                               const;
             ast_expr*                           cast_to(ast_record_type*,  ast_expr*)                               const;
+
+    //TODO: break up into create_default_integer / real / boolean / string ...
+    virtual void                                create_default_types()                                                    noexcept;
+
 
     ptr<ast_void_type>                                                  _the_void_type;                             //! The void type
     ptr<ast_pointer_type>                                               _the_void_ptr_type;                         //! The void pointer type
@@ -266,12 +327,21 @@ private:
     std::map<uint32_t, ptr<ast_integer_type>>                           _signed_integer_types;                      //! Signed integer types by bitwidth
     std::map<uint32_t, ptr<ast_real_type>>                              _real_types;                                //! Floating point types by bitwidth
 
+    //TODO: rethink this
     ast_typeset_base&                                                   _pointer_types;                             //! The pointer type set
     ast_typeset_base&                                                   _function_types;                            //! The function type set
     ast_typeset_base&                                                   _array_types;                               //! The array type set
     ast_typeset_base&                                                   _record_types;                              //! The record type set
 
-    ast_name_mangler*                                                   _mangler_ptr;                               //! A pointer to the name mangling function
+    template<typename, typename>
+    friend struct ast_builder;
+
+    //TODO: rethink this
+    ptr<ast_name_mangler>                                               _mangler_ptr;                              //! A pointer to the name mangling function
+    ptr<ast_typeset_base>                                               _the_typeset_ptr;                          //! A pointer to the main typeset
+
+    int                                                                 _next_local_id;
+
 };
 
 
@@ -279,8 +349,7 @@ private:
  * The base class for abstract syntax builders
  */
 template<typename TMangler              = ast_default_name_mangler,
-         typename TTypeSet              = ast_typeset,
-         typename std::enable_if<std::is_base_of<ast_name_mangler, TMangler>::value, int>::type = 0>
+         typename TTypeSet              = ast_typeset>
 struct ast_builder : public __ast_builder_impl {
 public:
 
@@ -293,7 +362,13 @@ public:
                     tu,
                     new TMangler(),
                     new TTypeSet()) { }
-    virtual ~ast_builder() noexcept = default;
+    virtual ~ast_builder() noexcept {
+        // do nothing
+    }
+
+protected:
+
+    inline TTypeSet&        get_universal_typeset() { return (TTypeSet&) *((ast_typeset_base*) _the_typeset_ptr); }
 
 };
 

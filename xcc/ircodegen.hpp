@@ -139,6 +139,7 @@ public:
 
     void generate(translation_unit& tu, const char* outfile);
     void generate_decl(ast_decl* decl);
+    void generate_stmt(ast_stmt* stmt);
     void generate_stmtlist(list<ast_stmt>* stmts);
 
     llvm::LLVMContext                                                   llvm_context;

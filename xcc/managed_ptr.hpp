@@ -71,9 +71,14 @@ public:
 template<typename T>
 struct managed_ptr final : __ptr_impl {
 
-    inline managed_ptr()                   noexcept : __ptr_impl((void*) nullptr, false) { }
-    inline managed_ptr(T* p)               noexcept : __ptr_impl((void*) p, true)    { this->incr_ref(); }
-    inline managed_ptr(T* p, bool managed) noexcept : __ptr_impl((void*) p, managed) { this->incr_ref(); }
+    inline managed_ptr()                    noexcept : __ptr_impl((void*) nullptr, false) { }
+    inline managed_ptr(T* p)                noexcept : __ptr_impl((void*) p, true)    { this->incr_ref(); }
+    inline managed_ptr(T* p, bool managed)  noexcept : __ptr_impl((void*) p, managed) { this->incr_ref(); }
+
+    template<typename TOther,
+             typename std::enable_if<std::is_base_of<T, TOther>::value, int>::type>
+    inline managed_ptr(TOther* p)           noexcept : __ptr_impl((void*) p, true)    { this->incr_ref(); }
+
     inline ~managed_ptr() noexcept {
         if(this->decr_ref() == 0) {
             trace_ptr_msg(this->_internal_ptr, "deleting");
@@ -87,6 +92,17 @@ struct managed_ptr final : __ptr_impl {
         trace_ptr_msg(this->_internal_ptr, "copy ctor");
     }
 
+#if 0
+    template<typename TOther,
+             typename std::enable_if<std::is_base_of<T, TOther>::value, int>::type = 0>
+    inline managed_ptr(const managed_ptr<TOther>& other) noexcept : __ptr_impl(other._internal_ptr) {
+        this->incr_ref();
+        //TODO: static cast
+        trace_ptr_msg(this->_internal_ptr, "copy ctor of super type");
+    }
+#endif
+
+#if 0
     inline managed_ptr<T>& operator=(managed_ptr<T>& other) {
         if(this->_internal_ptr != other._internal_ptr) {
             if(this->decr_ref() == 0) {
@@ -100,6 +116,32 @@ struct managed_ptr final : __ptr_impl {
         trace_ptr_msg(this->_internal_ptr, "assign ctor");
         return other;
     }
+#endif
+
+#if 0
+    template<typename TOther,
+             typename std::enable_if<std::is_base_of<T, TOther>::value, int>::type = 0>
+    inline TOther* operator=(TOther* p) {
+        return (TOther*) this->operator=(managed_ptr<TOther>(p));
+    }
+#endif
+
+    template<typename TOther,
+             typename std::enable_if<std::is_base_of<T, TOther>::value, int>::type = 0>
+    inline managed_ptr<TOther>& operator=(managed_ptr<TOther>& other) {
+        if(this->_internal_ptr != other._internal_ptr) {
+            if(this->decr_ref() == 0) {
+                //TODO:
+                //      Needs some serious testing before deleting here...
+                //this->maybe_delete<T>();
+            }
+            //TODO: static cast
+            this->_internal_ptr = other._internal_ptr;
+        }
+        trace_ptr_msg(this->_internal_ptr, "assign ctor of super type");
+        return other;
+    }
+
 
     inline const managed_ptr<T>& operator=(const managed_ptr<T>& other) {
         if(this->_internal_ptr != other._internal_ptr) {
@@ -113,6 +155,14 @@ struct managed_ptr final : __ptr_impl {
         this->incr_ref();
         trace_ptr_msg(this->_internal_ptr, "ctor assign ctor");
         return other;
+    }
+
+    inline T& operator*() noexcept {
+        return *reinterpret_cast<T*>(this->_internal_ptr);
+    }
+
+    inline T& operator*() const noexcept {
+        return *reinterpret_cast<T*>(this->_internal_ptr);
     }
 
     inline operator T*() noexcept {

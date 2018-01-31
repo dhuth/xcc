@@ -40,6 +40,8 @@ ast_expr* xi_tc_walker::tc_op_expr(xi_op_expr* e, xi_builder& b) {
         case xi_operator::__eq__:       return b.make_op_expr(ast_op::eq,       lhs, rhs);
         case xi_operator::__ne__:       return b.make_op_expr(ast_op::ne,       lhs, rhs);
 
+        case xi_operator::__assign__:   return b.make_assign_expr(lhs, rhs);
+
         default:
             __throw_unhandled_operator(__FILE__, __LINE__, (xi_operator) e->op, "xi_tc_walker::tc_op_expr");
         }

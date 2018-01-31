@@ -6,6 +6,7 @@
  */
 
 #include "ast_eval.hpp"
+#include "error.hpp"
 
 namespace xcc {
 
@@ -127,6 +128,8 @@ static ptr<ast_expr> ast_eval_cast(ast_cast* cexpr, ast_compile_time_evaluator& 
     case ast_op::ftoi:                  return ast_eval_cast_ftoi(cexpr->type, expr, false);
     case ast_op::ptou:                  return ast_eval_cast_bitcast(cexpr->type, expr); //TODO: constant pointer values to declarations and whatnot
     case ast_op::utop:                  return ast_eval_cast_bitcast(cexpr->type, expr); //TODO: constant pointer values to declarations and whatnot
+    default:
+        __throw_unhandled_operator(__FILE__, __LINE__, (ast_op)cexpr->op, "ast_eval_cast()");
     }
 }
 
@@ -214,6 +217,8 @@ static ptr<ast_expr> ast_eval_binary_op(ast_binary_op* opexpr, ast_compile_time_
     case ast_op::fcmp_ugt:              return __box_bool(opexpr->type, __do_fmt(lexpr, compare, rexpr) == llvm::APFloat::cmpGreaterThan);
     case ast_op::fcmp_uge:              return __box_bool(opexpr->type, __do_fmt(lexpr, compare, rexpr) != llvm::APFloat::cmpLessThan);
         // Logical binary operators
+    default:
+        __throw_unhandled_operator(__FILE__, __LINE__, opexpr->op, "ast_eval_binary_op()");
     }
 
 #undef __do_iop
@@ -251,6 +256,8 @@ static ptr<ast_expr> ast_eval_unary_op(ast_unary_op* opexpr, ast_compile_time_ev
     case ast_op::fneg:                  return __get_fneg(opexpr->type, expr);
     case ast_op::lnot:                  return __get_lnot(opexpr->type, expr);
     case ast_op::bnot:                  return __get_bnot(opexpr->type, expr);
+    default:
+        __throw_unhandled_operator(__FILE__, __LINE__, (ast_op)opexpr->op, "ast_eval_unary_op()");
     }
 }
 
@@ -298,10 +305,11 @@ static ptr<ast_expr> ast_eval_call(ast_call* cexpr, ast_compile_time_evaluator& 
 
 // Statement expression
 static ptr<ast_expr> ast_eval_stmt_expr(ast_stmt_expr* sexpr, ast_compile_time_evaluator& evaluator, ast_eval_context& context) {
-    for(auto s: sexpr->statements) {
-        evaluator.visit(s, evaluator, context);
-    }
-    return evaluator.visit(sexpr->expr, evaluator, context);
+    auto v = evaluator.visit(sexpr->temp->value, evaluator, context);
+    context.bind((ast_decl*) sexpr->temp, evaluator.visit(sexpr->temp->value, evaluator, context));
+    evaluator.eval_stmt(sexpr->statement, context);
+    //TODO: maybe check for return / continue / break?
+    return context.get((ast_decl*) sexpr->temp);
 }
 
 static ptr<ast_expr> ast_eval_nop_stmt(ast_nop_stmt*, ast_compile_time_evaluator& evaluator, ast_eval_context& context) {
@@ -315,14 +323,18 @@ static ptr<ast_expr> ast_eval_expr_stmt(ast_expr_stmt* estmt, ast_compile_time_e
 
 static ptr<ast_expr> ast_eval_assign_stmt(ast_assign_stmt* astmt, ast_compile_time_evaluator& evaluator, ast_eval_context& context) {
     //TODO: ...
-    if(astmt->is<ast_declref>()) {
-        ast_decl* decl  = astmt->lhs->as<ast_declref>()->declaration;
-        context.set(decl, evaluator.visit(astmt->rhs, evaluator, context));
+    auto valexpr = evaluator.visit(astmt->rhs, evaluator, context);
+    auto objexpr = evaluator.visit(astmt->lhs, evaluator, context);
+
+    switch(objexpr->get_tree_type()) {
+    default:
+        __throw_unsuported_tree_type(__FILE__, __LINE__, objexpr, "ast_eval_assign_stmt()");
     }
 }
 
 static ptr<ast_expr> ast_eval_decl_stmt(ast_decl_stmt* dstmt, ast_compile_time_evaluator& evaluator, ast_eval_context& context) {
     //TODO: ...
+    __throw_unsuported_tree_type(__FILE__, __LINE__, dstmt, "ast_eval_decl_stmt()");
 }
 
 static ptr<ast_expr> ast_eval_block_stmt(ast_block_stmt* bstmt, ast_compile_time_evaluator& evaluator, ast_eval_context& context) {

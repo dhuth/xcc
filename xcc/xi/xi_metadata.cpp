@@ -22,6 +22,7 @@ xi_metadata_reader::xi_metadata_reader(llvm::LLVMContext& context, xi_builder& b
     this->addmethod(&xi_metadata_reader::read_xi_tuple_type);
 
     //Declarations
+    this->addmethod(&xi_metadata_reader::read_xi_namespace_decl);
     this->addmethod(&xi_metadata_reader::read_xi_parameter_decl);
     this->addmethod(&xi_metadata_reader::read_xi_function_decl);
     this->addmethod(&xi_metadata_reader::read_xi_field_decl);
@@ -61,6 +62,19 @@ xi_tuple_type* xi_metadata_reader::read_xi_tuple_type(llvm::MDTuple* md) {
 
     this->read_tuple(md, types);
     return _xi_builder.get_tuple_type(types);
+}
+
+xi_namespace_decl* xi_metadata_reader::read_xi_namespace_decl(llvm::MDTuple* md) {
+    std::string                     name;
+    std::string                     generated_name;
+    source_span                     location;
+    list<ast_decl>*                 declarations;
+
+    this->read_tuple(md, name, generated_name, location, declarations);
+    auto ns = new xi_namespace_decl(name, declarations);
+    this->set_decl_data(ns, generated_name, location);
+
+    return ns;
 }
 
 xi_parameter_decl* xi_metadata_reader::read_xi_parameter_decl(llvm::MDTuple* md) {
@@ -222,6 +236,7 @@ xi_metadata_writer::xi_metadata_writer(llvm::LLVMContext& context, xi_builder& b
     this->addmethod(&xi_metadata_writer::write_xi_tuple_type);
 
     //Declarations
+    this->addmethod(&xi_metadata_writer::write_xi_namespace_decl);
     this->addmethod(&xi_metadata_writer::write_xi_parameter_decl);
     this->addmethod(&xi_metadata_writer::write_xi_function_decl);
     this->addmethod(&xi_metadata_writer::write_xi_field_decl);
@@ -249,6 +264,14 @@ llvm::MDTuple* xi_metadata_writer::write_xi_decl_type(xi_decl_type* dt) {
 
 llvm::MDTuple* xi_metadata_writer::write_xi_tuple_type(xi_tuple_type* tt) {
     return this->write_tuple(tt->types);
+}
+
+llvm::MDTuple* xi_metadata_writer::write_xi_namespace_decl(xi_namespace_decl* ns) {
+    return this->write_tuple(
+            ns->name,
+            ns->generated_name,
+            ns->source_location,
+            ns->declarations);
 }
 
 llvm::MDTuple* xi_metadata_writer::write_xi_parameter_decl(xi_parameter_decl* pd) {
