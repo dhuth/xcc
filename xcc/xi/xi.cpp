@@ -26,19 +26,20 @@ namespace xcc {
 extern void setup_xi_printer();
 
 // compiler phases:
-//  [x] parse                               parse input file
+//  [.] parse                               parse input file(s)
 //  [ ] read-llvm-metadata
 //      dom:
 //  [x]     merge-namespaces                merge namespaces with the same name
 //  [x]     resolve-qnames                  resolve qnames for declarations
-//  [ ]     merge-type-decls                merge type declarations & definitions (structs, concepts, ...)
-//  [ ]     merge-function-decls            merge function declarations & definitions (including operator overloads)
-//  [ ]     merge-method-decls              merge method declarations & definitions (including operator overloads)
-//  [ ] write-llvm-metadata
+//  [.]     merge-decls                     merge all other declarations & definitions (structs, concepts, ...)
+//  [ ]     set-member-parent               set member defining types,
+//                                          add extension methods to type declarations
+//  [.] write-llvm-metadata
 //      semantic:
-//  [ ]     resolve-qnames                  resolve qnames for expressions (should remove id_exprs)
 //  [ ]     type-check                      TODO: this is big. should expand
+//  [ ]     object-lifetype-analysis
 //      lower:
+//  [ ]     lower-generics                  TODO: need generics
 //  [ ]     promote-closures                TODO: need lambda and whatnot
 //  [ ]     methods                         lower xi_method_decls to xi_function_decls (including operators overloads)
 //  [ ]     functions                       lower xi_function_decls to ast_function_decls (including operators and overloads and function bodies)

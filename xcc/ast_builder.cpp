@@ -168,6 +168,7 @@ ast_expr* __ast_builder_impl::make_zero(ast_type* tp) const noexcept {
     switch(tp->get_tree_type()) {
     case tree_type_id::ast_integer_type:        return new ast_integer(tp, llvm::APSInt::get(0));
     case tree_type_id::ast_real_type:           return new ast_real(tp,    llvm::APFloat(0.0));
+    case tree_type_id::ast_pointer_type:        return new ast_integer(tp, llvm::APSInt::get(0));
     case tree_type_id::ast_record_type:
         {
             auto rectype = tp->as<ast_record_type>();
@@ -189,6 +190,10 @@ ast_expr* __ast_builder_impl::make_zero(ast_type* tp) const noexcept {
     default:
         __throw_unhandled_ast_type(__FILE__, __LINE__, tp, "__ast_builder_impl::make_zero");
     }
+}
+
+ast_expr* __ast_builder_impl::make_null() noexcept {
+    return this->make_zero(this->get_pointer_type(this->get_void_type()));
 }
 
 ast_expr* __ast_builder_impl::make_cast_expr(ast_type* desttype, ast_expr* expr) const noexcept {

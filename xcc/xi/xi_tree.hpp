@@ -190,12 +190,30 @@ public:
 
 };
 
+/**
+ * Common properties for all xi_function & method nodes
+ */
+struct xi_function_base {
+
+    explicit inline xi_function_base(tree_t* p, ast_type* return_type, list<xi_parameter_decl>* parameters, ast_stmt* body) noexcept
+            : return_type(p, return_type),
+              parameters(p, parameters),
+              body(p, body) {
+        /* do nothing */
+    }
+
+    property<ast_type>                                              return_type;    //! The functions return type
+    property<list<xi_parameter_decl>>                               parameters;     //! Function parameters
+    property<ast_stmt>                                              body;           //! Function body
+};
+
 
 /**
  * A function
  */
 struct xi_function_decl : public implement_tree<tree_type_id::xi_function_decl>,
-                          public ast_externable {
+                          public ast_externable,
+                          public xi_function_base {
 public:
 
     typedef xi_parameter_decl                                       parameter_decl_t;
@@ -208,11 +226,10 @@ public:
             ast_stmt*                   body) noexcept
                     : base_type(name),
                       ast_externable(this, false, true),
-                      return_type(this, return_type),
-                      parameters(this, parameters),
-                      body(this, body),
+                      xi_function_base(this, return_type, parameters, body),
                       is_inline(this, false),
-                      is_forward_decl(this, false) {
+                      is_forward_decl(this, false),
+                      is_c_extern(this, false) {
         /* do nothing */
     }
 
@@ -224,31 +241,26 @@ public:
             ast_stmt*                   body) noexcept
                     : base_type(id, name),
                       ast_externable(this, false, true),
-                      return_type(this, return_type),
-                      parameters(this, parameters),
-                      body(this, body),
+                      xi_function_base(this, return_type, parameters, body),
                       is_inline(this, false),
-                      is_forward_decl(this, false) {
+                      is_forward_decl(this, false),
+                      is_c_extern(this, false) {
         /* do nothing */
     }
 
     explicit inline xi_function_decl(const xi_function_decl& f) noexcept
             : base_type((base_type&) f),
               ast_externable(f),
-              return_type(this, f.return_type),
-              parameters(this, f.parameters),
-              body(this, f.body),
+              xi_function_base(this, f.return_type, f.parameters, f.body),
               is_inline(this, f.is_inline),
-              is_forward_decl(this, f.is_forward_decl){
+              is_forward_decl(this, f.is_forward_decl),
+              is_c_extern(this, false) {
         /* do nothing */
     }
 
-
     property<bool>                                                  is_inline;          //! the code generator should try to inline this function
     property<bool>                                                  is_forward_decl;    //! is a forward declaration
-    property<return_type_t>                                         return_type;        //! the return type of this function
-    property<list<parameter_decl_t>>                                parameters;         //! function parameters
-    property<ast_stmt>                                              body;               //! function body
+    property<bool>                                                  is_c_extern;        //! is this a C function
 
 };
 
@@ -305,7 +317,8 @@ public:
 /**
  * A method
  */
-struct xi_method_decl : public implement_tree<tree_type_id::xi_method_decl> {
+struct xi_method_decl : public implement_tree<tree_type_id::xi_method_decl>,
+                        public xi_function_base {
 public:
 
     typedef xi_parameter_decl                                       parameter_decl_t;
@@ -317,9 +330,7 @@ public:
             list<parameter_decl_t>*     parameters,
             ast_stmt*                   body) noexcept
                     : base_type(name),
-                      return_type(this, return_type),
-                      parameters(this, parameters),
-                      body(this, body),
+                      xi_function_base(this, return_type, parameters, body),
                       is_forward_decl(this, false) {
         /* do nothing */
     }
@@ -331,26 +342,19 @@ public:
             list<parameter_decl_t>*     parameters,
             ast_stmt*                   body) noexcept
                     : base_type(id, name),
-                      return_type(this, return_type),
-                      parameters(this, parameters),
-                      body(this, body),
+                      xi_function_base(this, return_type, parameters, body),
                       is_forward_decl(this, false) {
         /* do nothing */
     }
 
     explicit inline xi_method_decl(const xi_method_decl& m) noexcept
             : base_type((base_type&) m),
-              return_type(this, m.return_type),
-              parameters(this, m.parameters),
-              body(this, m.body),
+              xi_function_base(this, m.return_type, m.parameters, m.body),
               is_forward_decl(this, m.is_forward_decl) {
         /* do nothing */
     }
 
     property<bool>                                                  is_forward_decl;    //! is a forward declaration
-    property<return_type_t>                                         return_type;        //! the return type of this function
-    property<list<parameter_decl_t>>                                parameters;         //! function parameters
-    property<ast_stmt>                                              body;               //! function body
 
 };
 
@@ -394,6 +398,20 @@ public:
 
     explicit inline xi_struct_decl(std::string name, list<xi_member_decl>* members, list<ast_type>* base_types) noexcept
             : base_type(name, nullptr, members),
+              base_types(this, base_types),
+              is_forward_decl(this, false) {
+        /* do nothing */
+    }
+
+    explicit inline xi_struct_decl(tree_type_id id, std::string name, list<xi_member_decl>* members) noexcept
+            : base_type(id, name, nullptr, members),
+              base_types(this, new list<ast_type>()),
+              is_forward_decl(this, false) {
+        /* do nothing */
+    }
+
+    explicit inline xi_struct_decl(tree_type_id id, std::string name, list<xi_member_decl>* members, list<ast_type>* base_types) noexcept
+            : base_type(id, name, nullptr, members),
               base_types(this, base_types),
               is_forward_decl(this, false) {
         /* do nothing */
@@ -759,8 +777,8 @@ public:
 struct xi_operator_function_decl : public implement_tree<tree_type_id::xi_operator_function_decl> {
 public:
 
-    typedef tree_type_info<base_type::type_id>::base_type::return_type_t        return_type_t;
-    typedef tree_type_info<base_type::type_id>::base_type::parameter_decl_t     parameter_decl_t;
+    typedef tree_type_info<type_id>::base_type::return_type_t       return_type_t;
+    typedef tree_type_info<type_id>::base_type::parameter_decl_t    parameter_decl_t;
 
     explicit inline xi_operator_function_decl(
             std::string                         name,
@@ -789,8 +807,8 @@ public:
 struct xi_operator_method_decl : public implement_tree<tree_type_id::xi_operator_method_decl> {
 public:
 
-    typedef tree_type_info<base_type::type_id>::base_type::return_type_t        return_type_t;
-    typedef tree_type_info<base_type::type_id>::base_type::parameter_decl_t     parameter_decl_t;
+    typedef tree_type_info<type_id>::base_type::return_type_t       return_type_t;
+    typedef tree_type_info<type_id>::base_type::parameter_decl_t    parameter_decl_t;
 
     explicit inline xi_operator_method_decl(
             std::string                         name,

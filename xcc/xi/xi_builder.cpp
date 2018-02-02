@@ -56,6 +56,14 @@ xi_operator_function_decl* xi_builder::make_xi_operator_function_decl(xi_operato
     return new xi_operator_function_decl(std::to_string(op).c_str(), op, return_type, parameters, body);
 }
 
+xi_method_decl* xi_builder::make_xi_method_decl(const char* name, ast_type* return_type, list<xi_parameter_decl>* parameters, ast_stmt* body) const noexcept {
+    return new xi_method_decl(name, return_type, parameters, body);
+}
+
+xi_operator_method_decl* xi_builder::make_xi_operator_method_decl(xi_operator op, ast_type* return_type, list<xi_parameter_decl>* parameters, ast_stmt* body) const noexcept {
+    return new xi_operator_method_decl(std::to_string(op).c_str(), op, return_type, parameters, body);
+}
+
 xi_parameter_decl* xi_builder::make_xi_parameter_decl(const char* name, ast_type* type) const noexcept {
     return new xi_parameter_decl(name, type);
 }
@@ -133,14 +141,32 @@ ast_stmt* xi_builder::make_xi_return_stmt(ast_expr* expr) const noexcept {
 
 void xi_builder::push_xi_function(xi_function_decl* decl) noexcept {
     this->context = this->context->push_context<xi_function_context>(decl);
+    _nesting_function_decls.push(decl);
+}
+
+void xi_builder::leave_xi_function() noexcept {
+    this->pop_context();
+    _nesting_function_decls.pop();
 }
 
 void xi_builder::push_xi_struct(xi_struct_decl* s) noexcept {
     this->context = this->context->push_context<xi_struct_context>(s);
+    _nesting_types.push(s);
+}
+
+void xi_builder::leave_xi_struct() noexcept {
+    this->pop_context();
+    _nesting_types.pop();
 }
 
 void xi_builder::push_xi_method(xi_method_decl* m) noexcept {
     this->context = this->context->push_context<xi_method_context>(m);
+    _nesting_function_decls.push(m);
+}
+
+void xi_builder::leave_xi_method() noexcept {
+    this->pop_context();
+    _nesting_function_decls.pop();
 }
 
 void maybe_push_context(ast_tree* t, xi_builder& b) {
@@ -163,11 +189,11 @@ void maybe_pop_context(ast_tree* t, xi_builder& b) {
     case tree_type_id::xi_namespace_decl:               b.pop_context();                                break;
     case tree_type_id::ast_block_stmt:                  b.pop_context();                                break;
     case tree_type_id::ast_function_decl:               b.pop_context();                                break;
-    case tree_type_id::xi_function_decl:                b.pop_context();                                break;
-    case tree_type_id::xi_operator_function_decl:       b.pop_context();                                break;
-    case tree_type_id::xi_struct_decl:                  b.pop_context();                                break;
-    case tree_type_id::xi_method_decl:                  b.pop_context();                                break;
-    case tree_type_id::xi_operator_method_decl:         b.pop_context();                                break;
+    case tree_type_id::xi_function_decl:                b.leave_xi_function();                          break;
+    case tree_type_id::xi_operator_function_decl:       b.leave_xi_function();                          break;
+    case tree_type_id::xi_struct_decl:                  b.leave_xi_struct();                            break;
+    case tree_type_id::xi_method_decl:                  b.leave_xi_method();                            break;
+    case tree_type_id::xi_operator_method_decl:         b.leave_xi_method();                            break;
     }
 }
 

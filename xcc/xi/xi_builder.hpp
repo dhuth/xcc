@@ -11,6 +11,7 @@
 
 #include "xi_tree.hpp"
 #include "ast_builder.hpp"
+#include <stack>
 
 namespace xcc {
 
@@ -47,6 +48,8 @@ public:
     ast_namespace_decl*                         make_namespace_decl(const char*, list<ast_decl>*)                                                       const noexcept override;
     xi_function_decl*                           make_xi_function_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*)                      const noexcept;
     xi_operator_function_decl*                  make_xi_operator_function_decl(xi_operator, ast_type*, list<xi_parameter_decl>*, ast_stmt*)             const noexcept;
+    xi_method_decl*                             make_xi_method_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*)                        const noexcept;
+    xi_operator_method_decl*                    make_xi_operator_method_decl(xi_operator, ast_type*, list<xi_parameter_decl>*, ast_stmt*)               const noexcept;
     xi_parameter_decl*                          make_xi_parameter_decl(const char*, ast_type*)                                                          const noexcept;
     xi_struct_decl*                             make_xi_struct_decl(const char*, list<xi_member_decl>*)                                                 const noexcept;
     xi_field_decl*                              make_xi_field_decl(const char*, ast_type*)                                                              const noexcept;
@@ -91,19 +94,19 @@ public:
     bool                                        widens(ast_type*, ast_type*, int&)                                                                      const          override;
     ast_expr*                                   widen(ast_type*, ast_expr*)                                                                             const          override;
 
-    // Defined in xi_tc_id_expr.cpp
+    // Defined in xi_lookup.cpp
     ast_decl*                                   find_declaration(xi_qname*)                                                                             const noexcept;
     ptr<list<ast_decl>>                         find_all_declarations(xi_qname*)                                                                        const noexcept;
     xi_member_decl*                             find_member(ast_type*, xi_qname*)                                                                       const noexcept;
     ptr<list<xi_member_decl>>                   find_all_members(ast_type*, xi_qname*)                                                                  const noexcept;
 
-    // Defined in xi_tc_invoke.cpp
-    bool                                        is_callable(ast_type*)                                                                                        noexcept;
-    bool                                        is_static_callable(ast_type*)                                                                                 noexcept;
-
     void                                        push_xi_function(xi_function_decl*)                                                                           noexcept;
     void                                        push_xi_struct(xi_struct_decl*)                                                                               noexcept;
     void                                        push_xi_method(xi_method_decl*)                                                                               noexcept;
+
+    void                                        leave_xi_function()                                                                                           noexcept;
+    void                                        leave_xi_struct()                                                                                             noexcept;
+    void                                        leave_xi_method()                                                                                             noexcept;
 
     // Major compiler passes
     bool                                        read_metadata_pass(ircode_context& /* input modules, error log info */)                                       noexcept;
@@ -112,15 +115,16 @@ public:
     bool                                        semantic_pass(/* error log info*/)                                                                            noexcept;
     bool                                        lower_pass(/* error log info*/)                                                                               noexcept;
 
-    ast_expr*                                   find_best_overload(xi_op_expr::xi_operator, list<ast_expr>*)                                            const noexcept;
-
 private:
 
-    ptr<xi_auto_type>                           _the_auto_type;
-    xi_typeset                                  _const_types;
-    xi_typeset                                  _reference_types;
-    xi_typeset                                  _object_types;
-    xi_typeset                                  _tuple_types;
+    ptr<xi_auto_type>                                       _the_auto_type;
+    xi_typeset                                              _const_types;
+    xi_typeset                                              _reference_types;
+    xi_typeset                                              _object_types;
+    xi_typeset                                              _tuple_types;
+
+    std::stack<ptr<xi_type_decl>>                           _nesting_types;
+    std::stack<ptr<ast_decl>>                               _nesting_function_decls; // (??) only one... right?
 
 };
 
@@ -130,6 +134,10 @@ void maybe_pop_context(ast_tree*, xi_builder& b);
 template<typename... TParameters>
 struct xi_postorder_walker : public dispatch_postorder_tree_walker<ast_tree, xi_builder&, TParameters...> {
 public:
+
+    inline ast_tree* operator()(ast_tree* t, xi_builder& b) noexcept {
+        return this->visit(t, b);
+    }
 
     void begin(tree_type_id, ast_tree* t, xi_builder& b, TParameters...) override {
         maybe_push_context(t, b);
@@ -142,6 +150,10 @@ public:
 template<typename... TParameters>
 struct xi_preorder_walker : public dispatch_postorder_tree_walker<ast_tree, xi_builder&, TParameters...> {
 public:
+
+    inline ast_tree* operator()(ast_tree* t, xi_builder& b) noexcept {
+        return this->visit(t, b);
+    }
 
     void begin(tree_type_id, ast_tree* t, xi_builder& b, TParameters...) override {
         maybe_push_context(t, b);

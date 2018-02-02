@@ -58,11 +58,8 @@ typedef                         __tree_base*(*__tree_clone_func_t)(const __tree_
 template<typename T>
 using is_tree = std::is_base_of<__tree_base, T>;
 
-template<typename T>
-constexpr bool is_tree_v() { return is_tree<T>::value; }
-
 template<typename TTree, typename T>
-struct enable_if_tree : std::enable_if<is_tree_v<TTree>(), T> { };
+struct enable_if_tree : std::enable_if<is_tree<TTree>::value, T> { };
 
 template<typename TTree, typename T = int>
 using enable_if_tree_t = typename enable_if_tree<TTree, T>::type;
@@ -382,13 +379,42 @@ public:
         inline element_t operator*()          noexcept { return (element_t) unbox(vector[index]); }
         inline element_t operator*()    const noexcept { return (element_t) unbox(vector[index]); }
 
+
         inline bool operator==(const iterator& other) {
             return (other.index == this->index) && (other.vector == this->vector);
         }
 
-        inline bool operator!=(const iterator& other) {
+        inline bool operator==(const iterator& other) const {
+            return (other.index == this->index) && (other.vector == this->vector);
+        }
+
+
+        inline bool operator!=(const iterator& other) noexcept {
             return (other.index != this->index) || (other.vector != this->vector);
         }
+
+        inline bool operator!=(const iterator& other) const noexcept {
+            return (other.index != this->index) || (other.vector != this->vector);
+        }
+
+        inline iterator operator+(int distance) noexcept {
+            return {index + distance, vector};
+        }
+
+        inline iterator operator-(int distance) noexcept {
+            return {index - distance, vector};
+        }
+
+        inline bool operator<(const iterator& other) const noexcept {
+            assert(this->vector == other.vector);
+            return index < other.index;
+        }
+
+        inline bool operator>(const iterator& other) const noexcept {
+            assert(this->vector == other.vector);
+            return index > other.index;
+        }
+
     };
     typedef const iterator                              const_iterator;
 
@@ -457,29 +483,39 @@ public:
         this->_child_nodes.erase(this->_child_nodes.begin() + itr.index);
     }
 
+    inline void insert(const_iterator& itr, element_t& el) {
+        this->_child_nodes.insert(this->_child_nodes.begin() + itr.index, el);
+    }
+
+    inline void insert(const_iterator& itr, element_t&& el) {
+        this->_child_nodes.insert(this->_child_nodes.begin() + itr.index, el);
+    }
+
     inline typename std::vector<ptr<__tree_base>>::size_type size() const noexcept {
         return this->_child_nodes.size();
     }
 };
 
+template<typename T> inline typename __tree_list_tree<T>::      iterator begin(__tree_list_tree<T>& l)          noexcept { return l.begin();     }
+template<typename T> inline typename __tree_list_tree<T>::      iterator end(__tree_list_tree<T>& l)            noexcept { return l.end();       }
 template<typename T> inline typename __tree_list_tree<T>::      iterator begin(__tree_list_tree<T>* lptr)       noexcept { return lptr->begin(); }
 template<typename T> inline typename __tree_list_tree<T>::      iterator end(__tree_list_tree<T>* lptr)         noexcept { return lptr->end();   }
 template<typename T> inline typename __tree_list_tree<T>::const_iterator begin(const __tree_list_tree<T>* lptr) noexcept { return lptr->begin(); }
 template<typename T> inline typename __tree_list_tree<T>::const_iterator end(const __tree_list_tree<T>* lptr)   noexcept { return lptr->end();   }
 template<typename T> inline typename __tree_list_tree<T>::      iterator begin(ptr<__tree_list_tree<T>>& lptr)  noexcept { return lptr->begin(); }
-template<typename T> inline typename __tree_list_tree<T>::      iterator end(ptr<__tree_list_tree<T>>& lptr)    noexcept { return lptr->end(); }
+template<typename T> inline typename __tree_list_tree<T>::      iterator end(ptr<__tree_list_tree<T>>& lptr)    noexcept { return lptr->end();   }
 
 template<typename T> inline typename __tree_property_list<T>::list_t::      iterator begin(__tree_property_list<T>& lref)   noexcept { return lref.begin(); }
 template<typename T> inline typename __tree_property_list<T>::list_t::      iterator end(__tree_property_list<T>& lref)     noexcept { return lref.end(); }
 
 template<typename T>
 inline T* first(__tree_list_tree<T>* l) {
-    return *(begin(l));
+    return *(l->begin());
 }
 
 template<typename T>
 inline T* first(ptr<__tree_list_tree<T>>& l) {
-    return *(begin(l));
+    return *(l->begin());
 }
 
 template<typename T>
@@ -604,6 +640,10 @@ public:
         return static_cast<TTreeType*>(this->__get());
     }
 
+    inline operator ptr<TTreeType>() const noexcept {
+        return box(static_cast<TTreeType*>(this->__get()));
+    }
+
     template<typename TTargetType, typename std::enable_if<std::is_base_of<TTreeType, TTargetType>::value, int>::type = 0>
     inline operator TTargetType*() const noexcept {
         return static_cast<TTargetType*>(this->__get());
@@ -633,9 +673,15 @@ public:
     inline bool operator==(decltype(nullptr)) {
         return this->__get() == nullptr;
     }
+
     template<typename TOther>
     inline enable_if_tree_t<TOther, bool> operator==(const __tree_property_tree<TOther>& p) {
         return this->__get() == p.__get();
+    }
+
+    template<typename TOther>
+    inline enable_if_tree_t<TOther, bool> operator!=(const __tree_property_tree<TOther>& p) {
+        return this->__get() != p.__get();
     }
 
 protected:
@@ -717,8 +763,16 @@ public:
         return this->_value == other._value;
     }
 
-    inline bool operator==(const TValue& other) const noexcept {
+    inline bool operator==(const TValue&& other) const noexcept {
         return this->_value == other;
+    }
+
+    inline bool operator!=(const __tree_property_value<TValue>& other) const noexcept {
+        return !this->operator==(other);
+    }
+
+    inline bool operator!=(const TValue&& other) const noexcept {
+        return this->_value != other;
     }
 
     inline TValue* operator->() {

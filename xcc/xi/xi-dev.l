@@ -187,6 +187,9 @@ __isr__                                                 RETURN_OP_NAME(ASSIGN_SR
 
 const                                                   RETURN_KW(CONST)
 func                                                    RETURN_KW(FUNC)
+cfunc                                                   RETURN_KW(FUNC_C)
+extern\s+func                                           RETURN_KW(FUNC_EXTERN)
+extern\s+cfunc                                          RETURN_KW(FUNC_C_EXTERN)
 namespace                                               RETURN_KW(NAMESPACE)
 struct                                                  RETURN_KW(STRUCT)
 
@@ -214,18 +217,22 @@ else                                                    RETURN_KW(ELSE)
 elif                                                    RETURN_KW(ELIF)
 for                                                     RETURN_KW(FOR)
 if                                                      RETURN_KW(IF)
+local                                                   RETURN_KW(LOCAL)
 return                                                  RETURN_KW(RETURN)
 while                                                   RETURN_KW(WHILE)
-var                                                     RETURN_KW(VAR)
 
             /* expression keywords */
+            
+self                                                    RETURN_KW(SELF)
+            
             /* literals */
 
-{FLOATING_POINT_LITERAL}                                RETURN_LITERAL(REAL,    builder.make_real(yytext))
-{INTEGER_10_LITERAL}                                    RETURN_LITERAL(INTEGER, builder.make_integer(yytext, 10))
-{INTEGER_16_LITERAL}                                    RETURN_LITERAL(INTEGER, builder.make_integer(&yytext[2], 16))
-true                                                    RETURN_LITERAL(BOOL,    builder.make_true())
-false                                                   RETURN_LITERAL(BOOL,    builder.make_false())
+{FLOATING_POINT_LITERAL}                                RETURN_LITERAL(REAL,            builder.make_real(yytext))
+{INTEGER_10_LITERAL}                                    RETURN_LITERAL(INTEGER,         builder.make_integer(yytext, 10))
+{INTEGER_16_LITERAL}                                    RETURN_LITERAL(INTEGER,         builder.make_integer(&yytext[2], 16))
+true                                                    RETURN_LITERAL(BOOL,            builder.make_true())
+false                                                   RETURN_LITERAL(BOOL,            builder.make_false())
+null                                                    RETURN_LITERAL(POINTER,         builder.make_null())
 {IDENTIFIER}                                            RETURN_TOKEN(IDENTIFIER, text, copy_cstring(yytext))
 
 <<EOF>>                                                 return xi::parser::token::TOK_EOF;

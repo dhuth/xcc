@@ -198,11 +198,24 @@ inline bool is_decl(tree_t* t) { return t->is<ast_decl>(); }
 inline bool is_expr(tree_t* t) { return t->is<ast_expr>(); }
 inline bool is_stmt(tree_t* t) { return t->is<ast_stmt>(); }
 
+template<typename TBase, typename TTree, typename T>
+struct enable_if_base_of : std::enable_if_t<std::is_base_of<TBase, TTree>::value, T> { };
+
+template<typename T, typename U = void> struct enable_if_decl : enable_if_base_of<ast_decl, T, U> { };
+template<typename T, typename U = void> struct enable_if_type : enable_if_base_of<ast_type, T, U> { };
+template<typename T, typename U = void> struct enable_if_expr : enable_if_base_of<ast_expr, T, U> { };
+template<typename T, typename U = void> struct enable_if_stmt : enable_if_base_of<ast_stmt, T, U> { };
+
+template<typename T, typename U = void> using enable_if_decl_t = typename enable_if_decl<T, U>::type;
+template<typename T, typename U = void> using enable_if_type_t = typename enable_if_type<T, U>::type;
+template<typename T, typename U = void> using enable_if_expr_t = typename enable_if_expr<T, U>::type;
+template<typename T, typename U = void> using enable_if_stmt_t = typename enable_if_stmt<T, U>::type;
+
 
 /**
  * A Namespace
  */
-struct ast_namespace_decl : public extend_tree<tree_type_id::ast_namespace_decl, ast_decl> {
+struct ast_namespace_decl : public implement_tree<tree_type_id::ast_namespace_decl> {
 public:
 
     explicit inline ast_namespace_decl(std::string name) noexcept
@@ -243,7 +256,7 @@ public:
 /**
  * Global variable declaration
  */
-struct ast_variable_decl final : public extend_tree<tree_type_id::ast_variable_decl, ast_decl>,
+struct ast_variable_decl final : public implement_tree<tree_type_id::ast_variable_decl>,
                                  public ast_externable {
 public:
 
@@ -280,7 +293,7 @@ public:
 /**
  * Function parameter
  */
-struct ast_parameter_decl final : public extend_tree<tree_type_id::ast_parameter_decl, ast_decl> {
+struct ast_parameter_decl : public implement_tree<tree_type_id::ast_parameter_decl> {
 public:
 
     /**
@@ -310,7 +323,7 @@ public:
 /**
  * A local variable within a function
  */
-struct ast_local_decl final : public extend_tree<tree_type_id::ast_local_decl, ast_decl> {
+struct ast_local_decl final : public implement_tree<tree_type_id::ast_local_decl> {
 public:
 
     /**

@@ -21,16 +21,19 @@ ptr<ast_decl> ast_context::find(const char* name, bool search_parent) {
     return box<ast_decl>(nullptr);
 }
 
-ptr<list<ast_decl>> ast_context::findall(const char* name, bool search_parent) {
+ptr<list<ast_decl>> ast_context::findall(const char* name, bool search_parent, bool keep_looking) {
     ptr<list<ast_decl>> olist = box(new list<ast_decl>());
-    this->findall(olist, name, search_parent);
+    this->findall(olist, name, search_parent, keep_looking);
     return olist;
 }
 
-void ast_context::findall(ptr<list<ast_decl>> olist, const char* name, bool search_parent) {
+void ast_context::findall(ptr<list<ast_decl>> olist, const char* name, bool search_parent, bool keep_looking) {
     this->find_all_impl(olist, name);
+    if(!keep_looking && olist->size() > 0) {
+        return;
+    }
     if(search_parent && (this->parent != nullptr)) {
-        this->parent->findall(olist, name, search_parent);
+        this->parent->findall(olist, name, search_parent, keep_looking);
     }
 }
 

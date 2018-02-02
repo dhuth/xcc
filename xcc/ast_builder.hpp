@@ -167,6 +167,7 @@ public:
     virtual ast_expr*                           make_true()                                                         const noexcept;
     virtual ast_expr*                           make_false()                                                        const noexcept;
     virtual ast_expr*                           make_zero(ast_type* tp)                                             const noexcept;
+    virtual ast_expr*                           make_null()                                                               noexcept;
 
 
     /* ================ *

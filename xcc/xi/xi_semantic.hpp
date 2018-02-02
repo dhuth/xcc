@@ -32,7 +32,6 @@ private:
 };
 
 ast_expr* tc_single_expr(ast_expr*, xi_builder&);
-ast_expr* tc_call_expr(ast_expr*, list<ast_expr>*, xi_builder&);
 
 }
 

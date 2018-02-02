@@ -34,21 +34,22 @@ public:
 
     /**
      * Find all declarations with the given name
-     * @param name              the given name
-     * @param search_parent     if true, search all parents for this name
-     * @return                  a managed pointer to list of all declarations of the given name
+     * @param name              The name to search for
+     * @param search_parent     If true, search all parents for this name
+     * @param keep_looking      If true, keep searching parent scopes, even if values are already found
+     * @return                  A managed pointer to list of all declarations of the given name
      */
-    ptr<list<ast_decl>> findall(const char* name, bool search_parent = true);
+    ptr<list<ast_decl>> findall(const char* name, bool search_parent = true, bool keep_looking = false);
 
     /**
      * Convenience function for find. Returns the declarations casted to a base type
-     * @param name              the given name
-     * @param search_parent     if true, search all parents for this name
-     * @return                  a managed pointer to the declaration if one was found, otherwise a null managed pointer
+     * @param name              The name to search for
+     * @param search_parent     If true, search all parents for this name
+     * @return                  A managed pointer to the declaration if one was found, otherwise a null managed pointer
      */
     template<typename TTreeType,
              typename std::enable_if<std::is_base_of<ast_decl, TTreeType>::value, int>::type = 0>
-    ptr<TTreeType>          find_of(const char* name, bool search_parent = true) {
+    ptr<TTreeType> find_of(const char* name, bool search_parent = true) {
         auto ff = this->find_first_impl(name);
         if(ff == nullptr || !ff->is<TTreeType>()) {
             if(search_parent && this->parent != nullptr) {
@@ -67,14 +68,21 @@ public:
      * Convenience function for findall. Find all declarations with the given name, cast to a common base type
      * @param name              The given name
      * @param search_parent     If true, search all parents for this name
+     * @param keep_looking      If true, keep searching parent scopes, even if values are already found
      * @return                  A managed pointer to list of all declarations of the given name
      */
     template<typename TTreeType,
              typename std::enable_if<std::is_base_of<ast_decl, TTreeType>::value, int>::type = 0>
-    ptr<list<TTreeType>>    findall_of(const char* name, bool search_parent = true) {
+    ptr<list<TTreeType>> findall_of(const char* name, bool search_parent = true, bool keep_looking = false) {
         ptr<list<TTreeType>> olist = box(new list<TTreeType>());
         this->findall_of<TTreeType>(olist, name, search_parent);
         return olist;
+    }
+
+    template<typename TPredicate,
+             typename TTreeType = ast_decl>
+    ptr<TTreeType> find_if(const char* name, TPredicate pred, bool search_parent = true) {
+        // ...
     }
 
     /**
@@ -144,7 +152,7 @@ protected:
 
 private:
 
-    void findall(ptr<list<ast_decl>> olist, const char* name, bool search_parent);
+    void findall(ptr<list<ast_decl>> olist, const char* name, bool search_parent, bool keep_looking);
 
     template<typename TTreeType,
              typename std::enable_if<std::is_base_of<ast_decl, TTreeType>::value, int>::type = 0>
