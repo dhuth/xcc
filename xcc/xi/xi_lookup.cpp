@@ -44,7 +44,12 @@ static ptr<ast_decl> find_declaration(ptr<ast_context> ctx, list<std::string>::i
     }
 }
 
-static ptr<list<ast_decl>> find_all_declarations(ptr<ast_context> ctx, list<std::string>::iterator iter_start, list<std::string>::iterator iter_end, bool search_parent) {
+static ptr<list<ast_decl>> find_all_declarations(
+        ptr<ast_context> ctx,
+        list<std::string>::iterator iter_start,
+        list<std::string>::iterator iter_end,
+        bool search_parent,
+        bool keep_looking) {
     //TODO: visibility
     //TODO: change to breadth first
     ptr<list<ast_decl>> ilist = ctx->findall((*iter_start).c_str(), search_parent);
@@ -55,7 +60,7 @@ static ptr<list<ast_decl>> find_all_declarations(ptr<ast_context> ctx, list<std:
     else {
         ptr<list<ast_decl>> olist = new list<ast_decl>();
         for(auto d: ilist) {
-            auto res = find_all_declarations(push_context(ctx, d), iter_start, iter_end, false);
+            auto res = find_all_declarations(push_context(ctx, d), iter_start, iter_end, false, keep_looking);
             for(auto r: res) {
                 olist->append(r);
             }
@@ -70,7 +75,7 @@ ast_decl* xi_builder::find_declaration(xi_qname* qname) const noexcept {
 }
 
 ptr<list<ast_decl>> xi_builder::find_all_declarations(xi_qname* qname) const noexcept {
-    return xcc::find_all_declarations(this->context, begin(qname->names), end(qname->names), true);
+    return xcc::find_all_declarations(this->context, begin(qname->names), end(qname->names), true, false);
 }
 
 xi_member_decl* xi_builder::find_member(ast_type* tp, xi_qname* name) const noexcept {
@@ -82,7 +87,7 @@ xi_member_decl* xi_builder::find_member(ast_type* tp, xi_qname* name) const noex
 ptr<list<xi_member_decl>> xi_builder::find_all_members(ast_type* tp, xi_qname* name) const noexcept {
     //TODO: visibility
     //TODO: look for extension members (???)
-    return map(xcc::find_all_declarations(xcc::push_context(this->context, tp), begin(name->names), end(name->names), false),
+    return map(xcc::find_all_declarations(xcc::push_context(this->context, tp), begin(name->names), end(name->names), false, false),
             [=](ast_decl* d) -> xi_member_decl* { return d->as<xi_member_decl>(); });
 }
 

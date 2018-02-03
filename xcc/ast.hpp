@@ -23,6 +23,34 @@
 
 namespace xcc {
 
+/**
+ * Properties for locatable ast elements (decls, exprs, & stmts)
+ */
+struct ast_locatable {
+
+    explicit inline ast_locatable(tree_t* t) noexcept
+            : source_location(t) {
+        /* do nothing */
+    }
+
+    explicit inline ast_locatable(tree_t* t, source_span source_location) noexcept
+            : source_location(t, source_location) {
+        /* do nothing */
+    }
+
+    property<source_span>                           source_location;    //! the location of this node in the source code
+};
+
+
+template<typename T, typename U = T>
+using enable_if_locatable_t =
+        typename enable_if_base_of<ast_locatable, T, U>::type;
+
+
+/**
+ * Properties for ast elements that can have definitions outside of the current
+ * translation unit
+ */
 struct ast_externable {
 
     explicit inline ast_externable(tree_t* p, bool is_extern = false, bool is_extern_visible = false) noexcept
@@ -31,9 +59,14 @@ struct ast_externable {
         // do nothing
     }
 
-    property<bool>                                  is_extern;          //!< is defined externally
-    property<bool>                                  is_extern_visible;  //!< is visible outside of this module
+    property<bool>                                  is_extern;          //! is defined externally
+    property<bool>                                  is_extern_visible;  //! is visible outside of this module
 };
+
+
+template<typename T, typename U = T>
+using enable_if_externable_t =
+        typename enable_if_base_of<ast_externable, T, U>::type;
 
 
 /**
@@ -47,8 +80,7 @@ public:
      * @param id overriding tree type id
      */
     explicit inline ast_tree(tree_type_id id) noexcept
-            : base_type(id),
-              source_location(this) {
+            : base_type(id) {
         // do nothing
     }
 
@@ -56,12 +88,9 @@ public:
      * Passing cloning constructor for ast_tree
      */
     explicit inline ast_tree(const ast_tree& t) noexcept
-            : base_type(t._type),
-              source_location(this, t.source_location) {
+            : base_type(t._type) {
         // do nothing
     }
-
-    property<source_span>                           source_location;
 
 };
 
@@ -96,7 +125,8 @@ public:
 /**
  * Base class for all declaration ast nodes
  */
-struct ast_decl : public extend_tree<tree_type_id::ast_decl, ast_tree> {
+struct ast_decl : public extend_tree<tree_type_id::ast_decl, ast_tree>,
+                  public ast_locatable {
 public:
 
     /**
@@ -106,6 +136,7 @@ public:
      */
     inline ast_decl(tree_type_id id, std::string name) noexcept
             : base_type(id),
+              ast_locatable(this),
               name(this, name),
               generated_name(this, "") {
         //...
@@ -116,6 +147,7 @@ public:
      */
     inline ast_decl(const ast_decl& d) noexcept
             : base_type((base_type&) d),
+              ast_locatable((ast_locatable&) d),
               name(this, d.name),
               generated_name(this, d.generated_name) {
         // do nothing
@@ -130,7 +162,8 @@ public:
 /**
  * Base class for all expression ast nodes
  */
-struct ast_expr : public extend_tree<tree_type_id::ast_expr, ast_tree> {
+struct ast_expr : public extend_tree<tree_type_id::ast_expr, ast_tree>,
+                  public ast_locatable {
 public:
 
     /**
@@ -139,6 +172,7 @@ public:
      */
     inline ast_expr(tree_type_id id) noexcept
             : base_type(id),
+              ast_locatable(this),
               type(this, nullptr) {
         //...
     }
@@ -150,6 +184,7 @@ public:
      */
     inline ast_expr(tree_type_id id, ast_type* type) noexcept
             : base_type(id),
+              ast_locatable(this),
               type(this, type) {
         //...
     }
@@ -159,6 +194,7 @@ public:
      */
     inline ast_expr(const ast_expr& e) noexcept
             : base_type((base_type&) e),
+              ast_locatable((ast_locatable&) e),
               type(this, e.type) {
         // do nothing
     }
@@ -171,14 +207,17 @@ public:
 /**
  * Base class for all statement ast nodes
  */
-struct ast_stmt : public extend_tree<tree_type_id::ast_stmt, ast_tree> {
+struct ast_stmt : public extend_tree<tree_type_id::ast_stmt, ast_tree>,
+                  public ast_locatable {
 public:
 
     /**
      * Passing constructor
      * @param id overriding type id
      */
-    inline ast_stmt(tree_type_id id) noexcept : base_type(id) {
+    inline ast_stmt(tree_type_id id) noexcept
+            : base_type(id),
+              ast_locatable(this) {
         //...
     }
 
@@ -186,20 +225,18 @@ public:
      * Passing constructor for cloning
      */
     inline ast_stmt(const ast_stmt& s) noexcept
-            : base_type((base_type&) s) {
+            : base_type((base_type&) s),
+              ast_locatable((ast_locatable&) s){
         // do nothing
     }
 
 };
 
 
-inline bool is_type(tree_t* t) { return t->is<ast_type>(); }
-inline bool is_decl(tree_t* t) { return t->is<ast_decl>(); }
-inline bool is_expr(tree_t* t) { return t->is<ast_expr>(); }
-inline bool is_stmt(tree_t* t) { return t->is<ast_stmt>(); }
-
-template<typename TBase, typename TTree, typename T>
-struct enable_if_base_of : std::enable_if_t<std::is_base_of<TBase, TTree>::value, T> { };
+inline bool is_type(const tree_t* t) noexcept { return t->is<ast_type>(); }
+inline bool is_decl(const tree_t* t) noexcept { return t->is<ast_decl>(); }
+inline bool is_expr(const tree_t* t) noexcept { return t->is<ast_expr>(); }
+inline bool is_stmt(const tree_t* t) noexcept { return t->is<ast_stmt>(); }
 
 template<typename T, typename U = void> struct enable_if_decl : enable_if_base_of<ast_decl, T, U> { };
 template<typename T, typename U = void> struct enable_if_type : enable_if_base_of<ast_type, T, U> { };
@@ -1649,9 +1686,8 @@ private:
  * @param loc   the source location
  * @return      a pointer to the same node
  */
-template<typename T,
-         typename std::enable_if<std::is_base_of<ast_tree, T>::value, int>::type = 0>
-inline T* setloc(T* t, const source_span& loc) noexcept {
+template<typename T>
+inline enable_if_locatable_t<T, T*> setloc(T* t, const source_span& loc) noexcept {
     if(t != nullptr) {
         t->source_location = loc;
     }
@@ -1667,9 +1703,8 @@ inline T* setloc(T* t, const source_span& loc) noexcept {
  * @param width     the textual width of the node
  * @return          a pointer to the same node
  */
-template<typename T,
-         typename std::enable_if<std::is_base_of<ast_tree, T>::value, int>::type = 0>
-inline T* setloc(T* t, std::string filename, uint32_t line, uint32_t col, uint32_t width) noexcept {
+template<typename T>
+inline enable_if_locatable_t<T, T*> setloc(T* t, std::string filename, uint32_t line, uint32_t col, uint32_t width) noexcept {
     if(t != nullptr) {
         t->source_location = {
                 { filename, line, col },
@@ -1687,8 +1722,8 @@ inline T* setloc(T* t, std::string filename, uint32_t line, uint32_t col, uint32
  */
 template<typename TDestTreeType,
          typename TSrcTreeType,
-         typename std::enable_if<std::is_base_of<ast_tree, TDestTreeType>::value, int>::type = 0,
-         typename std::enable_if<std::is_base_of<ast_tree, TSrcTreeType>::value, int>::type = 0>
+         enable_if_locatable_t<TDestTreeType, int> = 0,
+         enable_if_locatable_t<TSrcTreeType, int> = 0>
 TDestTreeType* copyloc(TDestTreeType* t, TSrcTreeType* ft) noexcept { t->source_location = ft->source_location; return t; }
 
 /**
@@ -1701,9 +1736,9 @@ TDestTreeType* copyloc(TDestTreeType* t, TSrcTreeType* ft) noexcept { t->source_
 template<typename TDestTreeType,
          typename TSrcMinTreeType,
          typename TSrcMaxTreeType,
-         typename std::enable_if<std::is_base_of<ast_tree, TDestTreeType>::value, int>::type = 0,
-         typename std::enable_if<std::is_base_of<ast_tree, TSrcMinTreeType>::value, int>::type = 0,
-         typename std::enable_if<std::is_base_of<ast_tree, TSrcMaxTreeType>::value, int>::type = 0>
+         enable_if_locatable_t<TDestTreeType, int> = 0,
+         enable_if_locatable_t<TSrcMinTreeType, int> = 0,
+         enable_if_locatable_t<TSrcMaxTreeType, int> = 0>
 TDestTreeType* copyloc(TDestTreeType *t, TSrcMinTreeType* fmin, TSrcMaxTreeType* fmax) noexcept {
     t->source_location->first   = fmin->source_location->first;
     t->source_location->last    = fmax->source_location->last;

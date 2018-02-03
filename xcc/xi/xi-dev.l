@@ -188,8 +188,8 @@ __isr__                                                 RETURN_OP_NAME(ASSIGN_SR
 const                                                   RETURN_KW(CONST)
 func                                                    RETURN_KW(FUNC)
 cfunc                                                   RETURN_KW(FUNC_C)
-extern\s+func                                           RETURN_KW(FUNC_EXTERN)
-extern\s+cfunc                                          RETURN_KW(FUNC_C_EXTERN)
+extern[ \t\n]+func                                      RETURN_KW(FUNC_EXTERN)
+extern[ \t\n]+cfunc                                     RETURN_KW(FUNC_C_EXTERN)
 namespace                                               RETURN_KW(NAMESPACE)
 struct                                                  RETURN_KW(STRUCT)
 

@@ -38,17 +38,20 @@ public:
 /**
  * The name of a type
  */
-struct xi_id_type : public implement_tree<tree_type_id::xi_id_type> {
+struct xi_id_type : public implement_tree<tree_type_id::xi_id_type>,
+                    public ast_locatable {
 public:
 
     explicit inline xi_id_type(xi_qname* name) noexcept
             : base_type(),
+              ast_locatable(this),
               name(this, name) {
         /* do nothing */
     }
 
     explicit inline xi_id_type(const xi_id_type& i) noexcept
             : base_type((base_type&) i),
+              ast_locatable((ast_locatable&) i),
               name(this, i.name) {
         /* do nothing */
     }

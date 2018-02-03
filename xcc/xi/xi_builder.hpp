@@ -36,7 +36,7 @@ public:
     xi_reference_type*                          get_reference_type(ast_type* type)                                                                            noexcept;
     xi_decl_type*                               get_object_type(ast_decl* decl)                                                                               noexcept;
     xi_tuple_type*                              get_tuple_type(list<ast_type>* types)                                                                         noexcept;
-    ast_type*                                   get_id_type(xi_qname*)                                                                                  const noexcept;
+    xi_id_type*                                 get_id_type(xi_qname*)                                                                                  const noexcept;
 
     ast_type*                                   get_declaration_type(ast_decl*)                                                                               noexcept override;
 

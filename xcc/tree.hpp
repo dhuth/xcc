@@ -21,7 +21,7 @@
 #include <vector>
 
 #include "cppdefs.hpp"
-//#include "cpp_type_traits_ext.hpp"
+#include "cpp_type_traits_ext.hpp"
 #include "managed_ptr.hpp"
 
 
@@ -357,6 +357,15 @@ protected:
 
 };
 
+
+template<typename T> inline typename __tree_list_value<T>::iterator begin(__tree_list_value<T>& l)          noexcept { return l.begin();     }
+template<typename T> inline typename __tree_list_value<T>::iterator end(__tree_list_value<T>& l)            noexcept { return l.end();       }
+template<typename T> inline typename __tree_list_value<T>::iterator begin(__tree_list_value<T>* lptr)       noexcept { return lptr->begin(); }
+template<typename T> inline typename __tree_list_value<T>::iterator end(__tree_list_value<T>* lptr)         noexcept { return lptr->end();   }
+template<typename T> inline typename __tree_list_value<T>::iterator begin(ptr<__tree_list_value<T>>& lptr)  noexcept { return lptr->begin(); }
+template<typename T> inline typename __tree_list_value<T>::iterator end(ptr<__tree_list_value<T>>& lptr)    noexcept { return lptr->end();   }
+
+
 template<typename TElement>
 struct __tree_list_tree final : public __tree_list_base<ptr<TElement>> {
 public:
@@ -416,7 +425,7 @@ public:
         }
 
     };
-    typedef const iterator                              const_iterator;
+    //typedef const iterator                              const_iterator;
 
     inline __tree_list_tree()                                           noexcept : base_list_t()           { }
     inline __tree_list_tree(element_t f)                                noexcept : base_list_t()           { this->_child_nodes.push_back(box((__tree_base*) f)); }
@@ -443,8 +452,8 @@ public:
 
     inline       iterator begin()       noexcept { return {0,                         this->_child_nodes}; }
     inline       iterator end()         noexcept { return {this->_child_nodes.size(), this->_child_nodes}; }
-    inline const_iterator begin() const noexcept { return {0,                         this->_child_nodes}; }
-    inline const_iterator end()   const noexcept { return {this->_child_nodes.size(), this->_child_nodes}; }
+    //inline const_iterator begin() const noexcept { return {0,                         this->_child_nodes}; }
+    //inline const_iterator end()   const noexcept { return {this->_child_nodes.size(), this->_child_nodes}; }
 
     inline element_t operator[](size_t index) {
         return (element_t) unbox(this->_child_nodes[index]);
@@ -479,15 +488,15 @@ public:
         this->_child_nodes.insert(this->_child_nodes.begin(), box((__tree_base*) el));
     }
 
-    inline void remove(const_iterator& itr) {
+    inline void remove(const iterator& itr) {
         this->_child_nodes.erase(this->_child_nodes.begin() + itr.index);
     }
 
-    inline void insert(const_iterator& itr, element_t& el) {
+    inline void insert(const iterator& itr, element_t& el) {
         this->_child_nodes.insert(this->_child_nodes.begin() + itr.index, el);
     }
 
-    inline void insert(const_iterator& itr, element_t&& el) {
+    inline void insert(const iterator& itr, element_t&& el) {
         this->_child_nodes.insert(this->_child_nodes.begin() + itr.index, el);
     }
 
@@ -496,41 +505,30 @@ public:
     }
 };
 
-template<typename T> inline typename __tree_list_tree<T>::      iterator begin(__tree_list_tree<T>& l)          noexcept { return l.begin();     }
-template<typename T> inline typename __tree_list_tree<T>::      iterator end(__tree_list_tree<T>& l)            noexcept { return l.end();       }
-template<typename T> inline typename __tree_list_tree<T>::      iterator begin(__tree_list_tree<T>* lptr)       noexcept { return lptr->begin(); }
-template<typename T> inline typename __tree_list_tree<T>::      iterator end(__tree_list_tree<T>* lptr)         noexcept { return lptr->end();   }
-template<typename T> inline typename __tree_list_tree<T>::const_iterator begin(const __tree_list_tree<T>* lptr) noexcept { return lptr->begin(); }
-template<typename T> inline typename __tree_list_tree<T>::const_iterator end(const __tree_list_tree<T>* lptr)   noexcept { return lptr->end();   }
-template<typename T> inline typename __tree_list_tree<T>::      iterator begin(ptr<__tree_list_tree<T>>& lptr)  noexcept { return lptr->begin(); }
-template<typename T> inline typename __tree_list_tree<T>::      iterator end(ptr<__tree_list_tree<T>>& lptr)    noexcept { return lptr->end();   }
+template<typename T> inline typename __tree_list_tree<T>::iterator begin(__tree_list_tree<T>& l)            noexcept { return l.begin();     }
+template<typename T> inline typename __tree_list_tree<T>::iterator end(__tree_list_tree<T>& l)              noexcept { return l.end();       }
+template<typename T> inline typename __tree_list_tree<T>::iterator begin(__tree_list_tree<T>* lptr)         noexcept { return lptr->begin(); }
+template<typename T> inline typename __tree_list_tree<T>::iterator end(__tree_list_tree<T>* lptr)           noexcept { return lptr->end();   }
+template<typename T> inline typename __tree_list_tree<T>::iterator begin(ptr<__tree_list_tree<T>>& lptr)    noexcept { return lptr->begin(); }
+template<typename T> inline typename __tree_list_tree<T>::iterator end(ptr<__tree_list_tree<T>>& lptr)      noexcept { return lptr->end();   }
 
-template<typename T> inline typename __tree_property_list<T>::list_t::      iterator begin(__tree_property_list<T>& lref)   noexcept { return lref.begin(); }
-template<typename T> inline typename __tree_property_list<T>::list_t::      iterator end(__tree_property_list<T>& lref)     noexcept { return lref.end(); }
+template<typename T> inline typename __tree_property_list<T>::list_t::iterator begin(__tree_property_list<T>& lref) noexcept { return lref.begin(); }
+template<typename T> inline typename __tree_property_list<T>::list_t::iterator end(__tree_property_list<T>& lref)   noexcept { return lref.end(); }
 
-template<typename T>
-inline T* first(__tree_list_tree<T>* l) {
-    return *(l->begin());
+// ---------------
+// List Algorithms
+// ---------------
+
+// First & Rest
+// ------------
+
+template<typename TList>
+inline typename remove_managed_ptr_t<TList>::element_t first(TList& l) {
+    return *begin(l);
 }
 
-template<typename T>
-inline T* first(ptr<__tree_list_tree<T>>& l) {
-    return *(l->begin());
-}
-
-template<typename T>
-inline typename __tree_property_list<T>::element_t first(__tree_property_list<T>& p) {
-    return p[0];
-}
-
-template<typename T>
-inline __tree_list_tree<T>* rest(__tree_list_tree<T>* l) {
-    __tree_list_tree<T>* nl = new __tree_list_tree<T>();
-    for(int i = 1; i < l->size(); i++) {
-        nl->append((*l)[i]);
-    }
-    return nl;
-}
+// Map Algorithm
+// -------------
 
 template<typename TSrcEl,
          typename TDestEl>
@@ -555,13 +553,6 @@ inline __tree_list_value<TDestEl>* __map(__tree_list_value<TSrcEl>* slist, std::
 template<typename TSrcEl,
          typename TFunc,
          typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
-inline ptr<__tree_list_tree<_TDestEl>> map(ptr<__tree_list_tree<TSrcEl>>& slist, TFunc f) {
-    return box(__map(unbox(slist), std::function<_TDestEl*(TSrcEl*)>(f)));
-}
-
-template<typename TSrcEl,
-         typename TFunc,
-         typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
 inline ptr<__tree_list_tree<_TDestEl>> map(ptr<__tree_list_tree<TSrcEl>>&& slist, TFunc f) {
     return box(__map(unbox(slist), std::function<_TDestEl*(TSrcEl*)>(f)));
 }
@@ -580,9 +571,12 @@ inline ptr<__tree_list_tree<_TDestEl>> map(__tree_property_list<TSrcEl>& slist, 
     return box(__map((__tree_list_tree<TSrcEl>*) slist, std::function<_TDestEl*(TSrcEl*)>(f)));
 }
 
+// Filter algorithm
+// ----------------
+
 template<typename TTreeType,
          typename TPred>
-inline ptr<__tree_list_tree<TTreeType>> filter(__tree_list_tree<TTreeType>* slist, TPred pred) {
+inline __tree_list_tree<TTreeType>* __filter(__tree_list_tree<TTreeType>* slist, TPred pred) {
     __tree_list_tree<TTreeType>* dlist = new __tree_list_tree<TTreeType>();
     auto f = std::function<bool(TTreeType*)>(pred);
     for(auto el: *slist) {
@@ -590,25 +584,25 @@ inline ptr<__tree_list_tree<TTreeType>> filter(__tree_list_tree<TTreeType>* slis
             dlist->append(el);
         }
     }
-    return box(dlist);
+    return dlist;
 }
 
 template<typename TTreeType,
          typename TPred>
 inline ptr<__tree_list_tree<TTreeType>> filter(ptr<__tree_list_tree<TTreeType>>& slist, TPred pred) {
-    return filter(unbox(slist), pred);
+    return box(__filter(unbox(slist), pred));
 }
 
 template<typename TTreeType,
          typename TPred>
 inline ptr<__tree_list_tree<TTreeType>> filter(ptr<__tree_list_tree<TTreeType>>&& slist, TPred pred) {
-    return filter(unbox(slist), pred);
+    return box(__filter(unbox(slist), pred));
 }
 
 template<typename TTreeType,
          typename TPred>
 inline ptr<__tree_list_tree<TTreeType>> filter(__tree_property_list<TTreeType>& slist, TPred pred) {
-    return filter((__tree_list_tree<TTreeType>*) slist, pred);
+    return box(__filter((__tree_list_tree<TTreeType>*) slist, pred));
 }
 
 
@@ -709,7 +703,6 @@ public:
     typedef typename __list_type_selector<TTreeListElement>::type   list_t;
     typedef typename list_t::element_t                              element_t;
     typedef typename list_t::iterator                               iterator;
-    typedef typename list_t::const_iterator                         const_iterator;
 
     inline explicit __tree_property_list(__tree_base* parent)                noexcept : __tree_property_tree<list_t>(parent) { }
     inline explicit __tree_property_list(__tree_base* parent, list_t* value) noexcept : __tree_property_tree<list_t>(parent, value) { }
@@ -725,8 +718,6 @@ public:
 
     inline typename list_t::      iterator begin()       noexcept { return static_cast<list_t*>(this->__get())->begin(); }
     inline typename list_t::      iterator end()         noexcept { return static_cast<list_t*>(this->__get())->end();   }
-    inline typename list_t::const_iterator begin() const noexcept { return static_cast<list_t*>(this->__get())->begin(); }
-    inline typename list_t::const_iterator end()   const noexcept { return static_cast<list_t*>(this->__get())->end();   }
 
 };
 

@@ -828,6 +828,46 @@ ast_expr* __ast_builder_impl::widen(ast_type* typedest, ast_expr* expr) const {
     }
 }
 
+bool __ast_builder_impl::coercable(ast_type* typedest, ast_expr* expr) const noexcept {
+    int cost = 0;
+    return this->coercable(typedest, expr, cost);
+}
+
+bool __ast_builder_impl::coercable(ast_type* typedest, ast_expr* expr, int& cost) const noexcept {
+    switch(expr->get_tree_type()) {
+    case tree_type_id::ast_integer:
+        return
+                typedest->is<ast_real_type>() ||
+                typedest->is<ast_integer_type>();
+    case tree_type_id::ast_real:
+        return
+                typedest->is<ast_real_type>();
+    }
+    return false;
+}
+
+ast_expr* __ast_builder_impl::coerce(ast_type* typedest, ast_expr* expr) const noexcept {
+    switch(expr->get_tree_type()) {
+    case tree_type_id::ast_integer:
+        switch(typedest->get_tree_type()) {
+        case tree_type_id::ast_integer_type:        return this->cast_to(typedest->as<ast_integer_type>(), expr);
+        case tree_type_id::ast_real_type:           return this->cast_to(typedest->as<ast_real_type>(), expr);
+        default:
+            __throw_unhandled_tree_type(__FILE__, __LINE__, typedest, "__ast_builder_impl::coerce");
+        }
+        break;
+    case tree_type_id::ast_real:
+        switch(typedest->get_tree_type()) {
+        case tree_type_id::ast_real_type:           return this->cast_to(typedest->as<ast_real_type>(), expr);
+        default:
+            __throw_unhandled_tree_type(__FILE__, __LINE__, typedest, "__ast_builder_impl::coerce");
+        }
+        break;
+    default:
+        __throw_unhandled_tree_type(__FILE__, __LINE__, expr, "__ast_builder_impl::coerce");
+    }
+}
+
 void __ast_builder_impl::push_namespace(ast_namespace_decl* ns) noexcept {
     this->push_context<ast_namespace_context>(ns);
 }

@@ -217,7 +217,10 @@ public:
     virtual ast_type*                           maxtype(ast_type*, ast_type*)                                       const noexcept;
             bool                                widens(ast_type*, ast_type*)                                        const;
     virtual bool                                widens(ast_type*, ast_type*, int&)                                  const;
-    virtual ast_expr*                           widen(ast_type*, ast_expr*)                                         const;
+    virtual ast_expr*                           widen(ast_type*, ast_expr*)                                         const; //TODO: noexcept
+            bool                                coercable(ast_type*, ast_expr*)                                     const noexcept;
+    virtual bool                                coercable(ast_type*, ast_expr*, int&)                               const noexcept;
+    virtual ast_expr*                           coerce(ast_type*, ast_expr*)                                        const noexcept;
 
             ast_name_mangler&                   get_mangled_name;
 

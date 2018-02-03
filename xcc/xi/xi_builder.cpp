@@ -40,7 +40,7 @@ ast_type* xi_builder::get_declaration_type(ast_decl* decl) noexcept {
     }
 }
 
-ast_type* xi_builder::get_id_type(xi_qname* name) const noexcept {
+xi_id_type* xi_builder::get_id_type(xi_qname* name) const noexcept {
     return new xi_id_type(name);
 }
 
