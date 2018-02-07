@@ -262,7 +262,7 @@ llvm::Value* ircode_expr_generator::generate_invoke(ast_invoke* e) {
 }
 
 llvm::Value* ircode_expr_generator::generate_call(ast_call* e) {
-    llvm::Value* func = context.find(e->funcdecl);
+    llvm::Value* func = context.find(e->funcdecl->declaration);
     std::vector<llvm::Value*> args;
     for(auto a: e->arguments) {
         args.push_back(this->visit(a));

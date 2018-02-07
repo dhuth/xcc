@@ -42,7 +42,12 @@ static void print_xi_parameter_decl(xi_parameter_decl* p, std::ostream& s) {
 }
 
 static void print_xi_function_decl(xi_function_decl* f, std::ostream& s) {
-    ast_printer::print(s, "func %0(%{1:, }) -> %2 %3", f->name, f->parameters, f->return_type, f->body);
+    if(f->is_forward_decl) {
+        ast_printer::print(s, "func %0(%{1:, }) -> %2", f->name, f->parameters, f->return_type);
+    }
+    else {
+        ast_printer::print(s, "func %0(%{1:, }) -> %2 %3", f->name, f->parameters, f->return_type, f->body);
+    }
 }
 
 static void print_xi_operator_function_decl(xi_operator_function_decl* f, std::ostream& s) {

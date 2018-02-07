@@ -53,7 +53,7 @@ using enable_if_locatable_t =
  */
 struct ast_externable {
 
-    explicit inline ast_externable(tree_t* p, bool is_extern = false, bool is_extern_visible = false) noexcept
+    explicit inline ast_externable(tree_t* p, bool is_extern = false, bool is_extern_visible = true) noexcept
             : is_extern(p, is_extern),
               is_extern_visible(p, is_extern_visible) {
         // do nothing
@@ -1216,21 +1216,21 @@ public:
      * @param funcdecl
      * @param arguments
      */
-    inline ast_call(ast_type* type, ast_decl* funcdecl, list<ast_expr>* arguments) noexcept
+    explicit inline ast_call(ast_type* type, ast_declref* funcdecl, list<ast_expr>* arguments) noexcept
             : base_type(type),
               funcdecl(this, funcdecl),
               arguments(this, arguments) {
         // do nothing
     }
 
-    inline ast_call(const ast_call& c) noexcept
+    explicit inline ast_call(const ast_call& c) noexcept
             : base_type((base_type&) c),
               funcdecl(this, c.funcdecl),
               arguments(this, c.arguments) {
         // do nothing
     }
 
-    property<ast_decl>                                          funcdecl;   //!<
+    property<ast_declref>                                       funcdecl;   //!<
     property<list<ast_expr>>                                    arguments;  //!<
 
 };
@@ -1724,7 +1724,10 @@ template<typename TDestTreeType,
          typename TSrcTreeType,
          enable_if_locatable_t<TDestTreeType, int> = 0,
          enable_if_locatable_t<TSrcTreeType, int> = 0>
-TDestTreeType* copyloc(TDestTreeType* t, TSrcTreeType* ft) noexcept { t->source_location = ft->source_location; return t; }
+TDestTreeType* copyloc(TDestTreeType* t, TSrcTreeType* ft) noexcept {
+    t->source_location = ft->source_location;
+    return t;
+}
 
 /**
  * Copy the location from a begining and end ast_tree nodes to a destination node

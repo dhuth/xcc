@@ -179,7 +179,7 @@ public:
             ast_expr*                           make_lower_op_expr(ast_op, ast_expr*, ast_expr*)                          noexcept;
     virtual ast_expr*                           make_cast_expr(ast_type*, ast_expr*)                                const noexcept;
             ast_expr*                           make_lower_cast_expr(ast_type*, ast_expr*)                          const noexcept;
-    virtual ast_expr*                           make_declref_expr(ast_decl*)                                              noexcept;
+    virtual ast_declref*                        make_declref_expr(ast_decl*)                                              noexcept;
     virtual ast_expr*                           make_memberref_expr(ast_expr*, uint32_t)                                  noexcept;
     virtual ast_expr*                           make_deref_expr(ast_expr*)                                          const noexcept;
     virtual ast_expr*                           make_addressof_expr(ast_expr*)                                            noexcept;
@@ -221,6 +221,11 @@ public:
             bool                                coercable(ast_type*, ast_expr*)                                     const noexcept;
     virtual bool                                coercable(ast_type*, ast_expr*, int&)                               const noexcept;
     virtual ast_expr*                           coerce(ast_type*, ast_expr*)                                        const noexcept;
+
+
+    /* ================================= *
+     * Low level stuff & code generation *
+     * ================================= */
 
             ast_name_mangler&                   get_mangled_name;
 

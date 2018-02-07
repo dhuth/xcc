@@ -8,12 +8,15 @@ libxi_a_SOURCES    += xi_dom.cpp
 libxi_a_SOURCES    += xi_lookup.cpp
 libxi_a_SOURCES    += xi_lower.cpp
 libxi_a_SOURCES    += xi_metadata.cpp
+libxi_a_SOURCES    += xi_name_mangler.cpp
 libxi_a_SOURCES    += xi_printer.cpp
 libxi_a_SOURCES    += xi_semantic.cpp
 libxi_a_SOURCES    += xi_tc_id.cpp
 libxi_a_SOURCES    += xi_tc_invoke.cpp
 libxi_a_SOURCES    += xi_tc_op.cpp
+libxi_a_SOURCES	   += xi_tc_stmt.cpp
 libxi_a_SOURCES    += xi_tree.cpp
+libxi_a_SOURCES    += xi_walker.cpp
 libxi_a_SOURCES    += xi-parser.cpp
 libxi_a_SOURCES    += xi-lex.cpp
 

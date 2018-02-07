@@ -21,6 +21,9 @@ std::string ast_default_name_mangler::operator()(std::string prefix, ast_tree* t
         if(prefix.empty()) {
             return "_Z" + this->visit(t);
         }
+        else if(prefix.substr(0, 2) == "_Z") {
+            return "_ZN" + prefix.substr(2) + this->visit(t);
+        }
         else {
             return "_ZN" + prefix + this->visit(t);
         }

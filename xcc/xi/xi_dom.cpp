@@ -7,6 +7,7 @@
 
 
 #include "xi_dom.hpp"
+#include "xi_builder.hpp"
 #include "error.hpp"
 #include <map>
 

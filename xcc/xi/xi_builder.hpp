@@ -11,25 +11,16 @@
 
 #include "xi_tree.hpp"
 #include "ast_builder.hpp"
+#include "xi_name_mangler.hpp"
 #include <stack>
 
 namespace xcc {
 
-struct xi_builder;
-
-struct xi_builder : public ast_builder<ast_default_name_mangler,
+struct xi_builder : public ast_builder<xi_name_mangler,
                                        xi_typeset> {
 public:
 
-    inline xi_builder(translation_unit& tu) noexcept
-            : ast_builder<ast_default_name_mangler, xi_typeset>(tu),
-              _the_auto_type(new xi_auto_type()),
-              _const_types(     this->get_universal_typeset()),
-              _reference_types( this->get_universal_typeset()),
-              _object_types(    this->get_universal_typeset()),
-              _tuple_types(     this->get_universal_typeset()){
-        // do nothing ...
-    }
+    explicit xi_builder(translation_unit&) noexcept;
 
     xi_const_type*                              get_const_type(ast_type* type)                                                                                noexcept;
     xi_auto_type*                               get_auto_type()                                                                                         const noexcept;
@@ -70,14 +61,6 @@ public:
     ast_expr*                                   make_xi_index(ast_expr*, list<ast_expr>*)                                                               const noexcept;
 
 
-    /* --------------------------------------- *
-     * Semantic Pass Make Expression Functions *
-     * --------------------------------------- */
-
-    ast_expr*                                   make_xi_member_expr(ast_expr*, xi_member_decl*)                                                               noexcept;
-    ast_expr*                                   make_xi_deref_expr(ast_expr*)                                                                           const noexcept;
-
-
     /* ------------------------------- *
      * Parser Make Statement Functions *
      * ------------------------------- */
@@ -87,12 +70,25 @@ public:
     ast_stmt*                                   make_xi_return_stmt(ast_expr*)                                                                          const noexcept;
 
 
+    /* --------------------------------------- *
+     * Semantic Pass Make Expression Functions *
+     * --------------------------------------- */
+
+    ast_expr*                                   make_xi_member_expr(ast_expr*, xi_member_decl*)                                                               noexcept;
+    ast_expr*                                   make_xi_deref_expr(ast_expr*)                                                                           const noexcept;
+    ast_expr*                                   make_xi_call_expr(ast_decl*, list<ast_expr>* args)                                                            noexcept;
+
+
     /* ----------------- *
      * Semantic Analysis *
      * ----------------- */
 
+    // Defined in xi_semantic.cpp
     bool                                        widens(ast_type*, ast_type*, int&)                                                                      const          override;
     ast_expr*                                   widen(ast_type*, ast_expr*)                                                                             const          override;
+
+    // Defined in xi_walker.cpp
+    ast_type*                                   get_return_type()                                                                                       const noexcept;
 
     // Defined in xi_lookup.cpp
     ast_decl*                                   find_declaration(xi_qname*)                                                                             const noexcept;
@@ -108,12 +104,16 @@ public:
     void                                        leave_xi_struct()                                                                                             noexcept;
     void                                        leave_xi_method()                                                                                             noexcept;
 
-    // Major compiler passes
+    /* --------------------- *
+     * Major compiler passes *
+     * --------------------- */
+
     bool                                        read_metadata_pass(ircode_context& /* input modules, error log info */)                                       noexcept;
     bool                                        dom_pass(/* error log info*/)                                                                                 noexcept;
     bool                                        write_metadata_pass(ircode_context& /* error log info */)                                                     noexcept;
     bool                                        semantic_pass(/* error log info*/)                                                                            noexcept;
-    bool                                        lower_pass(/* error log info*/)                                                                               noexcept;
+    bool                                        mangle_names_pass()                                                                                           noexcept;
+    bool                                        lower_pass(ircode_context&/* error log info*/)                                                                noexcept;
 
 private:
 
@@ -124,43 +124,8 @@ private:
     xi_typeset                                              _tuple_types;
 
     std::stack<ptr<xi_type_decl>>                           _nesting_types;
-    std::stack<ptr<ast_decl>>                               _nesting_function_decls; // (??) only one... right?
+    std::stack<ptr<ast_decl>>                               _nesting_closure_decls;
 
-};
-
-void maybe_push_context(ast_tree*, xi_builder& b);
-void maybe_pop_context(ast_tree*, xi_builder& b);
-
-template<typename... TParameters>
-struct xi_postorder_walker : public dispatch_postorder_tree_walker<ast_tree, xi_builder&, TParameters...> {
-public:
-
-    inline ast_tree* operator()(ast_tree* t, xi_builder& b) noexcept {
-        return this->visit(t, b);
-    }
-
-    void begin(tree_type_id, ast_tree* t, xi_builder& b, TParameters...) override {
-        maybe_push_context(t, b);
-    }
-    void end(tree_type_id, ast_tree* t, xi_builder& b, TParameters...) override {
-        maybe_pop_context(t, b);
-    }
-};
-
-template<typename... TParameters>
-struct xi_preorder_walker : public dispatch_postorder_tree_walker<ast_tree, xi_builder&, TParameters...> {
-public:
-
-    inline ast_tree* operator()(ast_tree* t, xi_builder& b) noexcept {
-        return this->visit(t, b);
-    }
-
-    void begin(tree_type_id, ast_tree* t, xi_builder& b, TParameters...) override {
-        maybe_push_context(t, b);
-    }
-    void end(tree_type_id, ast_tree* t, xi_builder& b, TParameters...) override {
-        maybe_pop_context(t, b);
-    }
 };
 
 

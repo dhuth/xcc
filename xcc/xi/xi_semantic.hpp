@@ -9,6 +9,7 @@
 #define XCC_XI_XI_SEMANTIC_HPP_
 
 #include "xi_builder.hpp"
+#include "xi_walker.hpp"
 
 namespace xcc {
 
@@ -28,6 +29,8 @@ private:
     ast_expr*           tc_member_id_expr(xi_member_id_expr*,                           xi_builder&);
     ast_expr*           tc_op_expr(xi_op_expr*,                                         xi_builder&);
     ast_expr*           tc_invoke_expr(xi_invoke_expr*,                                 xi_builder&);
+
+    ast_stmt*           tc_return_stmt(ast_return_stmt*,                                xi_builder&);
 
 };
 

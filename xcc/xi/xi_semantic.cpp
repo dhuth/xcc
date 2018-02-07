@@ -22,6 +22,9 @@ xi_tc_walker::xi_tc_walker() noexcept {
     this->add(&xi_tc_walker::tc_member_id_expr);
     this->add(&xi_tc_walker::tc_op_expr);
     this->add(&xi_tc_walker::tc_invoke_expr);
+
+    // statements
+    this->add(&xi_tc_walker::tc_return_stmt);
 }
 
 void xi_tc_walker::visit_xi_function_decl(xi_function_decl* fdecl, xi_builder& b) {
@@ -75,7 +78,7 @@ static bool __widens_to(ast_type* tp_from, xi_reference_type* tp_to, int& cost, 
 // TODO: needs some major rework...
 bool xi_builder::widens(ast_type* tp_from, ast_type* tp_to, int& cost) const {
     assert(tp_from != nullptr);
-    assert(tp_from != nullptr);
+    assert(tp_to   != nullptr);
 
     if(this->sametype(tp_from, tp_to)) return true;
     //TODO: is there an explicit conversion function (?)

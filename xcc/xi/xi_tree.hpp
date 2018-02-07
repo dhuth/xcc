@@ -6,7 +6,6 @@
 
 namespace xcc {
 
-
 /**
  * QName
  */
@@ -179,17 +178,20 @@ public:
 
     explicit inline xi_parameter_decl(std::string name, ast_type* type) noexcept
             : base_type(name),
-              type(this, type) {
+              type(this, type),
+              lowered_parameter(this, nullptr) {
         /* do nothing */
     }
 
     explicit inline xi_parameter_decl(const xi_parameter_decl& p) noexcept
             : base_type((base_type&) p),
-              type(this, p.type) {
+              type(this, p.type),
+              lowered_parameter(this, p.lowered_parameter) {
         /* do nothing */
     }
 
     property<ast_type>                                              type;
+    property<ast_parameter_decl>                                    lowered_parameter; //TODO: should be weak property
 
 };
 
@@ -198,7 +200,11 @@ public:
  */
 struct xi_function_base {
 
-    explicit inline xi_function_base(tree_t* p, ast_type* return_type, list<xi_parameter_decl>* parameters, ast_stmt* body) noexcept
+    template<typename TReturnType,
+             typename TParameterType,
+             typename enable_if_base_of<ast_type,          TReturnType, int>::type = 0,
+             typename enable_if_base_of<xi_parameter_decl, TParameterType, int>::type = 0>
+    explicit inline xi_function_base(tree_t* p, TReturnType* return_type, __tree_list_tree<TParameterType>* parameters, ast_stmt* body) noexcept
             : return_type(p, return_type),
               parameters(p, parameters),
               body(p, body) {
@@ -230,6 +236,7 @@ public:
                     : base_type(name),
                       ast_externable(this, false, true),
                       xi_function_base(this, return_type, parameters, body),
+                      lowered_func(this, nullptr),
                       is_inline(this, false),
                       is_forward_decl(this, false),
                       is_c_extern(this, false) {
@@ -245,6 +252,7 @@ public:
                     : base_type(id, name),
                       ast_externable(this, false, true),
                       xi_function_base(this, return_type, parameters, body),
+                      lowered_func(this, nullptr),
                       is_inline(this, false),
                       is_forward_decl(this, false),
                       is_c_extern(this, false) {
@@ -254,7 +262,8 @@ public:
     explicit inline xi_function_decl(const xi_function_decl& f) noexcept
             : base_type((base_type&) f),
               ast_externable(f),
-              xi_function_base(this, f.return_type, f.parameters, f.body),
+              xi_function_base(this, (return_type_t*)f.return_type, (list<parameter_decl_t>*)f.parameters, f.body),
+              lowered_func(this, f.lowered_func),
               is_inline(this, f.is_inline),
               is_forward_decl(this, f.is_forward_decl),
               is_c_extern(this, false) {
@@ -264,6 +273,7 @@ public:
     property<bool>                                                  is_inline;          //! the code generator should try to inline this function
     property<bool>                                                  is_forward_decl;    //! is a forward declaration
     property<bool>                                                  is_c_extern;        //! is this a C function
+    property<ast_function_decl>                                     lowered_func;       //  TODO: should be weak property
 
 };
 
@@ -321,6 +331,7 @@ public:
  * A method
  */
 struct xi_method_decl : public implement_tree<tree_type_id::xi_method_decl>,
+                        public ast_externable,
                         public xi_function_base {
 public:
 
@@ -333,7 +344,9 @@ public:
             list<parameter_decl_t>*     parameters,
             ast_stmt*                   body) noexcept
                     : base_type(name),
+                      ast_externable(this),
                       xi_function_base(this, return_type, parameters, body),
+                      lowered_func(this, nullptr),
                       is_forward_decl(this, false) {
         /* do nothing */
     }
@@ -345,19 +358,24 @@ public:
             list<parameter_decl_t>*     parameters,
             ast_stmt*                   body) noexcept
                     : base_type(id, name),
+                      ast_externable(this),
                       xi_function_base(this, return_type, parameters, body),
+                      lowered_func(this, nullptr),
                       is_forward_decl(this, false) {
         /* do nothing */
     }
 
     explicit inline xi_method_decl(const xi_method_decl& m) noexcept
             : base_type((base_type&) m),
-              xi_function_base(this, m.return_type, m.parameters, m.body),
+              ast_externable((ast_externable&) m),
+              xi_function_base(this, (return_type_t*)m.return_type, (list<parameter_decl_t>*)m.parameters, m.body),
+              lowered_func(this, m.lowered_func),
               is_forward_decl(this, m.is_forward_decl) {
         /* do nothing */
     }
 
     property<bool>                                                  is_forward_decl;    //! is a forward declaration
+    property<xi_function_decl>                                      lowered_func;       //  TODO: should be weak property
 
 };
 

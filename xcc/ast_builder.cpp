@@ -12,6 +12,7 @@
 #include "ast_builder.hpp"
 #include "frontend.hpp"
 #include "error.hpp"
+#include "ircodegen.hpp"
 
 
 namespace xcc {
@@ -137,15 +138,15 @@ ast_temp_decl* __ast_builder_impl::make_temp_decl(ast_expr* expr) const noexcept
 
 ast_expr* __ast_builder_impl::make_integer(const char* txt, uint8_t radix) const noexcept {
     auto bitsneeded = llvm::APInt::getBitsNeeded(llvm::StringRef(txt), radix);
-    llvm::APSInt value(llvm::APInt(bitsneeded, llvm::StringRef(txt), radix));
 
     uint32_t bitwidth = 0;
-    if(bitsneeded <= 8)  { bitwidth = 8;  }
-    if(bitsneeded <= 16) { bitwidth = 16; }
-    if(bitsneeded <= 32) { bitwidth = 32; }
-    if(bitsneeded <= 64) { bitwidth = 64; }
+    if     (bitsneeded <= 8)  { bitwidth = 8;  }
+    else if(bitsneeded <= 16) { bitwidth = 16; }
+    else if(bitsneeded <= 32) { bitwidth = 32; }
+    else if(bitsneeded <= 64) { bitwidth = 64; }
 
     assert(bitwidth != 0);
+    llvm::APSInt value(llvm::APInt(bitwidth, llvm::StringRef(txt), radix));
 
     return new ast_integer(this->get_integer_type(bitwidth, false), value);
 }
@@ -153,7 +154,8 @@ ast_expr* __ast_builder_impl::make_integer(const char* txt, uint8_t radix) const
 ast_expr* __ast_builder_impl::make_real(const char* txt) const noexcept {
     llvm::APFloat value(std::atof(txt));
 
-    return new ast_real(this->get_real_type(64), value);
+    //TODO: float is default?
+    return new ast_real(this->get_real_type(32), value);
 }
 
 ast_expr* __ast_builder_impl::make_true() const noexcept {
@@ -441,7 +443,7 @@ ast_expr* __ast_builder_impl::make_op_expr(ast_op op, ast_expr* expr) noexcept {
     }
 }
 
-ast_expr* __ast_builder_impl::make_declref_expr(ast_decl* decl) noexcept {
+ast_declref* __ast_builder_impl::make_declref_expr(ast_decl* decl) noexcept {
     return new ast_declref(this->get_declaration_type(decl), decl);
 }
 
@@ -499,7 +501,7 @@ ast_expr* __ast_builder_impl::make_lower_call_expr(ast_expr* fexpr, list<ast_exp
 
     ast_type* t = fexpr->type->as<ast_function_type>()->return_type;
     if(fexpr->is<ast_declref>() && fexpr->as<ast_declref>()->declaration->is<ast_function_decl>()) {
-        return new ast_call(t, fexpr->as<ast_declref>()->declaration, new_args);
+        return new ast_call(t, fexpr->as<ast_declref>(), new_args);
     }
     else {
         return new ast_invoke(t, fexpr, new_args);

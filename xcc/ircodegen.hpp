@@ -123,7 +123,7 @@ private:
 struct ircode_context final {
 public:
 
-    inline ircode_context(std::string module_name) noexcept
+    inline ircode_context(std::string module_name /* arch options */) noexcept
         : llvm_context(),
           ir_builder(this->llvm_context),
           _local_scope(new local_scope(nullptr)),

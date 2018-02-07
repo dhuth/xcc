@@ -8,8 +8,8 @@
 #ifndef XCC_XI_XI_DOM_HPP_
 #define XCC_XI_XI_DOM_HPP_
 
-#include "xi_builder.hpp"
-#include <stack>
+#include "xi_walker.hpp"
+#include "xi_tree.hpp"
 
 namespace xcc {
 

@@ -1,4 +1,4 @@
 
 header(xi/xi.hpp)
 tree_header(xi/xi_tree.hpp)
-compiler(xi, dev, (xi, x++, hxi),  xcc::ximain)
+compiler(xi, dev, (xi, x++, hxi),  xcc::xi_dev)

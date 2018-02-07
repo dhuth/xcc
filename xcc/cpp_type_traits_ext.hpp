@@ -35,6 +35,26 @@ template<typename T>
 using remove_managed_ptr_t =
         typename remove_managed_ptr<T>::type;
 
+template<typename T>
+struct remove_ptr_and_ref {
+    typedef T                                               type;
+};
+
+template<typename T>
+struct remove_ptr_and_ref<managed_ptr<T>> {
+    typedef typename remove_ptr_and_ref<T>::type            type;
+};
+
+template<typename T>
+struct remove_ptr_and_ref<T*> {
+    typedef typename remove_ptr_and_ref<T>::type            type;
+};
+
+template<typename T>
+struct remove_ptr_and_ref<T&> {
+    typedef typename remove_ptr_and_ref<T>::type            type;
+};
+
 }
 
 

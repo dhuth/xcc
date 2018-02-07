@@ -24,7 +24,7 @@ struct translation_unit {
 };
 
 
-typedef int (*compiler_function)(const char*, const char*, std::vector<std::string>&);
+typedef int (*compiler_function)(const char*, const char*, const std::vector<std::string>&);
 
 enum class compiler_stage : uint32_t {
     preprocessor,

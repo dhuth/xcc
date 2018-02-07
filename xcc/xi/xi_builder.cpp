@@ -8,8 +8,19 @@
 #include "xi_builder.hpp"
 #include "xi_context.hpp"
 #include "error.hpp"
+#include "xi_lower.hpp"
 
 namespace xcc {
+
+xi_builder::xi_builder(translation_unit& tu) noexcept
+        : ast_builder<xi_name_mangler, xi_typeset>(tu),
+          _the_auto_type(new xi_auto_type()),
+          _const_types(     this->get_universal_typeset()),
+          _reference_types( this->get_universal_typeset()),
+          _object_types(    this->get_universal_typeset()),
+          _tuple_types(     this->get_universal_typeset()) {
+    // do nothing ...
+}
 
 xi_auto_type* xi_builder::get_auto_type() const noexcept {
     return this->_the_auto_type;
@@ -35,6 +46,22 @@ ast_type* xi_builder::get_declaration_type(ast_decl* decl) noexcept {
     switch(decl->get_tree_type()) {
     case tree_type_id::xi_parameter_decl:                   return decl->as<xi_parameter_decl>()->type;
     case tree_type_id::xi_field_decl:                       return decl->as<xi_field_decl>()->type;
+    case tree_type_id::xi_function_decl:
+    case tree_type_id::xi_operator_function_decl:
+        return this->get_function_type(
+                decl->as<xi_function_decl>()->return_type,
+                map(decl->as<xi_function_decl>()->parameters,
+                        [&](xi_parameter_decl* d)->ast_type* {
+                            return this->get_declaration_type(d);
+        }));
+    case tree_type_id::xi_method_decl:
+    case tree_type_id::xi_operator_method_decl:
+        return this->get_function_type(
+                decl->as<xi_method_decl>()->return_type,
+                map(decl->as<xi_method_decl>()->parameters,
+                        [&](xi_parameter_decl* d)->ast_type* {
+                            return this->get_declaration_type(d);
+        }));
     default:
         return __ast_builder_impl::get_declaration_type(decl);
     }
@@ -141,12 +168,12 @@ ast_stmt* xi_builder::make_xi_return_stmt(ast_expr* expr) const noexcept {
 
 void xi_builder::push_xi_function(xi_function_decl* decl) noexcept {
     this->context = this->context->push_context<xi_function_context>(decl);
-    _nesting_function_decls.push(decl);
+    _nesting_closure_decls.push(decl);
 }
 
 void xi_builder::leave_xi_function() noexcept {
     this->pop_context();
-    _nesting_function_decls.pop();
+    _nesting_closure_decls.pop();
 }
 
 void xi_builder::push_xi_struct(xi_struct_decl* s) noexcept {
@@ -161,40 +188,12 @@ void xi_builder::leave_xi_struct() noexcept {
 
 void xi_builder::push_xi_method(xi_method_decl* m) noexcept {
     this->context = this->context->push_context<xi_method_context>(m);
-    _nesting_function_decls.push(m);
+    _nesting_closure_decls.push(m);
 }
 
 void xi_builder::leave_xi_method() noexcept {
     this->pop_context();
-    _nesting_function_decls.pop();
-}
-
-void maybe_push_context(ast_tree* t, xi_builder& b) {
-    switch(t->get_tree_type()) {
-    case tree_type_id::ast_namespace_decl:              b.push_namespace(t->as<ast_namespace_decl>());  break;
-    case tree_type_id::xi_namespace_decl:               b.push_namespace(t->as<xi_namespace_decl>());   break;
-    case tree_type_id::ast_block_stmt:                  b.push_block(t->as<ast_block_stmt>());          break;
-    case tree_type_id::ast_function_decl:               b.push_function(t->as<ast_function_decl>());    break;
-    case tree_type_id::xi_function_decl:                b.push_xi_function(t->as<xi_function_decl>());  break;
-    case tree_type_id::xi_operator_function_decl:       b.push_xi_function(t->as<xi_function_decl>());  break;
-    case tree_type_id::xi_struct_decl:                  b.push_xi_struct(t->as<xi_struct_decl>());      break;
-    case tree_type_id::xi_method_decl:                  b.push_xi_method(t->as<xi_method_decl>());      break;
-    case tree_type_id::xi_operator_method_decl:         b.push_xi_method(t->as<xi_method_decl>());      break;
-    }
-}
-
-void maybe_pop_context(ast_tree* t, xi_builder& b) {
-    switch(t->get_tree_type()) {
-    case tree_type_id::ast_namespace_decl:              b.pop_context();                                break;
-    case tree_type_id::xi_namespace_decl:               b.pop_context();                                break;
-    case tree_type_id::ast_block_stmt:                  b.pop_context();                                break;
-    case tree_type_id::ast_function_decl:               b.pop_context();                                break;
-    case tree_type_id::xi_function_decl:                b.leave_xi_function();                          break;
-    case tree_type_id::xi_operator_function_decl:       b.leave_xi_function();                          break;
-    case tree_type_id::xi_struct_decl:                  b.leave_xi_struct();                            break;
-    case tree_type_id::xi_method_decl:                  b.leave_xi_method();                            break;
-    case tree_type_id::xi_operator_method_decl:         b.leave_xi_method();                            break;
-    }
+    _nesting_closure_decls.pop();
 }
 
 }

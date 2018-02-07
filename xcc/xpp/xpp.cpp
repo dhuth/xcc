@@ -7,4 +7,8 @@
 
 
 
+namespace xcc {
+
+}
+
 

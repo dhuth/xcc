@@ -522,9 +522,70 @@ template<typename T> inline typename __tree_property_list<T>::list_t::iterator e
 // First & Rest
 // ------------
 
-template<typename TList>
-inline typename remove_managed_ptr_t<TList>::element_t first(TList& l) {
+template<typename T>
+inline T first(__tree_list_value<T>& l) {
     return *begin(l);
+}
+
+template<typename T>
+inline T* first(__tree_list_tree<T>& l) {
+    return *begin(l);
+}
+
+template<typename T>
+inline typename __tree_property_list<T>::element_t first(__tree_property_list<T>& l) {
+    return *begin(l);
+}
+
+template<typename T>
+inline T first(__tree_list_value<T>* l) {
+    return *begin(l);
+}
+
+template<typename T>
+inline T* first(__tree_list_tree<T>* l) {
+    return *begin(l);
+}
+
+template<typename T>
+inline typename __tree_property_list<T>::element_t first(__tree_property_list<T>* l) {
+    return *begin(l);
+}
+
+template<typename T>
+inline T first(ptr<__tree_list_value<T>> l) {
+    return *begin(l);
+}
+
+template<typename T>
+inline T* first(ptr<__tree_list_tree<T>> l) {
+    return *begin(l);
+}
+
+template<typename T>
+inline typename __tree_property_list<T>::element_t first(ptr<__tree_property_list<T>> l) {
+    return *begin(l);
+}
+
+// Copy As Algorithm
+// -----------------
+
+template<typename TSrcEl,
+         typename TDestEl>
+inline enable_if_base_of_t<TDestEl, TSrcEl, __tree_list_tree<TDestEl>*>
+__copy_list_as(__tree_list_tree<TSrcEl>* slist) {
+    auto newlist = new __tree_list_tree<TDestEl>();
+    for(auto st: *slist) {
+        newlist->append(st->template as<TDestEl>());
+    }
+    return newlist;
+}
+
+template<typename TSrcEl,
+         typename TDestEl>
+inline enable_if_base_of_t<TDestEl, TSrcEl, __tree_list_tree<TDestEl>*>
+copy_list_as(__tree_list_tree<TSrcEl>* slist) {
+    return __copy_list_as<TDestEl>(slist);
 }
 
 // Map Algorithm
@@ -548,6 +609,20 @@ inline __tree_list_value<TDestEl>* __map(__tree_list_value<TSrcEl>* slist, std::
         dlist->append(f(el));
     }
     return dlist;
+}
+
+//template<typename TSrcEl,
+//         typename TFunc,
+//         typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
+//inline ptr<__tree_list_tree<_TDestEl>> map(ptr<__tree_list_tree<TSrcEl>> slist, TFunc f) {
+//    return box(__map(unbox(slist), std::function<_TDestEl*(TSrcEl*)>(f)));
+//}
+
+template<typename TSrcEl,
+         typename TFunc,
+         typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
+inline ptr<__tree_list_tree<_TDestEl>> map(ptr<__tree_list_tree<TSrcEl>>& slist, TFunc f) {
+    return box(__map(unbox(slist), std::function<_TDestEl*(TSrcEl*)>(f)));
 }
 
 template<typename TSrcEl,
@@ -648,16 +723,26 @@ public:
         return null;
     }
 
-    template<typename TFromType, typename std::enable_if<std::is_base_of<TTreeType, TFromType>::value, int>::type = 0>
+    template<typename TFromType,
+             enable_if_base_of_t<TTreeType, TFromType, int> = 0>
     inline TFromType* operator=(TFromType* value) noexcept {
         this->__set(value);
         return value;
     }
 
-    template<typename TFromType, typename std::enable_if<std::is_base_of<TTreeType, TFromType>::value, int>::type = 0>
+    template<typename TFromType,
+             enable_if_base_of_t<TTreeType, TFromType, int> = 0>
     inline ptr<TFromType> operator=(ptr<TFromType> value) noexcept {
         this->__set(unbox(value));
         return value;
+    }
+
+    template<typename TFromType,
+             enable_if_base_of_t<TTreeType, TFromType, int> = 0>
+    inline TFromType* operator=(const __tree_property_tree<TFromType>& p) noexcept {
+        TFromType* v = (TFromType*) p;
+        this->__set(v);
+        return v;
     }
 
     inline TTreeType* operator->() const noexcept {
@@ -706,6 +791,13 @@ public:
 
     inline explicit __tree_property_list(__tree_base* parent)                noexcept : __tree_property_tree<list_t>(parent) { }
     inline explicit __tree_property_list(__tree_base* parent, list_t* value) noexcept : __tree_property_tree<list_t>(parent, value) { }
+
+    template<typename TOtherElType,
+             typename enable_if_base_of<TTreeListElement, TOtherElType, int>::type = 0>
+    inline explicit __tree_property_list(__tree_base* parent, __tree_list_tree<TOtherElType>* value) noexcept
+            : __tree_property_tree<list_t>(parent, copy_list_as<TTreeListElement>(value)) {
+        // do nothing
+    }
 
     inline element_t operator[](size_t index) const noexcept {
         return (**this)[index];
@@ -801,12 +893,32 @@ protected:
     typedef std::function<TReturnType(__tree_base*, TParamTypes...)>
                                                                     dispatch_wrapper_t;
 
+    bool find_visitor_function(tree_type_id id, dispatch_wrapper_t& func) {
+        while(true) {
+            if(this->_function_map.find(id) == this->_function_map.end()) {
+                id = __all_tree_types[(uint64_t) id].base_id;
+                if(id == tree_type_id::tree || id == tree_type_id::dummy) {
+                    return false;
+                }
+            }
+            else {
+                func = this->_function_map[id];
+                return true;
+            }
+        }
+    }
+
     std::map<tree_type_id, dispatch_wrapper_t>                  _function_map;
 };
 
 template<typename    TReturnType,
          typename... TParamTypes>
-struct __dispatch_visitor_base_notvoid : public __dispatch_visitor_base<TReturnType, TParamTypes...>{
+struct __dispatch_visitor_base_notvoid : public __dispatch_visitor_base<TReturnType, TParamTypes...> {
+protected:
+
+    typedef typename __dispatch_visitor_base<TReturnType, TParamTypes...>::dispatch_wrapper_t
+                                                                dispatch_wrapper_t;
+
 public:
 
     __dispatch_visitor_base_notvoid() = default;
@@ -816,12 +928,13 @@ public:
         if(t == nullptr) {
             return this->handle_null_tree(args...);
         }
+        tree_type_id id = t->get_tree_type();
+        dispatch_wrapper_t func;
+        if(this->find_visitor_function(id, func)) {
+            return func(t, args...);
+        }
         else {
-            tree_type_id id = t->get_tree_type();
-            if(this->_function_map.find(id) == this->_function_map.end()) {
-                return this->handle_unregisterd_tree_type(id, args...);
-            }
-            return this->_function_map[id](t, args...);
+            return this->handle_unregisterd_tree_type(id, args...);
         }
     }
 
@@ -863,6 +976,10 @@ protected:
 
 template<typename... TParamTypes>
 struct __dispatch_visitor_base_void : public __dispatch_visitor_base<void, TParamTypes...>{
+protected:
+
+    typedef typename __dispatch_visitor_base<void, TParamTypes...>::dispatch_wrapper_t
+                                                                    dispatch_wrapper_t;
 public:
 
     __dispatch_visitor_base_void() = default;
@@ -872,12 +989,13 @@ public:
         if(t == nullptr) {
             this->handle_null_tree(args...);
         }
+        tree_type_id id = t->get_tree_type();
+        dispatch_wrapper_t func;
+        if(this->find_visitor_function(id, func)) {
+            func(t, args...);
+        }
         else {
-            tree_type_id id = t->get_tree_type();
-            if(this->_function_map.find(id) == this->_function_map.end()) {
-                this->handle_unregisterd_tree_type(id, args...);
-            }
-            this->_function_map[id](t, args...);
+            this->handle_unregisterd_tree_type(id, args...);
         }
     }
     template<typename T>
@@ -946,22 +1064,22 @@ public:
 
     template<typename TReturnType,
              typename TTreeType,
-             typename std::enable_if<std::is_base_of<TReturnType, TTreeType>::value, int>::type = 0,
-             enable_if_tree_t<TTreeType> = 0>
+             enable_if_base_of_t<TReturnType, TBaseType, int> = 0,
+             enable_if_base_of_t<TTreeType, TBaseType, int> = 0>
     using translate_func_t = TReturnType*(*)(TTreeType*, TParamTypes...);
 
     template<typename TReturnType,
              typename TTreeType,
              typename TClassType,
-             typename std::enable_if<std::is_base_of<TReturnType, TTreeType>::value, int>::type = 0,
-             typename std::enable_if<std::is_base_of<__dispatch_tree_walker_base<TBaseType, TParamTypes...>, TClassType>::value, int>::type = 0,
-             enable_if_tree_t<TTreeType> = 0>
+             enable_if_base_of_t<TBaseType, TTreeType, int> = 0,
+             enable_if_base_of_t<TBaseType, TReturnType, int> = 0,
+             enable_if_base_of_t<__dispatch_tree_walker_base<TBaseType, TParamTypes...>, TClassType, int> = 0>
     using translate_method_t = TReturnType*(TClassType::*)(TTreeType*, TParamTypes...);
 
     template<typename TTreeType,
              typename TClassType,
-             typename std::enable_if<std::is_base_of<__dispatch_tree_walker_base<TBaseType, TParamTypes...>, TClassType>::value, int>::type = 0,
-             enable_if_tree_t<TTreeType> = 0>
+             enable_if_base_of_t<TBaseType, TTreeType, int> = 0,
+             enable_if_base_of_t<__dispatch_tree_walker_base<TBaseType, TParamTypes...>, TClassType, int> = 0>
     using visit_method_t = void(TClassType::*)(TTreeType*, TParamTypes...);
 
 
@@ -984,7 +1102,9 @@ public:
         this->_functions[tree_type_id_from<TTreeType>()] = wfunc;
     }
 
-    template<typename TReturnType, typename TTreeType, typename TClassType>
+    template<typename TReturnType,
+             typename TTreeType,
+             typename TClassType>
     inline void add(translate_method_t<TReturnType, TTreeType, TClassType> mtd) {
         auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
             *retv = static_cast<__tree_base*>(
@@ -1085,19 +1205,20 @@ protected:
         }
     }
 
-    inline __tree_base* do_visit(__tree_base* t, TParamTypes... args) {
+    typedef std::function<void(__tree_base**,__tree_base*,TParamTypes...)>
+                                                                            fwalk_t;
+
+    __tree_base* do_visit(__tree_base* t, TParamTypes... args) {
         auto tpid = t->get_tree_type();
-        if(this->_functions.find(tpid) != this->_functions.end()) {
-            __tree_base* retval = t;
-            this->_functions[tpid](&retval, t, args...);
-            this->_visited[t] = retval;
+        fwalk_t func;
+        if(this->find_visitor_func(tpid, func)) {
+            __tree_base*    retval = t;
+            func(&retval, t, args...);
+            _visited[t] = retval;
             return retval;
         }
         return t;
     }
-
-    typedef std::function<void(__tree_base**,__tree_base*,TParamTypes...)>
-                                                                        fwalk_t;
 
     std::map<tree_type_id, fwalk_t>                                     _functions;
     std::map<__tree_base*, __tree_base*>                                _visited;
@@ -1105,6 +1226,24 @@ protected:
     std::vector<tree_type_id>                                           _include;
     bool                                                                _use_ignore;
     bool                                                                _use_include;
+
+private:
+
+    bool find_visitor_func(tree_type_id id, fwalk_t& func) {
+        while(true) {
+            auto fiter = this->_functions.find(id);
+            if(fiter == this->_functions.end()) {
+                id = __all_tree_types[(uint64_t) id].base_id;
+                if(id == tree_type_id::tree || id == tree_type_id::dummy) {
+                    return false;
+                }
+            }
+            else {
+                func = fiter->second;
+                return true;
+            }
+        }
+    }
 
 };
 

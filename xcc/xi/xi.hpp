@@ -12,7 +12,7 @@
 
 namespace xcc {
 
-int ximain(const char*, const char*, std::vector<std::string>&);
+int xi_dev(const char*, const char*, const std::vector<std::string>&);
 
 }
 
