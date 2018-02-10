@@ -430,6 +430,7 @@ global-function-decl-header
                         : /* attribute-list */ KW_FUNC          global-function-decl-header-cont { $$ = $2; }
                         | /* attribute-list */ KW_FUNC_C        global-function-decl-header-cont { $2->is_c_extern = true; $$ = $2; }
                         | /* attribute-list */ KW_FUNC_C_EXTERN global-function-decl-header-cont { $2->is_c_extern = true; $2->is_extern = true; $$ = $2; }
+                        | /* attribute-list */ KW_FUNC_EXTERN   global-function-decl-header-cont { $2->is_extern = true; $$ = $2; }
                         ;
 global-function-decl-header-cont
                         : TOK_IDENTIFIER
@@ -486,9 +487,9 @@ global-parameter-decl-list
                         | global-parameter-decl                                 { $$ = make_list<parameter_t>($1); }
                         ;
 global-parameter-decl
-                        : TOK_IDENTIFIER OP_COLON type                          { $$ = SETLOC(builder.make_xi_parameter_decl($1,      $3), @$); }
-                        |                OP_COLON type                          { $$ = SETLOC(builder.make_xi_parameter_decl(nullptr, $2), @$); }
-                        |                         type                          { $$ = SETLOC(builder.make_xi_parameter_decl(nullptr, $1), @$); }
+                        : TOK_IDENTIFIER OP_COLON type                          { $$ = SETLOC(builder.make_xi_parameter_decl($1, $3), @$); }
+                        |                OP_COLON type                          { $$ = SETLOC(builder.make_xi_parameter_decl("", $2), @$); }
+                        |                         type                          { $$ = SETLOC(builder.make_xi_parameter_decl("", $1), @$); }
                         ;
 global-function-return-type-decl
                         : OP_ARROW type                                         { $$ = $2; }

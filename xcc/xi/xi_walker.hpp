@@ -84,7 +84,7 @@ inline ptr<__tree_list_tree<T>> gather_nodes(ast_namespace_decl* ns) {
     ptr<list<T>> olist = box(new list<T>());
     instance.visit(ns, st);
     for(auto d: st) {
-        olist->append(d);
+        olist->push_back(d);
     }
     return olist;
 }

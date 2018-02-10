@@ -32,7 +32,7 @@ static ptr<ast_context> push_context(ptr<ast_context> ctx, ast_type* type) {
     }
 }
 
-static ptr<ast_decl> find_declaration(ptr<ast_context> ctx, list<std::string>::iterator iter_start, list<std::string>::iterator iter_end, bool search_parent) {
+static ptr<ast_decl> find_declaration(ptr<ast_context> ctx, list<std::string>::iterator_t iter_start, list<std::string>::iterator_t iter_end, bool search_parent) {
     //TODO: visibility
     auto decl = ctx->find((*iter_start).c_str(), search_parent);
     iter_start++;
@@ -46,8 +46,8 @@ static ptr<ast_decl> find_declaration(ptr<ast_context> ctx, list<std::string>::i
 
 static ptr<list<ast_decl>> find_all_declarations(
         ptr<ast_context> ctx,
-        list<std::string>::iterator iter_start,
-        list<std::string>::iterator iter_end,
+        list<std::string>::iterator_t iter_start,
+        list<std::string>::iterator_t iter_end,
         bool search_parent,
         bool keep_looking) {
     //TODO: visibility
@@ -62,7 +62,7 @@ static ptr<list<ast_decl>> find_all_declarations(
         for(auto d: ilist) {
             auto res = find_all_declarations(push_context(ctx, d), iter_start, iter_end, false, keep_looking);
             for(auto r: res) {
-                olist->append(r);
+                olist->push_back(r);
             }
         }
         return olist;
@@ -71,10 +71,14 @@ static ptr<list<ast_decl>> find_all_declarations(
 
 
 ast_decl* xi_builder::find_declaration(xi_qname* qname) const noexcept {
+    auto start_iter = begin(qname->names);
+    auto end_iter   = end(qname->names);
     return xcc::find_declaration(this->context, begin(qname->names), end(qname->names), true);
 }
 
 ptr<list<ast_decl>> xi_builder::find_all_declarations(xi_qname* qname) const noexcept {
+    auto start_iter = begin(qname->names);
+    auto end_iter   = end(qname->names);
     return xcc::find_all_declarations(this->context, begin(qname->names), end(qname->names), true, false);
 }
 

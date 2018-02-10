@@ -129,7 +129,7 @@ protected:
     static inline void all_from_list(__tree_property_list<T>& l, ptr<list<ast_decl>> olist, const char* name) {
         for(auto d: l) {
             if(std::string(name) == (std::string) d->name) {
-                olist->append(d);
+                olist->push_back(d);
             }
         }
     }
@@ -161,7 +161,7 @@ private:
         this->find_all_impl(dlist, name);
         for(auto decl: unbox(dlist)) {
             if(decl->is<TTreeType>()) {
-                olist->append(decl->as<TTreeType>());
+                olist->push_back(decl->as<TTreeType>());
             }
         }
         if(search_parent && this->parent != nullptr) {

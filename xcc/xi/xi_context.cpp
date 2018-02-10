@@ -16,7 +16,7 @@ static bool find_all_rest_members(xi_struct_decl*, ptr<list<ast_decl>>, const ch
 static bool find_all_members(xi_type_decl* tp, ptr<list<ast_decl>> olist, const char* name, bool first_only = false) {
     for(auto m: tp->members) {
         if(m->name == (std::string) name) {
-            olist->append(m);
+            olist->push_back(m);
             if(first_only) {
                 return true;
             }

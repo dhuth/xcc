@@ -5,11 +5,11 @@
  *      Author: derick
  */
 
-#include "tree.hpp"
 #include "ast.hpp"
 #include "ast_builder.hpp"
 #include "frontend.hpp"
 #include "gtest/gtest.h"
+#include "tree_base.hpp"
 
 namespace xcc {
 

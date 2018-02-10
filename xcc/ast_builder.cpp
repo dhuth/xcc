@@ -176,7 +176,7 @@ ast_expr* __ast_builder_impl::make_zero(ast_type* tp) const noexcept {
             auto rectype = tp->as<ast_record_type>();
             ptr<list<ast_expr>> exprlist = new list<ast_expr>();
             for(auto ftp: rectype->field_types) {
-                exprlist->append(this->make_zero(ftp));
+                exprlist->push_back(this->make_zero(ftp));
             }
             return new ast_record(tp, exprlist);
         }
@@ -185,7 +185,7 @@ ast_expr* __ast_builder_impl::make_zero(ast_type* tp) const noexcept {
             auto arrtype = tp->as<ast_array_type>();
             ptr<list<ast_expr>> exprlist = new list<ast_expr>();
             for(size_t i = 0; i < arrtype->size; i++) {
-                exprlist->append(this->make_zero(arrtype->element_type));
+                exprlist->push_back(this->make_zero(arrtype->element_type));
             }
             return new ast_array(tp, exprlist);
         }
@@ -496,7 +496,7 @@ ast_expr* __ast_builder_impl::make_lower_call_expr(ast_expr* fexpr, list<ast_exp
         auto ptp    = (*ftype->parameter_types)[i];
         auto narg   = (*args)[i];
 
-        new_args->append(this->make_lower_cast_expr(ptp, narg));
+        new_args->push_back(this->make_lower_cast_expr(ptp, narg));
     }
 
     ast_type* t = fexpr->type->as<ast_function_type>()->return_type;
@@ -792,12 +792,14 @@ bool __ast_builder_impl::widens(ast_type* from_type, ast_type* to_type, int& cos
             }
 
             if(isu_from) {
-                if(bw_from <= bw_to)                { return true; }
-                else                                { return false; }
+                if(bw_from < bw_to)                         { cost += 1; return true;  }
+                else if(bw_from == bw_to)                   {            return true;  }
+                else                                        {            return false; }
             }
             else {
-                if((bw_from <= bw_to) && (!isu_to)) { return true; }
-                else                                { return false; }
+                if((bw_from < bw_to) && (!isu_to))          { cost += 1; return true;  }
+                else if((bw_from == bw_to) && (!isu_to))    {            return true;  }
+                else                                        {            return false; }
             }
         }
     case tree_type_id::ast_real_type:
@@ -808,8 +810,9 @@ bool __ast_builder_impl::widens(ast_type* from_type, ast_type* to_type, int& cos
             else if(to_type->is<ast_real_type>()) {
                 uint32_t bw_from = from_type->as<ast_real_type>()->bitwidth;
                 uint32_t bw_to   = to_type->as<ast_real_type>()->bitwidth;
-                if(bw_from <= bw_to)                { return true; }
-                else                                { return false; }
+                if(bw_from < bw_to)                         { cost += 1; return true; }
+                else if(bw_from == bw_to)                   {            return true; }
+                else                                        {            return false; }
             }
             else {
                 break;
@@ -883,7 +886,7 @@ void __ast_builder_impl::push_block(ast_block_stmt* block) noexcept {
 }
 
 void __ast_builder_impl::insert_at_global_scope(ast_decl* decl) noexcept {
-    this->global_namespace->declarations->append(decl);
+    this->global_namespace->declarations->push_back(decl);
 }
 
 ast_decl* __ast_builder_impl::find_declaration(ast_context* context, const char* name) const noexcept {

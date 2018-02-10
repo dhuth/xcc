@@ -22,14 +22,14 @@ static void merge_namespaces_in(xi_namespace_decl*) noexcept;
  * @param rest      An iterator in list, just after the destination namespace
  * @param list      The list of declarations to search for similarly named namespaces
  */
-static void merge_namespaces_into(xi_namespace_decl* ns, list<ast_decl>::iterator rest, list<ast_decl>* list) {
+static void merge_namespaces_into(xi_namespace_decl* ns, list<ast_decl>::iterator_t rest, list<ast_decl>* list) {
     auto itr = rest;
     while(itr != list->end()) {
         auto decl = *itr;
         if(decl->is<xi_namespace_decl>() && (decl->name == ns->name)) {
-            list->remove(itr);
+            list->erase(itr);
             for(auto d: decl->as<xi_namespace_decl>()->declarations) {
-                ns->declarations->append(d);
+                ns->declarations->push_back(d);
             }
         }
         else {
@@ -45,7 +45,7 @@ static void merge_namespaces_into(xi_namespace_decl* ns, list<ast_decl>::iterato
  * @param decls
  */
 static void merge_namespaces(list<ast_decl>* decls) noexcept {
-    list<ast_decl>::iterator itr = decls->begin();
+    list<ast_decl>::iterator_t itr = decls->begin();
 
     while(itr != decls->end()) {
         if((*itr)->is<xi_namespace_decl>()) {
@@ -214,12 +214,12 @@ static ast_decl* merge_decl(ast_decl* lhs, ast_decl* rhs, xi_builder& b) {
     }
 }
 
-static ast_decl* merge_declarations_with(ast_decl* decl, list<ast_decl>::iterator iter, ptr<list<ast_decl>> decl_list, xi_builder& b, decl_swap_map_t& swapmap) {
+static ast_decl* merge_declarations_with(ast_decl* decl, list<ast_decl>::iterator_t iter, ptr<list<ast_decl>> decl_list, xi_builder& b, decl_swap_map_t& swapmap) {
     while(iter < decl_list->end()) {
         auto decl_other = *iter;
         if(same_decl(decl, decl_other, b)) {
             decl = merge_decl(decl, decl_other, b);
-            decl_list->remove(iter);
+            decl_list->erase(iter);
         }
         else {
             if(decl->is<xi_namespace_decl>()) {
@@ -233,13 +233,13 @@ static ast_decl* merge_declarations_with(ast_decl* decl, list<ast_decl>::iterato
 
 static void merge_decls_in_namespace(xi_namespace_decl* ns, xi_builder& b, decl_swap_map_t& swapmap) {
     ptr<list<ast_decl>>         decl_list   = ns->declarations;
-    list<ast_decl>::iterator    decl_iter   = decl_list->begin();
+    list<ast_decl>::iterator_t  decl_iter   = decl_list->begin();
     while(decl_iter < decl_list->end()) {
         auto old_decl = *decl_iter;
         auto new_decl = merge_declarations_with(old_decl, decl_iter + 1, decl_list, b, swapmap);
 
         if(old_decl != new_decl) {
-            decl_list->remove(decl_iter);
+            decl_list->erase(decl_iter);
             decl_list->insert(decl_iter, new_decl);
 
             swapmap[old_decl] = new_decl;

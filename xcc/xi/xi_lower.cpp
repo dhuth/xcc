@@ -78,7 +78,7 @@ static void lower_methods(ptr<list<xi_function_decl>> flist, xi_builder& b) {
     // -----------------------------
 
     for(auto f: mtd_functions) {
-        flist->append(f);
+        flist->push_back(f);
     }
 }
 

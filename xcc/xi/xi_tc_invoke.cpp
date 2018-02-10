@@ -63,10 +63,10 @@ static bool __check_candidate(ast_decl* decl, ptr<list<ast_expr>> args, ast_expr
         auto arg_type_from  = *arg_type_iter;
 
         if(b.widens(arg_type_from, param_type_to, arg_cost)) {
-            oargs->append(b.widen(param_type_to, arg_from));
+            oargs->push_back(b.widen(param_type_to, arg_from));
         }
         else if(b.coercable(param_type_to, arg_from, arg_cost)) {
-            oargs->append(b.coerce(param_type_to, arg_from));
+            oargs->push_back(b.coerce(param_type_to, arg_from));
         }
         else {
             delete oargs;

@@ -5,7 +5,7 @@ bin_PROGRAMS      		= xcc
 xcc_core_sources        = frontend.cpp
 xcc_core_sources       += ircodegen.cpp
 xcc_core_sources       += managed_ptr.cpp
-xcc_core_sources       += tree.cpp
+xcc_core_sources       += tree_base.cpp
 xcc_core_sources       += ast.cpp
 xcc_core_sources       += ast_builder.cpp
 xcc_core_sources       += ast_builder_mangler.cpp
@@ -22,8 +22,8 @@ xcc_core_ldflags        = @llvm_ldflags@
 
 ## Special source files
 xcc.cpp:                $(srcdir)/all_frontends.def.hpp
-tree.cpp:               $(srcdir)/all_tree_types.def.hpp
-tree.hpp:               $(srcdir)/all_tree_types.def.hpp
+tree_base.cpp:          $(srcdir)/all_tree_types.def.hpp
+tree_base.hpp:          $(srcdir)/all_tree_types.def.hpp
 
 
 xcc_CPPFLAGS            = $(xcc_core_cppflags)

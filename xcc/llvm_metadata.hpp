@@ -10,7 +10,6 @@
 
 #include "cppdefs.hpp"
 #include "cpp_type_traits_ext.hpp"
-#include "tree.hpp"
 #include "source.hpp"
 
 #include <llvm/IR/LLVMContext.h>
@@ -27,6 +26,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include "tree.hpp"
 
 namespace xcc {
 
@@ -135,7 +135,7 @@ private:
         auto md_tuple = llvm::dyn_cast<llvm::MDTuple>(md);
         list<T>* olist = new list<T>();
         for(size_t i = 0; i < md_tuple->getNumOperands(); i++) {
-            olist->append(this->read<typename list<T>::element_t>(md_tuple->getOperand(i).get()));
+            olist->push_back(this->read<typename list<T>::element_t>(md_tuple->getOperand(i).get()));
         }
         return olist;
     }

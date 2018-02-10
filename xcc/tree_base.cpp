@@ -6,9 +6,10 @@
  */
 
 
+#include "tree_base.hpp"
+
 #include <cstring>
 #include <new>
-#include "tree.hpp"
 #include "all_tree_headers.def.hpp"
 
 

@@ -8,7 +8,6 @@
 #ifndef AST_HPP_
 #define AST_HPP_
 
-#include "tree.hpp"
 #include "source.hpp"
 
 #include <iostream>
@@ -18,6 +17,7 @@
 #include <llvm/ADT/APSInt.h>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/StringRef.h>
+#include "tree.hpp"
 
 //#include "llvm_metadata.hpp"
 

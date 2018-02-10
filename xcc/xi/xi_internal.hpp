@@ -46,7 +46,7 @@ inline xcc::list<T>* make_list(Tptr el) {
 
 template<typename Tptr, typename T = typename std::remove_pointer<Tptr>::type>
 inline xcc::list<T>* make_list(xcc::list<T>* l, Tptr el) {
-    l->append(el);
+    l->push_back(el);
     return l;
 }
 
@@ -57,7 +57,7 @@ inline xcc::list<T>* make_list(Tptr lexpr, Tptr rexpr) {
 
 template<typename Tptr, typename T = typename std::remove_pointer<Tptr>::type>
 inline xcc::list<T>* make_list(Tptr el, xcc::list<T>* l) {
-    l->prepend(el);
+    l->push_back(el);
     return l;
 }
 
