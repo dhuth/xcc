@@ -160,7 +160,7 @@ public:
     }
 
     template<typename T>
-    inline void write_to_module(ptr<llvm::Module> m, std::string name, __tree_list_tree<T>* nlist) {
+    inline void write_to_module(ptr<llvm::Module> m, std::string name, tree_list<T>* nlist) {
         auto md_named = m->getOrInsertNamedMetadata(name);
         for(auto t: *nlist) {
             this->write_to_named_metadata(md_named, t);
@@ -213,7 +213,7 @@ private:
     llvm::Metadata* write_node(tree_t* t) noexcept;
 
     template<typename T>
-    llvm::Metadata* write_list(__tree_list_tree<T>* tlist) noexcept {
+    llvm::Metadata* write_list(tree_list<T>* tlist) noexcept {
         std::vector<llvm::Metadata*> vec;
         for(auto t: (*tlist)) {
             vec.push_back(this->write(t));
@@ -341,15 +341,15 @@ struct __llvm_io_tree_reader {
 };
 
 template<typename T>
-struct __llvm_io_tree_reader<__tree_list_value<T>> {
-    static inline __tree_list_value<T>* read(llvm::Metadata* md, llvm_metadata_reader& r) {
+struct __llvm_io_tree_reader<value_list<T>> {
+    static inline value_list<T>* read(llvm::Metadata* md, llvm_metadata_reader& r) {
         return r.read_list<T>(md);
     }
 };
 
 template<typename T>
-struct __llvm_io_tree_reader<__tree_list_tree<T>> {
-    static inline __tree_list_tree<T>* read(llvm::Metadata* md, llvm_metadata_reader& r) {
+struct __llvm_io_tree_reader<tree_list<T>> {
+    static inline tree_list<T>* read(llvm::Metadata* md, llvm_metadata_reader& r) {
         return r.read_list<T>(md);
     }
 };

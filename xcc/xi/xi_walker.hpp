@@ -53,7 +53,7 @@ public:
 template<typename TReturn, typename... TParameters>
 using xi_visitor = dispatch_visitor<TReturn, xi_builder&, TParameters...>;
 
-template<typename T> ptr<__tree_list_tree<T>> gather_nodes(ast_namespace_decl*);
+template<typename T> ptr<tree_list<T>> gather_nodes(ast_namespace_decl*);
 
 template<typename T>
 struct __gather_tt_walker : public dispatch_preorder_tree_walker<ast_tree, std::set<T*>&> {
@@ -66,7 +66,7 @@ public:
 private:
 
     friend
-    ptr<__tree_list_tree<T>> gather_nodes<T>(ast_namespace_decl*);
+    ptr<tree_list<T>> gather_nodes<T>(ast_namespace_decl*);
 
     void visit_node(ast_tree* t, std::set<T*>& s) {
         if(t->is<T>()) {
@@ -78,7 +78,7 @@ private:
 };
 
 template<typename T>
-inline ptr<__tree_list_tree<T>> gather_nodes(ast_namespace_decl* ns) {
+inline ptr<tree_list<T>> gather_nodes(ast_namespace_decl* ns) {
     __gather_tt_walker<T> instance;
     std::set<T*> st;
     ptr<list<T>> olist = box(new list<T>());

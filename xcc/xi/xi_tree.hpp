@@ -204,7 +204,7 @@ struct xi_function_base {
              typename TParameterType,
              typename enable_if_base_of<ast_type,          TReturnType, int>::type = 0,
              typename enable_if_base_of<xi_parameter_decl, TParameterType, int>::type = 0>
-    explicit inline xi_function_base(tree_t* p, TReturnType* return_type, __tree_list_tree<TParameterType>* parameters, ast_stmt* body) noexcept
+    explicit inline xi_function_base(tree_t* p, TReturnType* return_type, tree_list<TParameterType>* parameters, ast_stmt* body) noexcept
             : return_type(p, return_type),
               parameters(p, parameters),
               body(p, body) {

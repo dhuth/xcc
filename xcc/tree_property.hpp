@@ -130,7 +130,7 @@ public:
 
     template<typename TOtherElType,
              typename enable_if_base_of<TTreeListElement, TOtherElType, int>::type = 0>
-    inline explicit __tree_property_list(__tree_base* parent, __tree_list_tree<TOtherElType>* value) noexcept
+    inline explicit __tree_property_list(__tree_base* parent, tree_list<TOtherElType>* value) noexcept
             : __tree_property_tree<list_t>(parent, copy_list_as<TTreeListElement>(value)) {
         // do nothing
     }
@@ -208,11 +208,11 @@ template<typename T> struct __property_type_tree_selector {
     typedef __tree_property_tree<T>                             type;
 };
 
-template<typename T> struct __property_type_tree_selector<__tree_list_tree<T>> {
+template<typename T> struct __property_type_tree_selector<tree_list<T>> {
     typedef __tree_property_list<T>                             type;
 };
 
-template<typename T> struct __property_type_tree_selector<__tree_list_value<T>> {
+template<typename T> struct __property_type_tree_selector<value_list<T>> {
     typedef __tree_property_list<T>                             type;
 };
 

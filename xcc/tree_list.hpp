@@ -52,31 +52,72 @@ public:
     typedef typename vector_t::iterator                     iterator_t;
     typedef typename vector_t::const_iterator               const_iterator_t;
 
+    /**
+     * Get a reference from vec at index i
+     * @param vec
+     * @param i
+     * @return
+     */
     static inline element_ref_t get(vector_t& vec, size_t i) noexcept {
         return vec.at(i);
     }
 
+    /**
+     * Get a reference from vec at index i
+     * @param vec
+     * @param i
+     * @return
+     */
     static inline element_ref_t get(const vector_t& vec, size_t i) noexcept {
         return vec.at(i);
     }
 
+    /**
+     * Set the value in vec at index i
+     * @param vec
+     * @param i
+     * @param v
+     */
     static inline void set(vector_t& vec, size_t i, element_t v) noexcept {
         vec[i] = v;
     }
 
+    /**
+     * Remove an element from the list at pos
+     * @param vec
+     * @param pos
+     */
     static inline void erase(vector_t& vec, const_iterator_t pos) noexcept {
         vec.erase(pos);
     }
 
+    /**
+     * Insert a range of elements, starting at pos
+     * @param vec
+     * @param pos
+     * @param b
+     * @param e
+     */
     template<typename _It>
     static inline void insert(vector_t& vec, const_iterator_t pos, _It b, _It e) noexcept {
         vec.insert(pos, b, e);
     }
 
+    /**
+     * Insert a single element at pos
+     * @param vec
+     * @param pos
+     * @param el
+     */
     static inline void insert(vector_t& vec, const_iterator_t pos, element_t el) noexcept {
         vec.insert(pos, el);
     }
 
+    /**
+     * Add an element to the end of the list
+     * @param vec
+     * @param v
+     */
     static inline void push_back(vector_t& vec, element_t v) noexcept {
         vec.push_back(v);
     }
@@ -97,10 +138,12 @@ public:
     __tree_list_iterator(const __tree_list_iterator& i)  noexcept : _IterBase(i) { };
     __tree_list_iterator(const __tree_list_iterator&& i) noexcept : _IterBase(i) { };
 
+    // Use vectors iterator for most everything
     using _IterBase::operator++;
     using _IterBase::operator+;
     using _IterBase::operator-;
 
+    // TODO: should return a reference
     _TreeType* operator*() noexcept {
         auto ptr = (_IterBase::operator*());
         return (_TreeType*) unbox(ptr);
@@ -121,26 +164,61 @@ public:
     typedef __tree_list_iterator<_TreeType, typename vector_t::iterator>        iterator_t;
     typedef __tree_list_iterator<_TreeType, typename vector_t::const_iterator>  const_iterator_t;
 
+    /**
+     * Get the element in vec at index i
+     * @param vec
+     * @param i
+     * @return
+     */
     static inline element_ref_t get(vector_t& vec, size_t i) noexcept {
         return (element_t) unbox(vec[i]);
     }
 
+    /**
+     * Get the element in vec at index i
+     * @param vec
+     * @param i
+     * @return
+     */
     static inline element_ref_t get(const vector_t& vec, size_t i) noexcept {
         return (element_t) unbox(vec[i]);
     }
 
+    /**
+     * Set the element in vec at index i
+     * @param vec
+     * @param i
+     * @param v
+     */
     static inline void set(vector_t& vec, size_t i, element_t v) noexcept {
         vec[i] = box((tree_t*) v);
     }
 
+    /**
+     * Remove the element at pos
+     * @param vec
+     * @param pos
+     */
     static inline void erase(vector_t& vec, iterator_t pos) noexcept {
         vec.erase(pos);
     }
 
+    /**
+     * Remove the element at pos
+     * @param vec
+     * @param pos
+     */
     static inline void erase(vector_t& vec, const_iterator_t pos) noexcept {
         vec.erase(pos);
     }
 
+    /**
+     * Insert a range into vec starting at pos
+     * @param vec
+     * @param pos
+     * @param b
+     * @param e
+     */
     template<typename _It>
     static inline void insert(vector_t& vec, iterator_t pos, _It b, _It e) noexcept {
         while(b != e) {
@@ -150,6 +228,13 @@ public:
         }
     }
 
+    /**
+     * Insert a range into vec starting at pos
+     * @param vec
+     * @param pos
+     * @param b
+     * @param e
+     */
     template<typename _It>
     static inline void insert(vector_t& vec, const_iterator_t pos, _It b, _It e) noexcept {
         while(b != e) {
@@ -159,14 +244,31 @@ public:
         }
     }
 
+    /**
+     * Insert a single item into vec at pos
+     * @param vec
+     * @param pos
+     * @param el
+     */
     static inline void insert(vector_t& vec, iterator_t pos, element_t el) noexcept {
         vec.insert(pos, (tree_t*) el);
     }
 
+    /**
+     * Insert a single item into vec at pos
+     * @param vec
+     * @param pos
+     * @param el
+     */
     static inline void insert(vector_t& vec, const_iterator_t pos, element_t el) noexcept {
         vec.insert(pos, (tree_t*) el);
     }
 
+    /**
+     * Add an item to the end of the list
+     * @param vec
+     * @param el
+     */
     static inline void push_back(vector_t& vec, element_t el) noexcept {
         vec.push_back(box((tree_t*) el));
     }
@@ -232,50 +334,102 @@ public:
         adapter::insert(_vector, vec.end(), v.begin(), v.end());
     }
 
+    /**
+     * Returns an iterator at the begining of the list
+     * @return
+     */
     iterator_t begin() noexcept {
         return iterator_t(_vector.begin());
     }
 
+    /**
+     * Returns an iterator at the begining of the list
+     * @return
+     */
     const_iterator_t begin() const noexcept {
         return const_iterator_t(_vector.begin());
     }
 
+    /**
+     * Returns an iterator at the end of the list
+     * @return
+     */
     iterator_t end() noexcept {
         return iterator_t(_vector.end());
     }
 
+    /**
+     * Returns an iterator at the end of the list
+     * @return
+     */
     const_iterator_t end() const noexcept {
         return const_iterator_t(_vector.end());
     }
 
+    /**
+     * Returns a reference to the item at index i
+     * @param i
+     * @return
+     */
     element_ref_t operator[](size_t i) noexcept {
         return adapter::get(_vector, i);
     }
 
+    /**
+     * Returns a reference to the item at index i
+     * @param i
+     * @return
+     */
     element_ref_t operator[](size_t i) const noexcept {
         return adapter::get(_vector, i);
     }
 
+    /**
+     * Add an element to the end of the list
+     * @param el
+     */
     void push_back(element_t el) noexcept {
         adapter::push_back(_vector, el);
     }
 
+    /**
+     * Remove an item from the list at pos
+     * @param pos
+     */
     void erase(const_iterator_t pos) noexcept {
         adapter::erase(_vector, pos);
     }
 
+    /**
+     * Remove an item from he list at pos
+     * @param pos
+     */
     void erase(iterator_t pos) noexcept {
         adapter::erase(_vector, pos);
     }
 
+    /**
+     * Insert an item at pos
+     * @param pos
+     * @param el
+     */
     void insert(const_iterator_t pos, element_t el) noexcept {
         adapter::insert(_vector, pos, el);
     }
 
+    /**
+     * Insert an item at pos
+     * @param pos
+     * @param el
+     */
     void insert(iterator_t pos, element_t el) noexcept {
         adapter::insert(_vector, pos, el);
     }
 
+    /**
+     * Returns the number of elements currently in this list
+     * @return
+     */
     size_t size() const noexcept {
         return _vector.size();
     }
@@ -305,22 +459,22 @@ public:
     }
     inline explicit __tree_list_value(const base_list_t* l) noexcept
             : base_list_t(_list, l) {
-        for(auto el : l) {
-            this->push_back(el);
+        for(auto iter = l->begin(); iter != l->end(); iter++) {
+            this->push_back(*iter);
         }
     }
     inline explicit __tree_list_value(const base_list_t* f, element_t l) noexcept
             : base_list_t(_list, f, l) {
-        for(auto el : f) {
-            this->push_back(el);
+        for(auto iter = f->begin(); iter != f->end(); iter++) {
+            this->push_back(*iter);
         }
         this->push_back(l);
     }
     inline explicit __tree_list_value(element_t f, const base_list_t* r) noexcept
             : base_list_t(_list, f, r) {
         this->push_back(f);
-        for(auto el: r) {
-            this->push_back(el);
+        for(auto iter = r->begin(); iter != r->end(); iter++) {
+            this->push_back(*iter);
         }
     }
     inline explicit __tree_list_value(std::initializer_list<element_t> l) noexcept
@@ -376,7 +530,9 @@ template<typename T> inline typename __tree_list_tree<T>::iterator_t  end(__tree
 template<typename T> inline typename __tree_list_tree<T>::iterator_t  begin(ptr<__tree_list_tree<T>>& lptr)   noexcept { return lptr->begin(); }
 template<typename T> inline typename __tree_list_tree<T>::iterator_t  end(ptr<__tree_list_tree<T>>& lptr)     noexcept { return lptr->end();   }
 
-
+/**
+ * Select a list type based on the type of element
+ */
 template<typename T> struct __list_type_selector {
     typedef typename std::conditional<std::is_base_of<__tree_base, T>::value,
                             __tree_list_tree<T>,
