@@ -1,0 +1,12 @@
+context(start_line,
+        (newline,
+         continue_line,
+         directive_include,
+         directive_define,
+         directive_undef,
+         directive_pushdef,
+         directive_popdef,
+         directive_if,
+         directive_ifdef,
+         directive_endif))
+
