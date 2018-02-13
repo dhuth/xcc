@@ -22,23 +22,23 @@ struct __reference_base {
 public:
 
     typedef _TreeType*                                      pointer_t;
-
+    inline __reference_base() = default;
     __reference_base(const __reference_base&) = delete;
     __reference_base(__reference_base&&) = delete;
 
 };
 
 template<typename _TreeType>
-struct __vec_reference : public __reference_base<_TreeType> {
+struct __vec_reference_impl : public __reference_base<_TreeType> {
 public:
 
-    inline explicit __vec_reference(std::vector<ptr<__tree_base>>& vec) noexcept
+    inline explicit __vec_reference_impl(std::vector<ptr<__tree_base>>& vec) noexcept
             : _vector(vec),
               _index(vec.size()){
         _vector.push_back(box<__tree_base>(nullptr));
     }
 
-    inline explicit __vec_reference(std::vector<ptr<__tree_base>>& vec, _TreeType* value) noexcept
+    inline explicit __vec_reference_impl(std::vector<ptr<__tree_base>>& vec, _TreeType* value) noexcept
             : _vector(vec),
               _index(vec.size()) {
         _vector.push_back(value);
@@ -51,11 +51,11 @@ public:
     template<typename _TargetType,
              enable_if_base_of_t<_TreeType, _TargetType, int> = 0>
     inline operator _TargetType*() const noexcept {
-        return static_cast<_TargetType*>(this->_get());
+        return static_cast<_TargetType*>(this->__get());
     }
 
     inline operator ptr<_TreeType>() const noexcept {
-        return box(this->_get());
+        return box(this->__get());
     }
 
     inline nullptr_t operator=(nullptr_t) noexcept {
@@ -118,6 +118,17 @@ private:
 
 };
 
+
+template<typename _TreeType>
+struct __vec_reference : public __vec_reference_impl<_TreeType> {
+public:
+
+    using __vec_reference_impl<_TreeType>::operator=;
+    using __vec_reference_impl<_TreeType>::__vec_reference_impl;
+
+};
+
+
 template<typename _TreeType, std::vector<ptr<tree_t>> __tree_base::* _VecMember>
 struct __bound_vec_reference : public __vec_reference<_TreeType> {
 public:
@@ -126,8 +137,8 @@ public:
             : __vec_reference<_TreeType>(parent->*_VecMember) {
         //...
     }
-    explicit inline __bound_vec_reference(tree_t* parent, _TreeType* t) noexcept
-            : __vec_reference<_TreeType>(parent->*_VecMember, t) {
+    explicit inline __bound_vec_reference(tree_t* parent, _TreeType* v) noexcept
+            : __vec_reference<_TreeType>(parent->*_VecMember, v) {
         //...
     }
 
@@ -138,9 +149,9 @@ public:
 };
 
 template<typename T>
-using strong_ref = __bound_vec_reference<T, __tree_base::__get_strong_ref_member()>;
+using strong_ref = __bound_vec_reference<T, &__tree_base::_strong_references>;
 template<typename T>
-using weak_ref = __bound_vec_reference<T, &__tree_base::__get_weak_ref_member()>;
+using weak_ref = __bound_vec_reference<T, &__tree_base::_weak_references>;
 
 }
 

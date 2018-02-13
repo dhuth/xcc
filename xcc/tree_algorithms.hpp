@@ -46,18 +46,23 @@ inline T* first(tree_list<T>* l) {
 
 template<typename T>
 inline T first(ptr<value_list<T>> l) {
-    return *begin(l);
+    return *l->begin();
 }
 
 template<typename T>
 inline T* first(ptr<tree_list<T>> l) {
-    return *begin(l);
+    return *l->begin();
 }
 
-//template<typename T>
-//inline typename __tree_property_list<T>::element_t first(ptr<__tree_property_list<T>> l) {
-//    return *begin(l);
-//}
+template<typename T>
+inline T first(reference<value_list<T>>& l) {
+    return *l->begin();
+}
+
+template<typename T>
+inline T* first(reference<tree_list<T>>& l) {
+    return *l->begin();
+}
 
 // Copy As Algorithm
 // -----------------
@@ -110,29 +115,15 @@ inline ptr<value_list<_DestEl>> __map(
 template<typename TSrcEl,
          typename TFunc,
          typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
-inline ptr<__tree_list_tree<_TDestEl>> map(ptr<__tree_list_tree<TSrcEl>> slist, TFunc f) {
-    return box(__map(unbox(slist), std::function<_TDestEl*(TSrcEl*)>(f)));
-}
-
-template<typename TSrcEl,
-         typename TFunc,
-         typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
-inline ptr<tree_list<_TDestEl>> map(ptr<tree_list<TSrcEl>>& slist, TFunc f) {
-    return box(__map(unbox(slist), std::function<_TDestEl*(TSrcEl*)>(f)));
-}
-
-template<typename TSrcEl,
-         typename TFunc,
-         typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
-inline ptr<tree_list<_TDestEl>> map(ptr<tree_list<TSrcEl>>&& slist, TFunc f) {
-    return box(__map(unbox(slist), std::function<_TDestEl*(TSrcEl*)>(f)));
+inline ptr<tree_list<_TDestEl>> map(ptr<tree_list<TSrcEl>> slist, TFunc f) {
+    return __map(unbox(slist), std::function<_TDestEl*(TSrcEl*)>(f));
 }
 
 template<typename TSrcEl,
          typename TFunc,
          typename _TDestEl = std::remove_pointer_t<std::result_of_t<TFunc(TSrcEl*)>>>
 inline ptr<tree_list<_TDestEl>> map(tree_list<TSrcEl>* slist, TFunc f) {
-    return box(__map(slist, std::function<_TDestEl*(TSrcEl*)>(f)));
+    return __map(slist, std::function<_TDestEl*(TSrcEl*)>(f));
 }
 
 //template<typename TSrcEl,
@@ -144,8 +135,8 @@ inline ptr<tree_list<_TDestEl>> map(tree_list<TSrcEl>* slist, TFunc f) {
 
 template<typename _SrcEl,
          typename _Func,
-         typename _DestEl = std::remove_pointer_t<std::invoke_result_t<_Func(_SrcEl*)>>>
- inline ptr<tree_list<_DestEl>> map(ref<tree_list<_SrcEl>> slist, _Func f) {
+         typename _DestEl = std::remove_pointer_t<std::result_of_t<_Func(_SrcEl*)>>>
+ inline ptr<tree_list<_DestEl>> map(reference<tree_list<_SrcEl>>& slist, _Func f) {
     return __map((tree_list<_SrcEl>*)slist, std::function<_DestEl*(_SrcEl*)>(f));
 }
 

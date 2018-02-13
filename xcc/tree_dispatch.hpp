@@ -78,7 +78,7 @@ public:
     }
 
     template<typename T>
-    inline TReturnType visit(__tree_property_tree<T>& p, TParamTypes... args) {
+    inline TReturnType visit(reference<tree_list<T>>& p, TParamTypes... args) {
         return this->visit((__tree_base*)p, args...);
     }
 
@@ -138,7 +138,7 @@ public:
         }
     }
     template<typename T>
-    inline void visit(__tree_property_tree<T>& p, TParamTypes... args) {
+    inline void visit(reference<tree_list<T>>& p, TParamTypes... args) {
         return this->visit((__tree_base*)p, args...);
     }
 

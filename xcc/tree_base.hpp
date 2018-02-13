@@ -161,9 +161,6 @@ public:
         box(this).pin();
     }
 
-    static constexpr std::vector<ptr<__tree_base>> __tree_base::* __get_strong_ref_member() { return &__tree_base::_strong_references; }
-    static constexpr std::vector<ptr<__tree_base>> __tree_base::* __get_weak_ref_member()   { return &__tree_base::_weak_references; }
-
 protected:
 
     template<typename T>

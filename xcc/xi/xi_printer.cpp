@@ -10,7 +10,7 @@
 namespace xcc {
 
 static void print_xi_qname(xi_qname* q, std::ostream& s) {
-    s << q->names[0];
+    s << first(q->names);
     for(size_t i = 1; i < q->names->size(); i++) {
         s << "::" << q->names[i];
     }

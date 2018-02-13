@@ -1595,12 +1595,12 @@ protected:
     typedef std::function<void(const char*, std::ostream&)>             pwfunc_t;
 
     template<typename T>
-    inline pwfunc_t pwrap(__tree_property_tree<T>& p) {
+    inline pwfunc_t pwrap(reference<T>& p) {
         return [&](const char*, std::ostream& s) -> void { this->visit(p, s); };
     }
 
     template<typename T>
-    inline pwfunc_t pwrap(__tree_property_list<T>& p) {
+    inline pwfunc_t pwrap(reference<tree_list<T>>& p) {
         return [&](const char* fmt, std::ostream& s) -> void {
             for(uint32_t i = 0; i < p->size(); i++) {
                 this->visit((*p)[i], s);
@@ -1611,24 +1611,24 @@ protected:
         };
     }
 
-    inline pwfunc_t pwrap(__tree_property_value<std::string>& p) {
+    inline pwfunc_t pwrap(property<std::string>& p) {
         return [&](const char*, std::ostream& s) -> void { s << (std::string) p; };
     }
 
     template<typename T>
-    inline pwfunc_t pwrap(__tree_property_value<T>& p) {
+    inline pwfunc_t pwrap(property_value<T>& p) {
         return [&](const char*, std::ostream& s) -> void { s << std::to_string((T)p); };
     }
 
-    inline pwfunc_t pwrap(__tree_property_value<llvm::APSInt>& p) {
+    inline pwfunc_t pwrap(property<llvm::APSInt>& p) {
         return [&](const char*, std::ostream& s) -> void { s << p->toString(10); };
     }
 
-    inline pwfunc_t pwrap(__tree_property_value<llvm::APFloat>& p) {
+    inline pwfunc_t pwrap(property<llvm::APFloat>& p) {
         return [&](const char*, std::ostream& s) -> void { s << std::to_string(p->convertToDouble()); };
     }
 
-    inline pwfunc_t pwrap(__tree_property_value<bool>& p) {
+    inline pwfunc_t pwrap(property<bool>& p) {
         return [&](const char*, std::ostream& s) -> void {
             if((bool) p) s << "false";
             else         s << "true";

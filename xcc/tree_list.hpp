@@ -549,6 +549,54 @@ end(list_base_t<_Element, _VecElement>* l) noexcept {
    return l->end();
 }
 
+template<typename _Element>
+inline typename value_list<_Element>::iterator_t
+begin(ptr<value_list<_Element>> p) noexcept {
+    return p->begin();
+}
+
+template<typename _Element>
+inline typename value_list<_Element>::iterator_t
+end(ptr<value_list<_Element>> p) noexcept {
+    return p->end();
+}
+
+template<typename _Element>
+inline typename tree_list<_Element>::iterator_t
+begin(ptr<tree_list<_Element>> p) noexcept {
+    return p->begin();
+}
+
+template<typename _Element>
+inline typename tree_list<_Element>::iterator_t
+end(ptr<tree_list<_Element>> p) noexcept {
+    return p->end();
+}
+
+template<typename _Element>
+inline typename tree_list<_Element>::iterator_t
+begin(reference<tree_list<_Element>>& ref) noexcept {
+    return ref->begin();
+}
+
+template<typename _Element>
+inline typename tree_list<_Element>::iterator_t
+end(reference<tree_list<_Element>>& ref) noexcept {
+    return ref->end();
+}
+
+template<typename _Element>
+inline typename value_list<_Element>::iterator_t
+begin(reference<value_list<_Element>>& ref) noexcept {
+    return ref->begin();
+}
+
+template<typename _Element>
+inline typename value_list<_Element>::iterator_t
+end(reference<value_list<_Element>>& ref) noexcept {
+    return ref->end();
+}
+
 //template<typename T> inline typename __tree_list_value<T>::iterator_t begin(__tree_list_value<T>& l)          noexcept { return l.begin();     }
 //template<typename T> inline typename __tree_list_value<T>::iterator_t end(__tree_list_value<T>& l)            noexcept { return l.end();       }
 //template<typename T> inline typename __tree_list_value<T>::iterator_t begin(__tree_list_value<T>* lptr)       noexcept { return lptr->begin(); }

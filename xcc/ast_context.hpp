@@ -110,7 +110,7 @@ protected:
      * @return
      */
     template<typename T>
-    static inline ptr<ast_decl> first_from_list(__tree_property_list<T>& l, const char* name) {
+    static inline ptr<ast_decl> first_from_list(reference<tree_list<T>>& l, const char* name) {
         for(auto d: l) {
             if(std::string(name) == (std::string) d->name) {
                 return box<ast_decl>(d);
@@ -126,7 +126,7 @@ protected:
      * @param name
      */
     template<typename T>
-    static inline void all_from_list(__tree_property_list<T>& l, ptr<list<ast_decl>> olist, const char* name) {
+    static inline void all_from_list(reference<tree_list<T>>& l, ptr<list<ast_decl>> olist, const char* name) {
         for(auto d: l) {
             if(std::string(name) == (std::string) d->name) {
                 olist->push_back(d);
