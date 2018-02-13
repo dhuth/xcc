@@ -21,14 +21,8 @@ template<typename> struct __tree_property_list;
 template<typename> struct __tree_property_value;
 template<typename> struct __tree_property_type_traits;
 
-struct __tree_property_base {
-public:
-    // Anything ???
-
-};
-
 template<typename TTreeType>
-struct __tree_property_tree : public __tree_property_base {
+struct __tree_property_tree {
 public:
 
     typedef TTreeType*                                          param_type_t;
@@ -49,7 +43,8 @@ public:
         return box(static_cast<TTreeType*>(this->__get()));
     }
 
-    template<typename TTargetType, typename std::enable_if<std::is_base_of<TTreeType, TTargetType>::value, int>::type = 0>
+    template<typename TTargetType,
+             enable_if_base_of_t<TTreeType, TTargetType, int> = 0>
     inline operator TTargetType*() const noexcept {
         return static_cast<TTargetType*>(this->__get());
     }
@@ -101,8 +96,8 @@ public:
 
 protected:
 
-    inline __tree_base* __get()                   const noexcept { return unbox(this->_parent->_child_nodes[this->_index]); }
-    inline void         __set(__tree_base* value)       noexcept {        this->_parent->_child_nodes[this->_index] = box<__tree_base>(value); }
+    inline __tree_base* __get()                   const noexcept { return unbox(this->_parent->_strong_references[this->_index]); }
+    inline void         __set(__tree_base* value)       noexcept {        this->_parent->_strong_references[this->_index] = box<__tree_base>(value); }
 
 private:
 
@@ -230,8 +225,8 @@ template<typename T>
 using property = typename __property_type_selector<T>::type;
 
 
-template<typename T> inline typename __tree_property_list<T>::list_t::iterator_t begin(__tree_property_list<T>& lref) noexcept { return lref.begin(); }
-template<typename T> inline typename __tree_property_list<T>::list_t::iterator_t end(__tree_property_list<T>& lref)   noexcept { return lref.end(); }
+//template<typename T> inline typename __tree_property_list<T>::list_t::iterator_t begin(__tree_property_list<T>& lref) noexcept { return lref.begin(); }
+//template<typename T> inline typename __tree_property_list<T>::list_t::iterator_t end(__tree_property_list<T>& lref)   noexcept { return lref.end(); }
 
 }
 

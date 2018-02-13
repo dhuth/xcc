@@ -333,10 +333,10 @@ protected:
         if(t->is<TBaseType>()) {
             this->begin(t->get_tree_type(), static_cast<TBaseType*>(t), args...);
         }
-        for(size_t i = 0; i < t->_child_nodes.size(); i++) {
-            auto child = unbox(t->_child_nodes[i]);
+        for(size_t i = 0; i < t->_strong_references.size(); i++) {
+            auto child = unbox(t->_strong_references[i]);
             if(child != nullptr) {
-                t->_child_nodes[i] = box(this->visit_internal(child, args...));
+                t->_strong_references[i] = box(this->visit_internal(child, args...));
             }
         }
         if(t->is<TBaseType>()) {

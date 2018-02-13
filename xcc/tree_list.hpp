@@ -13,13 +13,14 @@
 
 namespace xcc {
 
-template<typename, typename>    struct __tree_list_base;
-template<typename>              struct __tree_list_tree;
-template<typename>              struct __tree_list_value;
-template<typename>              struct __tree_list_type_traits;
+template<typename, typename>        struct __tree_list_base;
+template<typename>                  struct __tree_list_tree;
+template<typename>                  struct __tree_list_value;
+template<typename>                  struct __tree_list_type_traits;
 
-template<typename T>            using tree_list     = __tree_list_tree<T>;
-template<typename T>            using value_list    = __tree_list_value<T>;
+template<typename T>                using tree_list     = __tree_list_tree<T>;
+template<typename T>                using value_list    = __tree_list_value<T>;
+template<typename T, typename Tvec> using list_base_t   = __tree_list_base<T, Tvec>;
 
 
 
@@ -505,30 +506,61 @@ struct __tree_list_tree final : public __tree_list_base<_TreeType*, ptr<tree_t>>
 public:
 
     typedef __tree_list_base<_TreeType*, ptr<tree_t>>                   base_list_t;
+    typedef typename base_list_t::iterator_t                            iterator_t;
     typedef typename base_list_t::element_t                             element_t;
 
-    inline          __tree_list_tree()                                   noexcept : base_list_t(this->_child_nodes)       { }
-    inline explicit __tree_list_tree(element_t el)                       noexcept : base_list_t(this->_child_nodes, el)   { }
-    inline explicit __tree_list_tree(const base_list_t* f)               noexcept : base_list_t(this->_child_nodes, f)    { }
-    inline explicit __tree_list_tree(const base_list_t* f, element_t l)  noexcept : base_list_t(this->_child_nodes, f, l) { }
-    inline explicit __tree_list_tree(element_t f, const base_list_t* r)  noexcept : base_list_t(this->_child_nodes, f, r) { }
-    inline explicit __tree_list_tree(std::initializer_list<element_t> l) noexcept : base_list_t(this->_child_nodes, l)    { }
-    inline explicit __tree_list_tree(const std::vector<element_t>& v)    noexcept : base_list_t(this->_child_nodes, v)    { }
+    inline          __tree_list_tree()                                   noexcept : base_list_t(this->_strong_references)       { }
+    inline explicit __tree_list_tree(element_t el)                       noexcept : base_list_t(this->_strong_references, el)   { }
+    inline explicit __tree_list_tree(const base_list_t* f)               noexcept : base_list_t(this->_strong_references, f)    { }
+    inline explicit __tree_list_tree(const base_list_t* f, element_t l)  noexcept : base_list_t(this->_strong_references, f, l) { }
+    inline explicit __tree_list_tree(element_t f, const base_list_t* r)  noexcept : base_list_t(this->_strong_references, f, r) { }
+    inline explicit __tree_list_tree(std::initializer_list<element_t> l) noexcept : base_list_t(this->_strong_references, l)    { }
+    inline explicit __tree_list_tree(const std::vector<element_t>& v)    noexcept : base_list_t(this->_strong_references, v)    { }
 
 };
 
-template<typename T> inline typename __tree_list_value<T>::iterator_t begin(__tree_list_value<T>& l)          noexcept { return l.begin();     }
-template<typename T> inline typename __tree_list_value<T>::iterator_t end(__tree_list_value<T>& l)            noexcept { return l.end();       }
-template<typename T> inline typename __tree_list_value<T>::iterator_t begin(__tree_list_value<T>* lptr)       noexcept { return lptr->begin(); }
-template<typename T> inline typename __tree_list_value<T>::iterator_t end(__tree_list_value<T>* lptr)         noexcept { return lptr->end();   }
-template<typename T> inline typename __tree_list_value<T>::iterator_t begin(ptr<__tree_list_value<T>>& lptr)  noexcept { return lptr->begin(); }
-template<typename T> inline typename __tree_list_value<T>::iterator_t end(ptr<__tree_list_value<T>>& lptr)    noexcept { return lptr->end();   }
-template<typename T> inline typename __tree_list_tree<T>::iterator_t  begin(__tree_list_tree<T>& l)           noexcept { return l.begin();     }
-template<typename T> inline typename __tree_list_tree<T>::iterator_t  end(__tree_list_tree<T>& l)             noexcept { return l.end();       }
-template<typename T> inline typename __tree_list_tree<T>::iterator_t  begin(__tree_list_tree<T>* lptr)        noexcept { return lptr->begin(); }
-template<typename T> inline typename __tree_list_tree<T>::iterator_t  end(__tree_list_tree<T>* lptr)          noexcept { return lptr->end();   }
-template<typename T> inline typename __tree_list_tree<T>::iterator_t  begin(ptr<__tree_list_tree<T>>& lptr)   noexcept { return lptr->begin(); }
-template<typename T> inline typename __tree_list_tree<T>::iterator_t  end(ptr<__tree_list_tree<T>>& lptr)     noexcept { return lptr->end();   }
+
+template<typename _Element,
+         typename _VecElement>
+inline typename list_base_t<_Element, _VecElement>::iterator_t
+begin(list_base_t<_Element, _VecElement>& l) noexcept {
+   return l.begin();
+}
+
+template<typename _Element,
+         typename _VecElement>
+inline typename list_base_t<_Element, _VecElement>::iterator_t
+end(list_base_t<_Element, _VecElement>& l) noexcept {
+   return l.end();
+}
+
+
+template<typename _Element,
+         typename _VecElement>
+inline typename list_base_t<_Element, _VecElement>::iterator_t
+begin(list_base_t<_Element, _VecElement>* l) noexcept {
+   return l->begin();
+}
+
+template<typename _Element,
+         typename _VecElement>
+inline typename list_base_t<_Element, _VecElement>::iterator_t
+end(list_base_t<_Element, _VecElement>* l) noexcept {
+   return l->end();
+}
+
+//template<typename T> inline typename __tree_list_value<T>::iterator_t begin(__tree_list_value<T>& l)          noexcept { return l.begin();     }
+//template<typename T> inline typename __tree_list_value<T>::iterator_t end(__tree_list_value<T>& l)            noexcept { return l.end();       }
+//template<typename T> inline typename __tree_list_value<T>::iterator_t begin(__tree_list_value<T>* lptr)       noexcept { return lptr->begin(); }
+//template<typename T> inline typename __tree_list_value<T>::iterator_t end(__tree_list_value<T>* lptr)         noexcept { return lptr->end();   }
+//template<typename T> inline typename __tree_list_value<T>::iterator_t begin(ptr<__tree_list_value<T>>& lptr)  noexcept { return lptr->begin(); }
+//template<typename T> inline typename __tree_list_value<T>::iterator_t end(ptr<__tree_list_value<T>>& lptr)    noexcept { return lptr->end();   }
+//template<typename T> inline typename __tree_list_tree<T>::iterator_t  begin(__tree_list_tree<T>& l)           noexcept { return l.begin();     }
+//template<typename T> inline typename __tree_list_tree<T>::iterator_t  end(__tree_list_tree<T>& l)             noexcept { return l.end();       }
+//template<typename T> inline typename __tree_list_tree<T>::iterator_t  begin(__tree_list_tree<T>* lptr)        noexcept { return lptr->begin(); }
+//template<typename T> inline typename __tree_list_tree<T>::iterator_t  end(__tree_list_tree<T>* lptr)          noexcept { return lptr->end();   }
+//template<typename T> inline typename __tree_list_tree<T>::iterator_t  begin(ptr<__tree_list_tree<T>>& lptr)   noexcept { return lptr->begin(); }
+//template<typename T> inline typename __tree_list_tree<T>::iterator_t  end(ptr<__tree_list_tree<T>>& lptr)     noexcept { return lptr->end();   }
 
 /**
  * Select a list type based on the type of element

@@ -42,12 +42,6 @@ typedef __tree_base             tree_t;
 
 typedef                         __tree_base*(*__tree_clone_func_t)(const __tree_base*);
 
-struct __tree_property_base;
-template<typename> struct __tree_property_tree;
-template<typename> struct __tree_property_list;
-template<typename> struct __tree_property_value;
-template<typename> struct __tree_property_type_traits;
-
 /* ==================== *
  * Type Trait Utilities *
  * ==================== */
@@ -60,15 +54,6 @@ struct enable_if_tree : std::enable_if<is_tree<TTree>::value, T> { };
 
 template<typename TTree, typename T = int>
 using enable_if_tree_t = typename enable_if_tree<TTree, T>::type;
-
-
-/* ==================== *
- * List Trait Utilities *
- * ==================== */
-
-/* ======================== *
- * Property Trait Utilities *
- * ======================== */
 
 
 /* ============== *
@@ -176,10 +161,16 @@ public:
         box(this).pin();
     }
 
+    static constexpr std::vector<ptr<__tree_base>> __tree_base::* __get_strong_ref_member() { return &__tree_base::_strong_references; }
+    static constexpr std::vector<ptr<__tree_base>> __tree_base::* __get_weak_ref_member()   { return &__tree_base::_weak_references; }
+
 protected:
 
     template<typename T>
-    friend struct __tree_property_tree;
+    friend struct __strong_reference;
+
+    template<typename T>
+    friend struct __weak_reference;
 
     template<typename TElement>
     friend struct __tree_list_tree;
@@ -191,13 +182,14 @@ protected:
      * Used by __tree_property_tree constructor to insert new children
      */
     inline size_t __append_child(__tree_base* v) noexcept {
-        size_t idx = this->_child_nodes.size();
-        this->_child_nodes.push_back(ptr<__tree_base>(v));
+        size_t idx = this->_strong_references.size();
+        this->_strong_references.push_back(ptr<__tree_base>(v));
         return idx;
     }
 
     const tree_type_id                                          _type;
-    std::vector<ptr<__tree_base>>                               _child_nodes;
+    std::vector<ptr<__tree_base>>                               _strong_references;
+    std::vector<ptr<__tree_base>>                               _weak_references;
 
 };
 
@@ -231,15 +223,6 @@ using implement_tree = __extend_tree<tp, typename tree_type_info<tp>::base_type>
 
 template<typename T>
 constexpr enable_if_tree_t<T, tree_type_id> tree_type_id_from() { return T::type_id; }
-
-// ---------------
-// List Algorithms
-// ---------------
-
-// First & Rest
-// ------------
-
-
 
 }
 
