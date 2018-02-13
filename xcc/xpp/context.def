@@ -1,5 +1,6 @@
 context(start_line,
-        (newline,
+        (ws,
+         newline,
          continue_line,
          directive_include,
          directive_define,
@@ -8,5 +9,16 @@ context(start_line,
          directive_popdef,
          directive_if,
          directive_ifdef,
-         directive_endif))
+         directive_endif,
+         directive_for,
+         directive_endfor,
+         comma,
+         identifier,
+         lparen,
+         rparen,
+         sq,
+         dq))
 
+context(sq_continue, (sq_char, sq))
+context(dq_continue, (dq_char, dq))
+context(lt_continue, (lt_char, gt))

@@ -33,9 +33,10 @@ struct token {
     std::string                                             text;
     uint32_t                                                line_number;
     uint32_t                                                column_number;
+    uint32_t                                                len;
 };
 
-extern const std::map<token_id,   std::string>              patterns;
+extern const std::map<token_id,         std::string>        patterns;
 extern const std::map<parse_context_id, parse_context>      contexts;
 
 }
