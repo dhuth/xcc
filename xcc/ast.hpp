@@ -158,6 +158,11 @@ public:
 
 };
 
+enum class ast_value_catagory : uint64_t {
+    none,
+    rvalue,
+    lvalue
+};
 
 /**
  * Base class for all expression ast nodes
@@ -169,22 +174,12 @@ public:
     /**
      * Passing constructor
      * @param id overriding tree type id
-     */
-    inline ast_expr(tree_type_id id) noexcept
-            : base_type(id),
-              ast_locatable(this),
-              type(this, nullptr) {
-        //...
-    }
-
-    /**
-     * Passing constructor
-     * @param id overriding tree type id
      * @param type expression type
      */
-    inline ast_expr(tree_type_id id, ast_type* type) noexcept
+    inline ast_expr(tree_type_id id, ast_type* type = nullptr, ast_value_catagory vcat=ast_value_catagory::none) noexcept
             : base_type(id),
               ast_locatable(this),
+              value_type(this, vcat),
               type(this, type) {
         //...
     }
@@ -194,11 +189,13 @@ public:
      */
     inline ast_expr(const ast_expr& e) noexcept
             : base_type((base_type&) e),
-              ast_locatable((ast_locatable&) e),
+              ast_locatable(e),
+              value_type(this, e.value_type),
               type(this, e.type) {
         // do nothing
     }
 
+    property<ast_value_catagory>                                value_type;
     property<ast_type>                                          type;   //!< Expression type
 
 };
@@ -709,7 +706,7 @@ public:
      * @param value
      */
     inline ast_integer(ast_type* itype, llvm::APSInt value) noexcept
-            : base_type(itype),
+            : base_type(itype, ast_value_catagory::rvalue),
               value(this, value) {
         // do nothing
     }
@@ -720,7 +717,7 @@ public:
      * @param value
      */
     inline ast_integer(ast_type* itype, llvm::APInt value) noexcept
-            : base_type(itype),
+            : base_type(itype, ast_value_catagory::rvalue),
               value(this, llvm::APSInt(value, !itype->as<ast_integer_type>()->is_unsigned)) {
     }
 
@@ -746,7 +743,7 @@ public:
      * @param value
      */
     inline ast_real(ast_type* ftype, llvm::APFloat value)
-            : base_type(ftype),
+            : base_type(ftype, ast_value_catagory::rvalue),
               value(this, value) {
         // do nothing
     }
@@ -773,7 +770,7 @@ public:
      * @param value
      */
     inline ast_string(ast_type* stype, std::string value)
-            : base_type(stype),
+            : base_type(stype, ast_value_catagory::rvalue),
               value(this, value) {
         // do nothing
     }
@@ -800,7 +797,7 @@ public:
      * @param values   a list of values
      */
     inline ast_array(ast_type* atype, list<ast_expr>* values)
-            : base_type(atype),
+            : base_type(atype, ast_value_catagory::rvalue),
               values(this, values) {
         // do nothing
     }
@@ -827,7 +824,7 @@ public:
      * @param values    a list of values
      */
     inline ast_record(ast_type* rtype, list<ast_expr>* values)
-            : base_type(rtype),
+            : base_type(rtype, ast_value_catagory::rvalue),
               values(this, values) {
         // do nothing
     }
@@ -951,7 +948,7 @@ public:
      * @param expr
      */
     inline ast_cast(ast_type* type, ast_op op, ast_expr* expr)
-            : base_type(type),
+            : base_type(type, ast_value_catagory::rvalue),
               op(this, op),
               expr(this, expr) {
         // do nothing
@@ -983,7 +980,7 @@ public:
      * @param rhs
      */
     inline ast_binary_op(ast_type* type, ast_op op, ast_expr* lhs, ast_expr* rhs) noexcept
-            : base_type(type),
+            : base_type(type, ast_value_catagory::rvalue),
               op(this, op),
               lhs(this, lhs),
               rhs(this, rhs) {
@@ -1017,7 +1014,7 @@ public:
      * @param expr
      */
     inline ast_unary_op(ast_type* type, ast_op op, ast_expr* expr) noexcept
-            : base_type(type),
+            : base_type(type, ast_value_catagory::rvalue),
               op(this, op),
               expr(this, expr) {
         // do nothing
@@ -1048,7 +1045,7 @@ public:
      * @param index
      */
     inline ast_index(ast_type* type, ast_expr* expr, ast_expr* index)
-            : base_type(type),
+            : base_type(type, ast_value_catagory::rvalue),
               arr_expr(this, expr),
               index_expr(this, index) {
         // do nothing
@@ -1078,7 +1075,7 @@ public:
      * @param variable
      */
     inline ast_declref(ast_type* type, ast_decl* declaration) noexcept
-            : base_type(type),
+            : base_type(type, ast_value_catagory::lvalue),
               declaration(this, declaration){
         //...
     }
@@ -1100,7 +1097,7 @@ struct ast_memberref final : public extend_tree<tree_type_id::ast_memberref, ast
 public:
 
     inline ast_memberref(ast_type* type, ast_expr* objexpr, uint32_t member) noexcept
-            : base_type(type),
+            : base_type(type, ast_value_catagory::lvalue),
               objexpr(this, objexpr),
               member_index(this, member) {
         // do nothing
@@ -1131,7 +1128,7 @@ public:
      * @param expr
      */
     inline ast_deref(ast_type* type, ast_expr* expr) noexcept
-            : base_type(type),
+            : base_type(type, ast_value_catagory::lvalue),
               expr(this, expr) {
         // do nothing
     }
@@ -1158,7 +1155,7 @@ public:
      * @param expr
      */
     inline ast_addressof(ast_type* type, ast_expr* expr) noexcept
-            : base_type(type),
+            : base_type(type, ast_value_catagory::rvalue),
               expr(this, expr) {
         // do nothing
     }
@@ -1186,7 +1183,7 @@ public:
      * @param arguments
      */
     inline ast_invoke(ast_type* type, ast_expr* funcexpr, list<ast_expr>* arguments) noexcept
-            : base_type(type),
+            : base_type(type, ast_value_catagory::rvalue),
               funcexpr(this, funcexpr),
               arguments(this, arguments) {
         // do nothing
@@ -1217,7 +1214,7 @@ public:
      * @param arguments
      */
     explicit inline ast_call(ast_type* type, ast_declref* funcdecl, list<ast_expr>* arguments) noexcept
-            : base_type(type),
+            : base_type(type, ast_value_catagory::lvalue),
               funcdecl(this, funcdecl),
               arguments(this, arguments) {
         // do nothing
@@ -1244,7 +1241,7 @@ public:
 
 
     inline ast_stmt_expr(ast_type* type, ast_temp_decl* temp, ast_stmt* statement) noexcept
-            : base_type(type),
+            : base_type(type, ast_value_catagory::rvalue),
               temp(this, temp),
               statement(this, statement) {
         // do nothing
@@ -1598,12 +1595,12 @@ protected:
     typedef std::function<void(const char*, std::ostream&)>             pwfunc_t;
 
     template<typename T>
-    inline pwfunc_t pwrap(__tree_property_tree<T>& p) {
+    inline pwfunc_t pwrap(reference<T>& p) {
         return [&](const char*, std::ostream& s) -> void { this->visit(p, s); };
     }
 
     template<typename T>
-    inline pwfunc_t pwrap(__tree_property_list<T>& p) {
+    inline pwfunc_t pwrap(reference<tree_list<T>>& p) {
         return [&](const char* fmt, std::ostream& s) -> void {
             for(uint32_t i = 0; i < p->size(); i++) {
                 this->visit((*p)[i], s);
@@ -1614,24 +1611,24 @@ protected:
         };
     }
 
-    inline pwfunc_t pwrap(__tree_property_value<std::string>& p) {
+    inline pwfunc_t pwrap(property<std::string>& p) {
         return [&](const char*, std::ostream& s) -> void { s << (std::string) p; };
     }
 
     template<typename T>
-    inline pwfunc_t pwrap(__tree_property_value<T>& p) {
+    inline pwfunc_t pwrap(property_value<T>& p) {
         return [&](const char*, std::ostream& s) -> void { s << std::to_string((T)p); };
     }
 
-    inline pwfunc_t pwrap(__tree_property_value<llvm::APSInt>& p) {
+    inline pwfunc_t pwrap(property<llvm::APSInt>& p) {
         return [&](const char*, std::ostream& s) -> void { s << p->toString(10); };
     }
 
-    inline pwfunc_t pwrap(__tree_property_value<llvm::APFloat>& p) {
+    inline pwfunc_t pwrap(property<llvm::APFloat>& p) {
         return [&](const char*, std::ostream& s) -> void { s << std::to_string(p->convertToDouble()); };
     }
 
-    inline pwfunc_t pwrap(__tree_property_value<bool>& p) {
+    inline pwfunc_t pwrap(property<bool>& p) {
         return [&](const char*, std::ostream& s) -> void {
             if((bool) p) s << "false";
             else         s << "true";

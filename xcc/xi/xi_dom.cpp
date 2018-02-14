@@ -107,9 +107,9 @@ static bool same_rt_and_parameters(xi_function_base* lhs, xi_function_base* rhs,
     // same number of parameters
     if(lhs->parameters->size() != rhs->parameters->size()) return false;
     // same parameter types
-    auto lhs_iter = lhs->parameters.begin();
-    auto rhs_iter = rhs->parameters.begin();
-    while(lhs_iter != lhs->parameters.end()) {
+    auto lhs_iter = lhs->parameters->begin();
+    auto rhs_iter = rhs->parameters->begin();
+    while(lhs_iter != lhs->parameters->end()) {
 
         if(!same_type((*lhs_iter)->type, (*rhs_iter)->type, b)) {
             return false;

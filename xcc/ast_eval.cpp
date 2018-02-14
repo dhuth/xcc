@@ -495,12 +495,12 @@ ast_eval_context ast_eval_context::push() noexcept {
 }
 
 ptr<ast_expr> ast_compile_time_evaluator::call(ast_function_decl* fdecl, list<ast_expr>* args, ast_eval_context& context) noexcept {
-    auto arg_iter   = begin(args);
+    auto arg_iter   = begin(*args);
     auto prm_iter   = begin(fdecl->parameters);
 
     ast_eval_context fcontext = context.push();
 
-    auto arg_end    = end(args);
+    auto arg_end    = end(*args);
     while(arg_iter != arg_end) {
         fcontext.bind(*prm_iter, *arg_iter);
         arg_iter++;

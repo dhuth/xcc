@@ -168,7 +168,7 @@ public:
     }
 
     template<typename T>
-    inline void write_to_module(ptr<llvm::Module> m, std::string name, __tree_property_list<T>& plist) {
+    inline void write_to_module(ptr<llvm::Module> m, std::string name, reference<tree_list<T>>& plist) {
         auto md_named = m->getOrInsertNamedMetadata(name);
         for(auto t: plist) {
             this->write_to_named_metadata(md_named, t);
@@ -197,6 +197,11 @@ protected:
 
     template<typename T>
     inline llvm::Metadata* write(T& v) noexcept {
+        return __llvm_io_writer<typename std::remove_reference<T>::type>::write(v, *this);
+    }
+
+    template<typename T>
+    inline llvm::Metadata* write(T&& v) noexcept {
         return __llvm_io_writer<typename std::remove_reference<T>::type>::write(v, *this);
     }
 
@@ -469,25 +474,29 @@ struct __llvm_io_tree_writer {
 template<typename T> struct __llvm_io_writer<T*> : public __llvm_io_tree_writer<T> { };
 
 template<typename T>
-struct __llvm_io_writer<__tree_property_value<T>> {
-    static inline llvm::Metadata* write(__tree_property_value<T>& p, llvm_metadata_writer& w) {
+struct __llvm_io_writer<property_value<T>> {
+    static inline llvm::Metadata* write(property_value<T>& p, llvm_metadata_writer& w) {
         return __llvm_io_writer<T>::write((T) p, w);
     }
 };
 
 template<typename T>
-struct __llvm_io_writer<__tree_property_tree<T>> {
-    static inline llvm::Metadata* write(__tree_property_tree<T>& p, llvm_metadata_writer& w) {
+struct __llvm_io_writer<reference<T>> {
+    static inline llvm::Metadata* write(reference<T>& p, llvm_metadata_writer& w) {
         return __llvm_io_tree_writer<T>::write((T*) p, w);
     }
 };
 
 template<typename T>
-struct __llvm_io_writer<__tree_property_list<T>> {
-    typedef typename __tree_property_list<T>::list_t        list_t;
-    static inline llvm::Metadata* write(__tree_property_list<T>& p, llvm_metadata_writer& w) {
+struct __llvm_io_writer<reference<tree_list<T>>> {
+    typedef tree_list<T>                                    list_t;
+    static inline llvm::Metadata* write(reference<tree_list<T>>& p, llvm_metadata_writer& w) {
         return w.write_list((list_t*) p);
     }
+};
+
+template<typename T>
+struct __llvm_io_writer<strong_ref<T>> : public __llvm_io_writer<reference<T>> {
 };
 
 #undef  __as_const_metadata_value
