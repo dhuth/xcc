@@ -381,7 +381,7 @@ void yyerror(XILTYPE* loc, xi::parser&, xi_builder_t& builder, const char* msg);
 
 translation-unit
                         : global-decl-list-opt                                  {
-                                                                                    for(auto d: $1) {
+                                                                                    for(auto d: *$1) {
                                                                                         builder.insert_at_global_scope(d);
                                                                                     }
                                                                                 }

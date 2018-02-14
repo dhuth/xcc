@@ -159,7 +159,7 @@ private:
     void findall_of(ptr<list<TTreeType>> olist, const char* name, bool search_parent) {
         ptr<list<ast_decl>> dlist = box(new list<ast_decl>());
         this->find_all_impl(dlist, name);
-        for(auto decl: unbox(dlist)) {
+        for(auto decl: *dlist) {
             if(decl->is<TTreeType>()) {
                 olist->push_back(decl->as<TTreeType>());
             }

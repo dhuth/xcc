@@ -459,7 +459,7 @@ void ircode_context::generate_stmt(ast_stmt* stmt) {
 }
 
 void ircode_context::generate_stmtlist(list<ast_stmt>* stmts) {
-    for(auto stmt: stmts) {
+    for(auto stmt: *stmts) {
         this->generate_stmt(stmt, nullptr, nullptr);
     }
 }

@@ -12,10 +12,14 @@
 
 namespace xcc {
 
-template<typename> struct __vec_reference;
+using tvec_t = std::vector<ptr<__tree_base>>;
 
-template<typename T>
-using reference = __vec_reference<T>;
+template<typename>  struct __vec_reference;
+template<typename>  struct __vec_reference_impl_base;
+template<typename>  struct __pick_reference_impl;
+
+template<typename T>    using reference             = __vec_reference<T>;
+template<typename T>    using reference_impl_base   = __vec_reference_impl_base<T>;
 
 template<typename _TreeType>
 struct __reference_base {
@@ -29,16 +33,16 @@ public:
 };
 
 template<typename _TreeType>
-struct __vec_reference_impl : public __reference_base<_TreeType> {
+struct __vec_reference_impl_base : public __reference_base<_TreeType> {
 public:
 
-    inline explicit __vec_reference_impl(std::vector<ptr<__tree_base>>& vec) noexcept
+    inline explicit __vec_reference_impl_base(tvec_t& vec) noexcept
             : _vector(vec),
               _index(vec.size()){
         _vector.push_back(box<__tree_base>(nullptr));
     }
 
-    inline explicit __vec_reference_impl(std::vector<ptr<__tree_base>>& vec, _TreeType* value) noexcept
+    inline explicit __vec_reference_impl_base(tvec_t& vec, _TreeType* value) noexcept
             : _vector(vec),
               _index(vec.size()) {
         _vector.push_back(value);
@@ -113,23 +117,40 @@ protected:
 
 private:
 
-    std::vector<ptr<__tree_base>>&                          _vector;
+    tvec_t&                                                 _vector;
     size_t                                                  _index;
 
 };
 
 
 template<typename _TreeType>
-struct __vec_reference : public __vec_reference_impl<_TreeType> {
+struct __pick_reference_impl {
+public:
+    typedef __vec_reference_impl_base<_TreeType>            type;
+};
+
+
+template<typename _TreeType>
+struct __vec_reference : public __pick_reference_impl<_TreeType>::type {
 public:
 
-    using __vec_reference_impl<_TreeType>::operator=;
-    using __vec_reference_impl<_TreeType>::__vec_reference_impl;
+    typedef typename __pick_reference_impl<_TreeType>::type __impl_t;
+
+    explicit inline __vec_reference(tvec_t& vec) noexcept
+            : __impl_t(vec) {
+        // do nothing
+    }
+    explicit inline __vec_reference(tvec_t& vec, _TreeType* t) noexcept
+            : __impl_t(vec, t) {
+        // do nothing
+    }
+
+    using __impl_t::operator=;
 
 };
 
 
-template<typename _TreeType, std::vector<ptr<tree_t>> __tree_base::* _VecMember>
+template<typename _TreeType, tvec_t __tree_base::* _VecMember>
 struct __bound_vec_reference : public __vec_reference<_TreeType> {
 public:
 
@@ -143,15 +164,12 @@ public:
     }
 
     using __vec_reference<_TreeType>::operator=;
-    using __vec_reference<_TreeType>::operator==;
-    using __vec_reference<_TreeType>::operator!=;
 
 };
 
-template<typename T>
-using strong_ref = __bound_vec_reference<T, &__tree_base::_strong_references>;
-template<typename T>
-using weak_ref = __bound_vec_reference<T, &__tree_base::_weak_references>;
+
+template<typename T>    using strong_ref = __bound_vec_reference<T, &__tree_base::_strong_references>;
+template<typename T>    using weak_ref = __bound_vec_reference<T, &__tree_base::_weak_references>;
 
 }
 
