@@ -1,6 +1,1 @@
-tree_type(xpp_tree,                                 tree)
-tree_type(xpp_text,                                 xpp_tree)
-tree_type(xpp_sequence,                             xpp_tree)
-tree_type(xpp_line,                                 xpp_tree)
-tree_type(xpp_macro_defn,                           xpp_tree)
-tree_type(xpp_macro_call,                           xpp_tree)
+
