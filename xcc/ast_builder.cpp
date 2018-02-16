@@ -493,7 +493,7 @@ ast_expr* __ast_builder_impl::make_lower_call_expr(ast_expr* fexpr, list<ast_exp
     auto ftype = fexpr->type->as<ast_function_type>();
     list<ast_expr>* new_args = new list<ast_expr>();
     for(uint32_t i = 0; i < args->size(); i++) {
-        auto ptp    = (*ftype->parameter_types)[i];
+        auto ptp    = ftype->parameter_types[i];
         auto narg   = (*args)[i];
 
         new_args->push_back(this->make_lower_cast_expr(ptp, narg));
@@ -644,6 +644,12 @@ ast_type* __ast_builder_impl::maxtype(ast_type* lhs, ast_type* rhs) const noexce
     throw std::runtime_error("unhandled type " + std::to_string((int) lhs->get_tree_type()) + " in maxtype\n");
 }
 
+static inline ast_expr* bitcast_to(ast_type* t, ast_expr* e) noexcept {
+    auto cexpr = new ast_cast(t, ast_op::bitcast, e);
+    cexpr->value_type = e->value_type;
+    return cexpr;
+}
+
 ast_expr* __ast_builder_impl::cast_to(ast_integer_type* itype, ast_expr* expr) const {
     uint32_t    to_bitwidth       = itype->bitwidth;
     bool        to_is_unsigned    = itype->is_unsigned;
@@ -665,7 +671,7 @@ ast_expr* __ast_builder_impl::cast_to(ast_integer_type* itype, ast_expr* expr) c
                 }
             }
             else {
-                return new ast_cast(itype, ast_op::bitcast, expr);
+                return bitcast_to(itype, expr);
             }
         }
     case tree_type_id::ast_real_type:
@@ -744,7 +750,7 @@ ast_expr* __ast_builder_impl::cast_to(ast_pointer_type* ptype, ast_expr* expr) c
 
     switch(expr->type->get_tree_type()) {
     case tree_type_id::ast_pointer_type:
-        return new ast_cast(ptype, ast_op::bitcast, expr);
+        return bitcast_to(ptype, expr);
     case tree_type_id::ast_integer_type:
         {
             uint32_t    bitwidth    = expr->as<ast_integer_type>()->bitwidth;

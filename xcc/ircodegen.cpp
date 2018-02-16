@@ -568,7 +568,7 @@ void ircode_context::generate_if_stmt(ast_if_stmt* stmt, llvm::BasicBlock* ct, l
 
     false_block->insertInto(func);
     this->ir_builder.SetInsertPoint(false_block);
-    if(stmt->false_stmt) {
+    if(stmt->false_stmt != nullptr) {
         this->generate_stmt(stmt->false_stmt, ct, bt);
         if(!this->ir_builder.GetInsertBlock()->getTerminator()) {
             this->ir_builder.CreateBr(continue_block);

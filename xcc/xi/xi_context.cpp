@@ -32,7 +32,7 @@ static bool find_all_members(xi_type_decl* tp, ptr<list<ast_decl>> olist, const 
 static bool find_all_rest_members(xi_struct_decl* sdecl, ptr<list<ast_decl>> olist, const char* name, bool first_only) {
     //TODO: visibility
     for(auto bt: sdecl->base_types) {
-        if(find_all_members(bt->as<xi_decl_type>()->declaration, olist, name, first_only) && first_only) {
+        if(find_all_members(bt->as<xi_decl_type>()->declaration->as<xi_type_decl>(), olist, name, first_only) && first_only) {
             return true;
         }
     }

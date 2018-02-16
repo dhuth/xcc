@@ -48,12 +48,12 @@ public:
         _vector.push_back(value);
     }
 
-    inline operator _TreeType*() const noexcept {
-        return this->__get();
-    }
+    //inline operator _TreeType*() const noexcept {
+    //    return this->__get();
+    //}
 
     template<typename _TargetType,
-             enable_if_base_of_t<_TreeType, _TargetType, int> = 0>
+             enable_if_base_of_t<_TargetType, _TreeType, int> = 0>
     inline operator _TargetType*() const noexcept {
         return static_cast<_TargetType*>(this->__get());
     }
@@ -94,11 +94,15 @@ public:
     }
 
     inline bool operator==(nullptr_t) const noexcept {
-        return this->_get() == nullptr;
+        return this->__get() == nullptr;
     }
 
     inline bool operator==(const reference<_TreeType>& p) const noexcept {
         return this->__get() == p.__get();
+    }
+
+    inline bool operator!=(nullptr_t) const noexcept {
+        return this->__get() != nullptr;
     }
 
     inline bool operator!=(const reference<_TreeType>& p) const noexcept {

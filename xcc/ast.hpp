@@ -1045,7 +1045,7 @@ public:
      * @param index
      */
     inline ast_index(ast_type* type, ast_expr* expr, ast_expr* index)
-            : base_type(type, ast_value_catagory::rvalue),
+            : base_type(type, ast_value_catagory::lvalue),
               arr_expr(this, expr),
               index_expr(this, index) {
         // do nothing
@@ -1603,7 +1603,7 @@ protected:
     inline pwfunc_t pwrap(reference<tree_list<T>>& p) {
         return [&](const char* fmt, std::ostream& s) -> void {
             for(uint32_t i = 0; i < p->size(); i++) {
-                this->visit((*p)[i], s);
+                this->visit(p[i], s);
                 if(i < (p->size()-1)) {
                     this->print(s, fmt);
                 }
