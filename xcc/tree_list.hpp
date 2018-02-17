@@ -534,7 +534,7 @@ template<typename T>
 using list = typename __list_type_selector<T>::type;
 
 template<typename _List>
-struct __reference_list_impl : public __vec_reference_impl_base<_List> {
+struct __reference_list_impl : public __reference_impl_base<_List> {
 public:
 
     typedef _List                                           list_t;
@@ -542,12 +542,12 @@ public:
     typedef typename list_t::element_ref_t                  element_ref_t;
     typedef typename list_t::iterator_t                     iterator_t;
 
-    using __vec_reference_impl_base<_List>::operator=;
-    using __vec_reference_impl_base<_List>::__vec_reference_impl_base;
+    using __reference_impl_base<_List>::operator=;
+    using __reference_impl_base<_List>::__reference_impl_base;
 
     inline element_ref_t operator[](size_t index) const noexcept {
-        assert(this->__get() != nullptr);
-        auto& l = *(this->__get());
+        assert(this->get() != nullptr);
+        auto& l = *(this->get());
         return l[index];
     }
 
