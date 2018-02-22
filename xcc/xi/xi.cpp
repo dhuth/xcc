@@ -25,7 +25,7 @@ namespace xcc {
 
 extern void setup_xi_printer();
 
-int ximain(const char*, const char*, std::vector<std::string>&);
+int ximain(const char*, const char*, std::map<std::string, std::string>&);
 int xi_dev(const char*, const char*, const std::vector<std::string>&);
 
 
@@ -49,10 +49,10 @@ int xi_dev(const char*, const char*, const std::vector<std::string>&);
 //  [.]     methods                         lower xi_method_decls to xi_function_decls (including operators overloads)
 //  [.]     functions                       lower xi_function_decls to ast_function_decls (including operators and overloads and function bodies)
 
-int ximain(const char* input_filenamename, const char* output_filename, std::vector<std::string>& args) {
+int ximain(const char* input_filenamename, const char* output_filename, std::map<std::string, std::string>& args) {
     setup_xi_printer();
 
-    // TODO: read input args
+    // TODO: read options
 
     translation_unit        tu;
     ircode_context          ctx(output_filename);
@@ -83,9 +83,11 @@ int ximain(const char* input_filenamename, const char* output_filename, std::vec
 
 int xi_dev(const char* input_filename, const char* output_filename, const std::vector<std::string>& args) {
     // input args
-    std::vector<std::string> devargs;
+    std::map<std::string, std::string> devargs;
     for(auto s: args) {
-        devargs.push_back(s);
+        auto key = s.substr(0, s.find('='));
+        auto val = s.substr(s.find('=') + 1);
+        devargs[key] = val;
     }
     return ximain(input_filename, output_filename, devargs);
 }

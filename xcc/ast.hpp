@@ -1086,7 +1086,7 @@ public:
         // do nothing
     }
 
-    property<ast_decl>                                          declaration;   //!<
+    weak_ref<ast_decl>                                          declaration;   //!<
 };
 
 

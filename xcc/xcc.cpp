@@ -141,6 +141,13 @@ static inline std::string getext(std::string filename) {
     return filename.substr(filename.find_last_of('.') + 1);
 }
 
+static bool run_compiler_function(const xcc::compiler_function& f, std::string in_file, std::string out_file, const std::vector<std::string>& args) {
+    if(f(in_file, out_file, args) != 0) {
+        return false;
+    }
+    return true;
+}
+
 static std::string handle_compile_from_file(const std::string& filename, xcc_program_args* args) {
     //TODO: A lot...
     const xcc::frontend* lang;
@@ -171,7 +178,7 @@ static std::string handle_compile_from_file(const std::string& filename, xcc_pro
     }
 
     //TODO: preprocessor
-    lang->language_compiler(filename.c_str(), outfile.c_str(), args->compiler_args);
+    run_compiler_function(lang->language_compiler, filename, outfile, args->compiler_args);
 
     return outfile;
 }

@@ -142,7 +142,7 @@ public:
         /* do nothing */
     }
 
-    property<ast_decl>                                              declaration;    //! The declaration that defines the type
+    weak_ref<ast_decl>                                              declaration;    //! The declaration that defines the type
 
 };
 
@@ -191,7 +191,7 @@ public:
     }
 
     property<ast_type>                                              type;
-    property<ast_parameter_decl>                                    lowered_parameter; //TODO: should be weak property
+    weak_ref<ast_parameter_decl>                                    lowered_parameter;
 
 };
 
@@ -273,7 +273,7 @@ public:
     property<bool>                                                  is_inline;          //! the code generator should try to inline this function
     property<bool>                                                  is_forward_decl;    //! is a forward declaration
     property<bool>                                                  is_c_extern;        //! is this a C function
-    property<ast_function_decl>                                     lowered_func;       //  TODO: should be weak property
+    weak_ref<ast_function_decl>                                     lowered_func;
 
 };
 
@@ -375,7 +375,7 @@ public:
     }
 
     property<bool>                                                  is_forward_decl;    //! is a forward declaration
-    property<xi_function_decl>                                      lowered_func;       //  TODO: should be weak property
+    weak_ref<xi_function_decl>                                      lowered_func;
 
 };
 
@@ -765,7 +765,7 @@ public:
     }
 
     property<ast_expr>                                              expression; //! the object expression
-    property<xi_member_decl>                                        member;     //! the member
+    weak_ref<xi_member_decl>                                        member;     //! the member
 
 };
 

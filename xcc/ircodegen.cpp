@@ -12,6 +12,7 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/Bitcode/BitcodeWriter.h>
 
 namespace xcc {
 
@@ -322,6 +323,7 @@ void ircode_context::generate(translation_unit& tu, const char* outfile) {
     std::error_code ec;
     llvm::raw_fd_ostream outstream(outfile, ec, llvm::sys::fs::F_None);
 
+    //llvm::WriteBitcodeToFile(this->module, outstream);
     this->module->print(outstream, nullptr);
 
 }

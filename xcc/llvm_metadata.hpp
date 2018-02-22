@@ -495,9 +495,8 @@ struct __llvm_io_writer<reference<tree_list<T>>> {
     }
 };
 
-template<typename T>
-struct __llvm_io_writer<strong_ref<T>> : public __llvm_io_writer<reference<T>> {
-};
+template<typename T> struct __llvm_io_writer<strong_ref<T>> : public __llvm_io_writer<reference<T>> { };
+template<typename T> struct __llvm_io_writer<weak_ref<T>>   : public __llvm_io_writer<reference<T>> { };
 
 #undef  __as_const_metadata_value
 #undef  __get_const_t_value
