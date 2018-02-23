@@ -62,7 +62,7 @@ m4_define(`m4_define_ifdef',                                    `m4_ifelse($#,  
                                                                            m4_eval($# > 3), `1', `m4_define_ifdef(`$1', m4_shiftn(3,$@))')')
 m4_define(`m4_list_enumerate',                                  `m4_strip(
                                                                     m4_pushdef(`i', 0)
-                                                                    m4_list_map(`li', $1, `(i, li)m4_define(`i', m4_incr(i))')
+                                                                    m4_list_map(`__li', $1, `(i, __li)m4_define(`i', m4_incr(i))')
                                                                     m4_popdef(`i'))')
 
 

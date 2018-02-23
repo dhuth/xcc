@@ -27,6 +27,7 @@ $m4_cmd -Dswitch_frontends_header   $top_srcdir/m4/lang.def.m4 $lang_files      
 $m4_cmd -Dswitch_tree_header        $top_srcdir/m4/lang.def.m4 $lang_files       > $top_srcdir/xcc/all_tree_headers.def.hpp
 $m4_cmd -Dswitch_frontends_compiler $top_srcdir/m4/lang.def.m4 $lang_files       > $top_srcdir/xcc/all_frontend_compilers.def.hpp
 $m4_cmd -Dswitch_tree_types_header  $top_srcdir/m4/tree.def.m4 $tree_def_files   > $top_srcdir/xcc/all_tree_types.def.hpp
+$m4_cmd -Dswitch_tree_expand        $top_srcdir/m4/tree.def.m4 $tree_def_files   > $top_srcdir/xcc/all_tree_types_expand.def.hpp
 
 echo "AC_SUBST([xcc_lang_libs], [\"$lang_libs\"])"
 echo "m4_define([__xcc_lang_makefiles__], [$lang_makefiles])"

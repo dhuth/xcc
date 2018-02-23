@@ -1,4 +1,8 @@
 
+/* ---------- *
+ * Tree Types *
+ * ---------- */
+
 tree_type(ast_tree,                     tree)
 tree_type(ast_type,                     ast_tree)
 tree_type(ast_decl,                     ast_tree)
@@ -41,7 +45,7 @@ tree_type(ast_memberref,                ast_expr)
 tree_type(ast_deref,                    ast_expr)
 tree_type(ast_addressof,                ast_expr)
 tree_type(ast_invoke,                   ast_expr)               // call a function pointer
-tree_type(ast_call,                     ast_expr)               // call a function
+tree_type(ast_call,                     ast_expr)               // call a function decl
 tree_type(ast_stmt_expr,                ast_expr)
 
 
@@ -57,5 +61,4 @@ tree_type(ast_for_stmt,                 ast_stmt)
 tree_type(ast_return_stmt,              ast_stmt)
 tree_type(ast_break_stmt,               ast_stmt)
 tree_type(ast_continue_stmt,            ast_stmt)
-
 
