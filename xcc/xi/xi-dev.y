@@ -12,22 +12,8 @@
 #include    "source.hpp"
 #define     YYSTYPE                         XISTYPE
 #define     YYLTYPE                         XILTYPE
-#define     YY_DECL                         int yylex(YYSTYPE* yylval_param, XILTYPE* yyloc, xi_builder_t& builder)
+#define     YY_DECL                         int yylex(XISTYPE* yylval_param, XILTYPE* yyloc, xi_builder_t& builder)
 
-//#define     YYLTYPE_IS_DECLARED             1
-/*
-#define     YYLLOC_DEFAULT(current, rhs, n)             \
-    do                                                  \
-        if(n) {                                         \
-            (current).first = YYRHSLOC(rhs, 1).first;   \
-            (current).last  = YYRHSLOC(rhs, n).last;    \
-        }                                               \
-        else {                                          \
-            (current).first = YYRHSLOC(rhs, 0).first;   \
-            (current).last  = YYRHSLOC(rhs, 0).last;    \
-        }                                               \
-   while(0)
-*/
 #define SETLOC(e, ...)                      setloc(e, __VA_ARGS__)
 }
 
@@ -229,6 +215,7 @@
 
 %type <type>                                type
 %type <type>                                TOK_TYPE
+%type <type>                                non-ref-type
 %type <type>                                postfix-type
 %type <type>                                prefix-type
 %type <type>                                non-const-prefix-type
@@ -364,13 +351,18 @@
 %type <stmt_list>                           stmt-list
 
 %code {
+
 extern YY_DECL;
 void yyerror(XILTYPE* loc, xi::parser&, xi_builder_t& builder, const char* msg);
 
 }
 
-%parse-param                        {std::string            input_filename}
+%parse-param                        {std::string&           input_filename}
 %param                              {xi_builder_t&          builder}
+
+%initial-action {
+    @$.initialize(&input_filename);
+};
 
 %start  translation-unit
 %%
@@ -408,10 +400,14 @@ global-decl
  * Qname *
  * ----- */
  
- qname
+qname
                         : TOK_IDENTIFIER                                        { $$ = make_xi_qname($1);     }
                         | qname OP_DOUBLE_COLON TOK_IDENTIFIER                  { $$ = make_xi_qname($1, $3); }
                         ;
+//gname
+//                        : qname OP_LT generic-expr-list-opt OP_GT               { $$ = make_xi_gname($1, $3); }
+//                        | gname OP_DOUBLE_COLON TOK_IDENTIFIER                  { $$ = make_xi_gname($1, $3); }
+//                        ;
  
 /* ------------------- *
  * Global Declarations *
@@ -521,7 +517,8 @@ struct-member-decl-list
 struct-member-decl
                         : field-decl                                            { $$ = $1; }
                         ;
-field-decl              : TOK_IDENTIFIER OP_COLON type OP_SEMICOLON             { $$ = builder.make_xi_field_decl($1, $3); }
+field-decl              
+                        : OP_DOT TOK_IDENTIFIER OP_COLON type OP_SEMICOLON      { $$ = SETLOC(builder.make_xi_field_decl($2, $4), @$); }
                         ;
 
 /* ---------- *
@@ -748,6 +745,10 @@ named-op
  * ---- */
 
 type
+                        : OP_BINARY_AND non-ref-type                            { $$ = builder.get_reference_type($2); }
+                        |               non-ref-type                            { $$ = $1; }
+                        ;
+non-ref-type
                         : postfix-type                                          { $$ = $1; }
                         ;
 postfix-type
@@ -759,12 +760,12 @@ prefix-type
                         ;
 non-const-prefix-type
                         : OP_MUL        prefix-type                             { $$ = builder.get_pointer_type($2); }
-                        | OP_BINARY_AND prefix-type                             { $$ = builder.get_reference_type($2); }
                         | term-type                                             { $$ = $1; }
                         ;
 term-type
                         : TOK_TYPE                                              { $$ = $1; }
                         | qname                                                 { $$ = SETLOC(builder.get_id_type($1), @$); }
+                        //| gname                                                 { $$ = SETLOC(builder.get_gid_type($1), @$); }
                         | OP_LPAREN type OP_RPAREN                              { $$ = $2; }
                         | OP_LPAREN
                             type OP_COMA type-list-opt

@@ -142,7 +142,7 @@ static inline std::string getext(std::string filename) {
 }
 
 static bool run_compiler_function(const xcc::compiler_function& f, std::string in_file, std::string out_file, const std::vector<std::string>& args) {
-    if(f(in_file, out_file, args) != 0) {
+    if(f(in_file.c_str(), out_file.c_str(), args) != 0) {
         return false;
     }
     return true;

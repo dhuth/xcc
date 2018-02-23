@@ -28,6 +28,16 @@ extern void setup_xi_printer();
 int ximain(const char*, const char*, std::map<std::string, std::string>&);
 int xi_dev(const char*, const char*, const std::vector<std::string>&);
 
+static void parse_file(const char* filename, xi_builder& builder) noexcept {
+    std::string filename_str(filename);
+    FILE* in = fopen(filename, "r");
+
+    xiset_in(in);
+    xi::parser p(filename_str, builder);
+    p.parse();
+
+    fclose(in);
+}
 
 // compiler phases:
 //  [.] parse                               parse input file(s)
@@ -49,7 +59,7 @@ int xi_dev(const char*, const char*, const std::vector<std::string>&);
 //  [.]     methods                         lower xi_method_decls to xi_function_decls (including operators overloads)
 //  [.]     functions                       lower xi_function_decls to ast_function_decls (including operators and overloads and function bodies)
 
-int ximain(const char* input_filenamename, const char* output_filename, std::map<std::string, std::string>& args) {
+int ximain(const char* input_filename, const char* output_filename, std::map<std::string, std::string>& args) {
     setup_xi_printer();
 
     // TODO: read options
@@ -61,11 +71,7 @@ int ximain(const char* input_filenamename, const char* output_filename, std::map
     // TODO: loop over included library objects
     builder.read_metadata_pass(ctx);
 
-    // Parse input file
-    xi::parser p(std::string(input_filenamename), builder);
-    xiin = fopen(input_filenamename, "r");
-    p.parse();
-    fclose(xiin);
+    parse_file(input_filename, builder);
 
     builder.dom_pass();
     builder.write_metadata_pass(ctx);

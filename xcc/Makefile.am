@@ -1,4 +1,4 @@
-SUBDIRS=xpp xi ardvarc
+SUBDIRS=xpp xi ardvark
 
 bin_PROGRAMS      		= xcc
 
