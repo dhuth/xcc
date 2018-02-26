@@ -25,6 +25,7 @@ static uint8_t hexval(char c) {
 
 static char read_hex(size_t& i, const std::string& s_in) {
     //TODO: Handle user error
+    i++;
     auto d1 = hexval(s_in[i]);
     auto d0 = hexval(s_in[i + 1]);
     i++;
@@ -32,6 +33,7 @@ static char read_hex(size_t& i, const std::string& s_in) {
 }
 
 static void handle_escape_sequence(size_t& i, const std::string& s_in, std::stringstream& s_out) noexcept {
+    i++;
     char d = s_in[i];
     switch(d) {
     case '\'':      s_out << '\x27';                break;
@@ -45,7 +47,7 @@ static void handle_escape_sequence(size_t& i, const std::string& s_in, std::stri
     case 'r':       s_out << '\x0d';                break;
     case 't':       s_out << '\x09';                break;
     case 'v':       s_out << '\x0b';                break;
-    case 'x':       s_out << read_hex(++i, s_in);   break;
+    case 'x':       s_out << read_hex(i, s_in);     break;
     default:        s_out << d;
     }
 }
@@ -56,8 +58,8 @@ std::string cstr_expand_escapes(std::string s_in) noexcept {
     std::stringstream s_out;
     for(size_t i = 0; i < s_in.length(); i++) {
         auto c = s_in[i];
-        if(c == '\'') {
-            handle_escape_sequence(++i, s_in, s_out);
+        if(c == '\\') {
+            handle_escape_sequence(i, s_in, s_out);
         }
         else {
             s_out << c;
