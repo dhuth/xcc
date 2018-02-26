@@ -90,55 +90,65 @@ public:
             ast_typeset_base* ts) noexcept;
     virtual ~__ast_builder_impl() noexcept;
 
-            /**
-             * Get the universal void type node
-             * @return
-             */
-            ast_void_type*                      get_void_type()                                                     const noexcept;
-            /**
-             * Get an integer type node
-             * @param bitwidth
-             * @param is_unsigned
-             * @return
-             */
-            ast_integer_type*                   get_integer_type(uint32_t bitwidth, bool is_unsigned)               const noexcept;
-            /**
-             * Get a boolean type node
-             * @return
-             */
-            ast_integer_type*                   get_bool_type()                                                     const noexcept;
-            /**
-             * Get a floating point type node
-             * @param bitwidth
-             * @return
-             */
-            ast_real_type*                      get_real_type(uint32_t bitwidth)                                    const noexcept;
-            /**
-             * Get a pointer type node
-             * @param eltype
-             * @return
-             */
-            ast_pointer_type*                   get_pointer_type(ast_type* eltype)                                        noexcept;
-            /**
-             * Get an array type node
-             * @param artype
-             * @param size
-             * @return
-             */
-            ast_array_type*                     get_array_type(ast_type* artype, uint32_t size)                           noexcept;
-            /**
-             * Get a function type node
-             * @param
-             * @param
-             * @return
-             */
-            ast_function_type*                  get_function_type(ast_type*, ptr<list<ast_type>>)                         noexcept;
-            /**
-             * Get a record type node
-             * @param
-             * @return
-             */
-            ast_record_type*                    get_record_type(ptr<list<ast_type>>)                                      noexcept;
+    /**
+     * Get the universal void type node
+     * @return
+     */
+    virtual ast_void_type*                      get_void_type()                                                     const noexcept;
+    /**
+     * Get an integer type node
+     * @param bitwidth
+     * @param is_unsigned
+     * @return
+     */
+    virtual ast_integer_type*                   get_integer_type(uint32_t bitwidth, bool is_unsigned)               const noexcept;
+    /**
+     * Get a boolean type node
+     * @return
+     */
+    virtual ast_integer_type*                   get_bool_type()                                                     const noexcept;
+    /**
+     * Get a floating point type node
+     * @param bitwidth
+     * @return
+     */
+    virtual ast_real_type*                      get_real_type(uint32_t bitwidth)                                    const noexcept;
+    /**
+     * Get a pointer type node
+     * @param eltype
+     * @return
+     */
+    virtual ast_pointer_type*                   get_pointer_type(ast_type* eltype)                                        noexcept;
+    /**
+     * Get an array type node
+     * @param artype
+     * @param size
+     * @return
+     */
+    virtual ast_array_type*                     get_array_type(ast_type* artype, uint32_t size)                           noexcept;
+    /**
+     * Get a function type node
+     * @param
+     * @param
+     * @return
+     */
+    virtual ast_function_type*                  get_function_type(ast_type*, ptr<list<ast_type>>)                         noexcept;
+    /**
+     * Get a record type node
+     * @param
+     * @return
+     */
+    virtual ast_record_type*                    get_record_type(ptr<list<ast_type>>)                                      noexcept;
+    /**
+     * Get the language default string type (ast is an i8 array)
+     * @return
+     */
+    virtual ast_type*                           get_string_type(const std::string& s)                                     noexcept;
+    /**
+     * Get the underlying size type
+     * @return
+     */
+    virtual ast_type*                           get_size_type()                                                     const noexcept;
 
     /**
      * Get the type of a declaration
@@ -164,6 +174,7 @@ public:
 
     virtual ast_expr*                           make_integer(const char* txt, uint8_t radix)                        const noexcept;
     virtual ast_expr*                           make_real(const char* txt)                                          const noexcept;
+    virtual ast_expr*                           make_string(const char* txt, size_t len)                                  noexcept;
     virtual ast_expr*                           make_true()                                                         const noexcept;
     virtual ast_expr*                           make_false()                                                        const noexcept;
     virtual ast_expr*                           make_zero(ast_type* tp)                                             const noexcept;

@@ -59,6 +59,7 @@ public:
             : context(context) {
         this->addmethod(&ircode_expr_generator::generate_integer);
         this->addmethod(&ircode_expr_generator::generate_real);
+        this->addmethod(&ircode_expr_generator::generate_string);
         this->addmethod(&ircode_expr_generator::generate_cast);
         this->addmethod(&ircode_expr_generator::generate_record);
         this->addmethod(&ircode_expr_generator::generate_array);
@@ -80,6 +81,7 @@ private:
 
     llvm::Value*                                    generate_integer(ast_integer*);
     llvm::Value*                                    generate_real(ast_real*);
+    llvm::Value*                                    generate_string(ast_string*);
     llvm::Value*                                    generate_record(ast_record*);
     llvm::Value*                                    generate_array(ast_array*);
     llvm::Value*                                    generate_cast(ast_cast*);
@@ -105,6 +107,7 @@ public:
         this->addmethod(&ircode_address_generator::generate_declref);
         this->addmethod(&ircode_address_generator::generate_deref);
         this->addmethod(&ircode_address_generator::generate_memberref);
+        this->addmethod(&ircode_address_generator::generate_global_string);
         this->addmethod(&ircode_address_generator::generate_index);
     }
 
@@ -115,6 +118,7 @@ private:
     llvm::Value*                                    generate_declref(ast_declref*);
     llvm::Value*                                    generate_deref(ast_deref*);
     llvm::Value*                                    generate_memberref(ast_memberref*);
+    llvm::Value*                                    generate_global_string(ast_string*);
     llvm::Value*                                    generate_index(ast_index*);
 
     ircode_context&                                                     context;
@@ -126,7 +130,7 @@ public:
     inline ircode_context(std::string module_name /* arch options */) noexcept
         : llvm_context(),
           ir_builder(this->llvm_context),
-          _local_scope(new local_scope(nullptr)),
+          _local_scope(new ircodegen_scope(nullptr)),
           _header_bb(nullptr),
           generate_expr(*this),
           generate_type(*this),
@@ -151,11 +155,11 @@ public:
 
 //private: //TODO: maybe make some friends ?
 
-    struct local_scope {
-        inline local_scope(local_scope* prev): prev(prev) { }
-        ~local_scope() = default;
+    struct ircodegen_scope {
+        inline ircodegen_scope(ircodegen_scope* prev): prev(prev) { }
+        ~ircodegen_scope() = default;
 
-        local_scope*                                                    prev;
+        ircodegen_scope*                                                prev;
         std::map<ast_decl*, llvm::Value*>                               named_values;
 
         llvm::Value* operator[](ast_decl* decl) {
@@ -172,20 +176,22 @@ public:
         }
     };
 
-    inline void begin_scope() {
-        this->_local_scope = new local_scope(this->_local_scope);
+    inline void begin_scope() noexcept {
+        this->_local_scope = new ircodegen_scope(this->_local_scope);
     }
-    inline void end_scope() {
+    inline void end_scope() noexcept {
         auto old_scope = this->_local_scope;
         this->_local_scope = old_scope->prev;
         delete old_scope;
     }
-    inline void add_declaration(ast_decl* decl, llvm::Value* value) {
+    inline void add_declaration(ast_decl* decl, llvm::Value* value) noexcept {
         this->_local_scope->named_values[decl] = value;
     }
     inline llvm::Value* find(ast_decl* decl) {
         return (*this->_local_scope)[decl];
     }
+
+    llvm::Value* get_string_data(ast_string* s) noexcept;
 
 private:
 
@@ -207,7 +213,8 @@ private:
     void                                                                generate_break_stmt(llvm::BasicBlock*);
 
     std::map<ast_decl*, llvm::Value*>                                   _named_declarations;
-    local_scope*                                                        _local_scope;
+    std::map<std::string, llvm::Value*>                                 _string_data;
+    ircodegen_scope*                                                    _local_scope;
     llvm::BasicBlock*                                                   _header_bb;
 
 };

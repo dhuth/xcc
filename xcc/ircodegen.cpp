@@ -78,6 +78,11 @@ llvm::Value* ircode_expr_generator::generate_real(ast_real* fexpr) {
     return            context.ir_builder.CreateFPCast(fvalue, ftype);
 }
 
+llvm::Value* ircode_expr_generator::generate_string(ast_string* sexpr) {
+    auto atype      = context.generate_type(sexpr->type);
+    return context.ir_builder.CreateLoad(atype, context.get_string_data(sexpr));
+}
+
 llvm::Value* ircode_expr_generator::generate_record(ast_record* rexpr) {
     std::vector<llvm::Constant*> field_values;
 
@@ -291,6 +296,10 @@ llvm::Value* ircode_address_generator::generate_memberref(ast_memberref* memref)
     auto objtype = context.generate_type(memref->objexpr->type);
 
     return context.ir_builder.CreateConstGEP2_32(objtype, objaddr, 0, (uint32_t) memref->member_index);
+}
+
+llvm::Value* ircode_address_generator::generate_global_string(ast_string* expr) {
+    return context.get_string_data(expr);
 }
 
 llvm::Value* ircode_address_generator::generate_index(ast_index* expr) {
@@ -614,6 +623,23 @@ void ircode_context::generate_while_stmt(ast_while_stmt* stmt, llvm::BasicBlock*
 
     continue_block->insertInto(func);
     this->ir_builder.SetInsertPoint(continue_block);
+}
+
+llvm::Value* ircode_context::get_string_data(ast_string* sexpr) noexcept {
+    if(_string_data.find(sexpr->value) == _string_data.end()) {
+        auto name   = std::string(".str.") + std::to_string(_string_data.size());
+        auto value  = llvm::ConstantDataArray::getString(this->llvm_context, (std::string) sexpr->value);
+        auto gvar   = new llvm::GlobalVariable(
+                *this->module,
+                value->getType(),
+                true,
+                llvm::GlobalVariable::PrivateLinkage,
+                value,
+                name);
+        _string_data[(std::string) sexpr->value] = gvar;
+        return gvar;
+    }
+    return _string_data[(std::string) sexpr->value];
 }
 
 }

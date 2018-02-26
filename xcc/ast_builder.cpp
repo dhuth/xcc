@@ -13,6 +13,7 @@
 #include "frontend.hpp"
 #include "error.hpp"
 #include "ircodegen.hpp"
+#include "cstr.hpp"
 
 
 namespace xcc {
@@ -98,6 +99,15 @@ ast_record_type* __ast_builder_impl::get_record_type(ptr<list<ast_type>> types) 
     return this->_record_types.get_new_as<ast_record_type>(types);
 }
 
+ast_type* __ast_builder_impl::get_string_type(const std::string& s) noexcept {
+    auto ctype = this->get_integer_type(8, false);
+    return this->get_array_type(ctype, s.length() + 1);
+}
+
+ast_type* __ast_builder_impl::get_size_type() const noexcept {
+    return this->get_integer_type(64, true);
+}
+
 ast_type* __ast_builder_impl::get_declaration_type(ast_decl* decl) noexcept {
     switch(decl->get_tree_type()) {
     case tree_type_id::ast_variable_decl:
@@ -156,6 +166,11 @@ ast_expr* __ast_builder_impl::make_real(const char* txt) const noexcept {
 
     //TODO: float is default?
     return new ast_real(this->get_real_type(32), value);
+}
+
+ast_expr* __ast_builder_impl::make_string(const char* txt, size_t len) noexcept {
+    auto val = cstr_expand_escapes(std::string(txt, len));
+    return new ast_string(this->get_string_type(val), val);
 }
 
 ast_expr* __ast_builder_impl::make_true() const noexcept {
@@ -760,6 +775,11 @@ ast_expr* __ast_builder_impl::cast_to(ast_pointer_type* ptype, ast_expr* expr) c
             }
             return new ast_cast(ptype, ast_op::utop, expr);
         }
+    case tree_type_id::ast_array_type:
+        {
+            return new ast_addressof(ptype,
+                    this->make_index_expr(expr, this->make_zero(this->get_size_type())));
+        }
     default:
         __throw_unhandled_ast_type(__FILE__, __LINE__, expr, "__ast_builder_impl::cast_to(pointer)");
     }
@@ -816,13 +836,21 @@ bool __ast_builder_impl::widens(ast_type* from_type, ast_type* to_type, int& cos
             else if(to_type->is<ast_real_type>()) {
                 uint32_t bw_from = from_type->as<ast_real_type>()->bitwidth;
                 uint32_t bw_to   = to_type->as<ast_real_type>()->bitwidth;
-                if(bw_from < bw_to)                         { cost += 1; return true; }
-                else if(bw_from == bw_to)                   {            return true; }
+                if(bw_from < bw_to)                         { cost += 1; return true;  }
+                else if(bw_from == bw_to)                   {            return true;  }
                 else                                        {            return false; }
             }
-            else {
-                break;
+            break;
+        }
+    case tree_type_id::ast_array_type:
+        {
+            if(to_type->is<ast_pointer_type>()) {
+                ast_type* peltype = to_type->as<ast_pointer_type>()->element_type;
+                ast_type* aeltype = from_type->as<ast_array_type>()->element_type;
+                if(this->sametype(peltype, aeltype))        { cost += 1; return true;  }
+                else                                        {            return false; }
             }
+            break;
         }
     }
     throw std::runtime_error("unhandled " + std::string(from_type->get_tree_type_name()) + " -> " +

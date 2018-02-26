@@ -29,7 +29,7 @@
         LITERAL_STRING                      "string value"
         LITERAL_CHARACTER                   "character value"
         LITERAL_BOOL                        "boolean value"
-        LITERAL_POINTER                     "just null really"
+        LITERAL_POINTER                     "pointer value"
         
         OP_LBRACE                           "{"
         OP_RBRACE                           "}"
@@ -245,6 +245,7 @@
 %type <expr>                                LITERAL_REAL
 %type <expr>                                LITERAL_BOOL
 %type <expr>                                LITERAL_POINTER
+%type <expr>                                LITERAL_STRING
 
 %type <text>                                TOK_IDENTIFIER
 
@@ -672,6 +673,7 @@ term-expr
                         | LITERAL_REAL                                          { $$ = $1; }
                         | LITERAL_BOOL                                          { $$ = $1; }
                         | LITERAL_POINTER                                       { $$ = $1; }
+                        | LITERAL_STRING                                        { $$ = $1; }
                         | qname                                                 { $$ = SETLOC(builder.make_xi_id_expr($1), @$); }
                         | KW_SELF                                               { $$ = SETLOC(builder.make_xi_id_expr(make_xi_qname("self")), @$); }
                         ;
