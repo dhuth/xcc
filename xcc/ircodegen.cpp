@@ -229,7 +229,7 @@ llvm::Value* ircode_expr_generator::generate_index(ast_index* e) {
 
 llvm::Value* ircode_expr_generator::generate_declref(ast_declref* e) {
     ast_decl* decl = e->declaration;
-    return context.ir_builder.CreateLoad(context.find(e->declaration));
+    return context.ir_builder.CreateLoad(context.find(decl));
 }
 
 llvm::Value* ircode_expr_generator::generate_deref(ast_deref* e) {
@@ -277,8 +277,13 @@ llvm::Value* ircode_expr_generator::generate_call(ast_call* e) {
 }
 
 llvm::Value* ircode_expr_generator::generate_stmt_expr(ast_stmt_expr* expr) {
-    context.add_declaration((ast_decl*) expr->temp, context.generate_expr(expr->temp->value));
+    ast_temp_decl* decl = expr->temp;
+    context.generate_temp_decl(decl);
+
     context.generate_stmt(expr->statement);
+
+    //TODO: Clean up
+
     return context.find((ast_decl*) expr->temp);
 }
 
@@ -409,12 +414,30 @@ void ircode_context::generate_function_decl(ast_function_decl* func) {
 
 void ircode_context::generate_local_decl(ast_local_decl* decl) {
     auto bb = this->ir_builder.GetInsertBlock();
-    this->ir_builder.SetInsertPoint(this->_header_bb);
+    this->ir_builder.SetInsertPoint(_header_bb);
 
     auto type = this->generate_type(decl->type);
-    this->add_declaration(decl, this->ir_builder.CreateAlloca(type, nullptr, (std::string) decl->name));
+    auto dval = this->ir_builder.CreateAlloca(type, nullptr, (std::string) decl->name);
+    this->add_declaration(decl, dval);
 
     this->ir_builder.SetInsertPoint(bb);
+
+    if(decl->init_value != nullptr) {
+        this->ir_builder.CreateStore(this->generate_expr(decl->init_value), dval);
+    }
+}
+
+void ircode_context::generate_temp_decl(ast_temp_decl* decl) {
+    auto bb = this->ir_builder.GetInsertBlock();
+    this->ir_builder.SetInsertPoint(_header_bb);
+
+    auto type = this->generate_type(decl->type);
+    auto dval = this->ir_builder.CreateAlloca(type);
+    this->add_declaration(decl, dval);
+
+    this->ir_builder.SetInsertPoint(bb);
+
+    this->ir_builder.CreateStore(this->generate_expr(decl->value), dval);
 }
 
 void ircode_context::generate_function_body(ast_function_decl* decl) {

@@ -145,6 +145,7 @@ public:
     void generate_decl(ast_decl* decl);
     void generate_stmt(ast_stmt* stmt);
     void generate_stmtlist(list<ast_stmt>* stmts);
+    void generate_temp_decl(ast_temp_decl*);
 
     llvm::LLVMContext                                                   llvm_context;
     llvm::IRBuilder<>                                                   ir_builder;

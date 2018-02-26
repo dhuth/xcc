@@ -1,7 +1,7 @@
 
-extern cfunc printf(*i8);
 
 cfunc main() {
-    printf("Hello World!\n");
+    local x: i8 = 2;
+    x = x + 4;
 }
 
