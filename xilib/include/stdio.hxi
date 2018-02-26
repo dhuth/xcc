@@ -1,0 +1,8 @@
+
+#ifndef __XI_STD_IO_HXI_
+#define __XI_STD_IO_HXI_
+
+#include "stdstring.hxi"
+
+
+#endif  // __XI_STD_IO_HXI_
