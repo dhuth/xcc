@@ -30,6 +30,7 @@ private:
     ast_expr*           tc_op_expr(xi_op_expr*,                                         xi_builder&);
     ast_expr*           tc_invoke_expr(xi_invoke_expr*,                                 xi_builder&);
 
+    ast_stmt*           tc_block_stmt(ast_block_stmt*,                                  xi_builder&);
     ast_stmt*           tc_return_stmt(ast_return_stmt*,                                xi_builder&);
 
 };

@@ -115,6 +115,15 @@ public:
     }
 
     /**
+     * Insert a single element to the front of the list
+     * @param vec
+     * @param v
+     */
+    static inline void push_front(vector_t& vec, element_t v) noexcept {
+       vec.insert(vec.begin(), v);
+    }
+
+    /**
      * Add an element to the end of the list
      * @param vec
      * @param v
@@ -266,6 +275,15 @@ public:
     }
 
     /**
+     * Insert a single to the beginning of the list
+     * @param vec
+     * @param el
+     */
+    static inline void push_front(vector_t& vec, element_t el) noexcept {
+        vec.insert(vec.begin(), (tree_t*) el);
+    }
+
+    /**
      * Add an item to the end of the list
      * @param vec
      * @param el
@@ -391,6 +409,14 @@ public:
      */
     void push_back(element_t el) noexcept {
         adapter::push_back(_vector, el);
+    }
+
+    /**
+     * Add en element to the front of the list
+     * @param el
+     */
+    void push_front(element_t el) noexcept {
+        adapter::push_front(_vector, el);
     }
 
     /**
@@ -616,6 +642,18 @@ begin(reference<tree_list<_Element>>& ref) noexcept {
 template<typename _Element>
 inline typename tree_list<_Element>::iterator_t
 end(reference<tree_list<_Element>>& ref) noexcept {
+    return ref->end();
+}
+
+template<typename _Element>
+inline typename tree_list<_Element>::iterator_t
+begin(strong_ref<tree_list<_Element>>& ref) noexcept {
+    return ref->begin();
+}
+
+template<typename _Element>
+inline typename tree_list<_Element>::iterator_t
+end(strong_ref<tree_list<_Element>>& ref) noexcept {
     return ref->end();
 }
 

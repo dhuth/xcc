@@ -24,6 +24,7 @@ xi_tc_walker::xi_tc_walker() noexcept {
     this->add(&xi_tc_walker::tc_invoke_expr);
 
     // statements
+    this->add(&xi_tc_walker::tc_block_stmt);
     this->add(&xi_tc_walker::tc_return_stmt);
 }
 

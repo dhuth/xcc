@@ -423,7 +423,8 @@ void ircode_context::generate_local_decl(ast_local_decl* decl) {
     this->ir_builder.SetInsertPoint(bb);
 
     if(decl->init_value != nullptr) {
-        this->ir_builder.CreateStore(this->generate_expr(decl->init_value), dval);
+        auto ival = this->generate_expr(decl->init_value);
+        this->ir_builder.CreateStore(ival, dval);
     }
 }
 
@@ -476,7 +477,7 @@ void ircode_context::generate_function_body(ast_function_decl* decl) {
     //TODO: post function generation
     if(llvm::verifyFunction(*fvalue, &llvm::outs())) {
         //TODO: better error handling
-        std::exit(1);
+        //std::exit(1);
     }
 }
 
