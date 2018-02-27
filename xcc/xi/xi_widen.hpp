@@ -20,6 +20,8 @@ public:
 
 private:
 
+    ast_expr*   to_ast_integer_type(ast_integer_type*,      ast_expr*, const xi_builder&);
+    ast_expr*   to_ast_real_type(ast_real_type*,            ast_expr*, const xi_builder&);
     ast_expr*   to_xi_const_type(xi_const_type*,            ast_expr*, const xi_builder&);
     ast_expr*   to_ast_pointer_type(ast_pointer_type*,      ast_expr*, const xi_builder&);
     ast_expr*   to_xi_reference_type(xi_reference_type*,    ast_expr*, const xi_builder&);
@@ -34,6 +36,8 @@ public:
 
 private:
 
+    bool        to_ast_integer_type(ast_integer_type*,      ast_type*, int&, const xi_builder&);
+    bool        to_ast_real_type(ast_real_type*,            ast_type*, int&, const xi_builder&);
     bool        to_xi_const_type(xi_const_type*,            ast_type*, int&, const xi_builder&);
     bool        to_ast_pointer_type(ast_pointer_type*,      ast_type*, int&, const xi_builder&);
     bool        to_xi_reference_type(xi_reference_type*,    ast_type*, int&, const xi_builder&);

@@ -14,6 +14,7 @@
 #include "error.hpp"
 #include "ircodegen.hpp"
 #include "cstr.hpp"
+#include "ast_type_conv.hpp"
 
 
 namespace xcc {
@@ -38,6 +39,13 @@ __ast_builder_impl::__ast_builder_impl(
     this->global_namespace = this->make_namespace_decl("global", new list<ast_decl>());
     this->push_namespace(this->global_namespace);
     this->create_default_types();
+
+    _the_widen_func         = this->settup_widen_func();
+    _the_widens_func        = this->settup_widens_func();
+    _the_coerce_func        = this->settup_coerce_func();
+    _the_coercable_func     = this->settup_coercable_func();
+    _the_max_func           = this->settup_max_func();
+    _the_cast_func          = this->settup_cast_func();
 }
 
 __ast_builder_impl::~__ast_builder_impl() noexcept {
@@ -937,6 +945,14 @@ ptr<list<ast_decl>> __ast_builder_impl::find_all_declarations(ast_context* conte
 
 ptr<list<ast_decl>> __ast_builder_impl::find_all_declarations(const char* name) noexcept {
     return this->find_all_declarations(this->context, name);
+}
+
+ast_widen_func* __ast_builder_impl::settup_widen_func() const noexcept {
+    return new ast_widen_func(*this);
+}
+
+ast_widens_func* __ast_builder_impl::settup_widens_func() const noexcept {
+    return new ast_widens_func(*this);
 }
 
 }

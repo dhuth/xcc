@@ -10,15 +10,16 @@
 
 #include "ast.hpp"
 #include "ast_context.hpp"
-
 #include <map>
 #include <unordered_map>
 #include <functional>
 
+#include "ast_type_conv_fwd.hpp"
+
 namespace xcc {
 
-struct translation_unit;
-struct ircode_context;
+struct translation_unit;    // frontend.hpp
+struct ircode_context;      // ircodegen.hpp
 struct __ast_builder_impl;
 
 /// A convenient way to refer to ast_builder implementation without template parameters
@@ -225,13 +226,13 @@ public:
      * ================= */
 
             bool                                sametype(ast_type*, ast_type*)                                      const noexcept;
-    virtual ast_type*                           maxtype(ast_type*, ast_type*)                                       const noexcept;
-    virtual bool                                widens(ast_type*, ast_type*)                                        const;
-    virtual bool                                widens(ast_type*, ast_type*, int&)                                  const;
-    virtual ast_expr*                           widen(ast_type*, ast_expr*)                                         const; //TODO: noexcept
-            bool                                coercable(ast_type*, ast_expr*)                                     const noexcept;
-    virtual bool                                coercable(ast_type*, ast_expr*, int&)                               const noexcept;
-    virtual ast_expr*                           coerce(ast_type*, ast_expr*)                                        const noexcept;
+    virtual ast_type*                           maxtype(__Max_arg_types)                                            const noexcept;
+    virtual bool                                widens(__Widens_arg_types)                                          const;
+    virtual bool                                widens(__Widen_arg_types)                                           const;
+    virtual ast_expr*                           widen(__Widen_arg_types)                                            const; //TODO: noexcept
+            bool                                coercable(__Coerce_arg_types)                                       const noexcept;
+    virtual bool                                coercable(__Coercable_arg_types)                                    const noexcept;
+    virtual ast_expr*                           coerce(__Coerce_arg_types)                                          const noexcept;
 
 
     /* ================================= *
@@ -321,6 +322,13 @@ public:
      */
             void                                insert_at_global_scope(ast_decl*)                                         noexcept;
 
+protected:
+    virtual ast_widen_func*                     settup_widen_func()                                                 const noexcept;
+    virtual ast_widens_func*                    settup_widens_func()                                                const noexcept;
+    virtual ast_coerce_func*                    settup_coerce_func()                                                const noexcept;
+    virtual ast_coercable_func*                 settup_coercable_func()                                             const noexcept;
+    virtual ast_max_func*                       settup_max_func()                                                   const noexcept;
+    virtual ast_cast_func*                      settup_cast_func()                                                  const noexcept;
 private:
 
             // Low level cast functions
@@ -332,6 +340,9 @@ private:
     //TODO: break up into create_default_integer / real / boolean / string ...
     virtual void                                create_default_types()                                                    noexcept;
 
+    /* ============ *
+     * Common types *
+     * ============ */
 
     ptr<ast_void_type>                                                  _the_void_type;                             //! The void type
     ptr<ast_pointer_type>                                               _the_void_ptr_type;                         //! The void pointer type
@@ -339,9 +350,6 @@ private:
     ptr<ast_stmt>                                                       _the_nop_stmt;                              //! The nop stmt
     ptr<ast_stmt>                                                       _the_break_stmt;                            //! The break stmt;
     ptr<ast_stmt>                                                       _the_continue_stmt;                         //! The continue stmt
-
-    ptr<ast_expr>                                                       _true_value;                                //! The default true value
-    ptr<ast_expr>                                                       _false_value;                               //! The default false value
 
     std::map<uint32_t, ptr<ast_integer_type>>                           _unsigned_integer_types;                    //! Unsigned integer types by bitwidth
     std::map<uint32_t, ptr<ast_integer_type>>                           _signed_integer_types;                      //! Signed integer types by bitwidth
@@ -352,6 +360,25 @@ private:
     ast_typeset_base&                                                   _function_types;                            //! The function type set
     ast_typeset_base&                                                   _array_types;                               //! The array type set
     ast_typeset_base&                                                   _record_types;                              //! The record type set
+
+    /* ============= *
+     * Common values *
+     * ============= */
+
+    //TODO: add null
+    ptr<ast_expr>                                                       _true_value;                                //! The default true value
+    ptr<ast_expr>                                                       _false_value;                               //! The default false value
+
+    /* ========================= *
+     * Sementic function objects *
+     * ========================= */
+
+    ast_widen_func*                                                     _the_widen_func;
+    ast_widens_func*                                                    _the_widens_func;
+    ast_coercable_func*                                                 _the_coercable_func;
+    ast_coerce_func*                                                    _the_coerce_func;
+    ast_max_func*                                                       _the_max_func;
+    ast_cast_func*                                                      _the_cast_func;
 
     template<typename, typename>
     friend struct ast_builder;
