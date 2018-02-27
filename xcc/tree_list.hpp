@@ -635,38 +635,26 @@ end(ptr<tree_list<_Element>> p) noexcept {
 
 template<typename _Element>
 inline typename tree_list<_Element>::iterator_t
-begin(reference<tree_list<_Element>>& ref) noexcept {
-    return ref->begin();
+begin(ref<tree_list<_Element>> lref) noexcept {
+    return lref->begin();
 }
 
 template<typename _Element>
 inline typename tree_list<_Element>::iterator_t
-end(reference<tree_list<_Element>>& ref) noexcept {
-    return ref->end();
-}
-
-template<typename _Element>
-inline typename tree_list<_Element>::iterator_t
-begin(strong_ref<tree_list<_Element>>& ref) noexcept {
-    return ref->begin();
-}
-
-template<typename _Element>
-inline typename tree_list<_Element>::iterator_t
-end(strong_ref<tree_list<_Element>>& ref) noexcept {
-    return ref->end();
+end(ref<tree_list<_Element>> lref) noexcept {
+    return lref->end();
 }
 
 template<typename _Element>
 inline typename value_list<_Element>::iterator_t
-begin(reference<value_list<_Element>>& ref) noexcept {
-    return ref->begin();
+begin(ref<value_list<_Element>> lref) noexcept {
+    return lref->begin();
 }
 
 template<typename _Element>
 inline typename value_list<_Element>::iterator_t
-end(reference<value_list<_Element>>& ref) noexcept {
-    return ref->end();
+end(ref<value_list<_Element>> lref) noexcept {
+    return lref->end();
 }
 
 }

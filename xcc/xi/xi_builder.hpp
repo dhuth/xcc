@@ -16,11 +16,15 @@
 
 namespace xcc {
 
+struct xi_widen_func;
+struct xi_widens_func;
+
 struct xi_builder : public ast_builder<xi_name_mangler,
                                        xi_typeset> {
 public:
 
     explicit xi_builder(translation_unit&) noexcept;
+    ~xi_builder() noexcept;
 
     xi_const_type*                              get_const_type(ast_type* type)                                                                                noexcept;
     xi_auto_type*                               get_auto_type()                                                                                         const noexcept;
@@ -85,7 +89,10 @@ public:
 
     // Defined in xi_semantic.cpp
     bool                                        widens(ast_type*, ast_type*, int&)                                                                      const          override;
+    bool                                        widens(ast_type*, ast_type*)                                                                            const          override;
     ast_expr*                                   widen(ast_type*, ast_expr*)                                                                             const          override;
+    bool                                        ast_widens(ast_type*, ast_type*, int&)                                                                  const;
+    ast_expr*                                   ast_widen(ast_type*, ast_expr*)                                                                         const;
 
     // Defined in xi_walker.cpp
     ast_type*                                   get_return_type()                                                                                       const noexcept;
@@ -122,6 +129,9 @@ private:
     xi_typeset                                              _reference_types;
     xi_typeset                                              _object_types;
     xi_typeset                                              _tuple_types;
+
+    xi_widen_func*                                          _the_widen_func;
+    xi_widens_func*                                         _the_widens_func;
 
     std::stack<ptr<xi_type_decl>>                           _nesting_types;
     std::stack<ptr<ast_decl>>                               _nesting_closure_decls;

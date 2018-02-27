@@ -226,7 +226,7 @@ public:
 
             bool                                sametype(ast_type*, ast_type*)                                      const noexcept;
     virtual ast_type*                           maxtype(ast_type*, ast_type*)                                       const noexcept;
-            bool                                widens(ast_type*, ast_type*)                                        const;
+    virtual bool                                widens(ast_type*, ast_type*)                                        const;
     virtual bool                                widens(ast_type*, ast_type*, int&)                                  const;
     virtual ast_expr*                           widen(ast_type*, ast_expr*)                                         const; //TODO: noexcept
             bool                                coercable(ast_type*, ast_expr*)                                     const noexcept;

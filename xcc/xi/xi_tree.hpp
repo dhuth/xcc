@@ -211,9 +211,35 @@ struct xi_function_base {
         /* do nothing */
     }
 
+    explicit inline xi_function_base(const xi_function_base& o) noexcept
+            : return_type(this, o.return_type),
+              parameters(this, o.parameters),
+              body(this, o.body) {
+        /* do nothing */
+    }
+
     property<ast_type>                                              return_type;    //! The functions return type
     property<list<xi_parameter_decl>>                               parameters;     //! Function parameters
     property<ast_stmt>                                              body;           //! Function body
+};
+
+
+/**
+ * Common properties for all nodes that belong to a namespace
+ */
+struct xi_namespace_member_base {
+
+    explicit inline xi_namespace_member_base(tree_t* p) noexcept
+            : ns(p) {
+        /* do nothing */
+    }
+
+    explicit inline xi_namespace_member_base(const xi_namespace_member_base& o) noexcept
+            : ns(this, o.ns) {
+        /* do nothing */
+    }
+
+    weak_ref<ast_namespace_decl>                                    ns;
 };
 
 
@@ -222,7 +248,8 @@ struct xi_function_base {
  */
 struct xi_function_decl : public implement_tree<tree_type_id::xi_function_decl>,
                           public ast_externable,
-                          public xi_function_base {
+                          public xi_function_base,
+                          public xi_namespace_member_base {
 public:
 
     typedef xi_parameter_decl                                       parameter_decl_t;
@@ -236,6 +263,7 @@ public:
                     : base_type(name),
                       ast_externable(this, false, true),
                       xi_function_base(this, return_type, parameters, body),
+                      xi_namespace_member_base(this),
                       lowered_func(this, nullptr),
                       is_inline(this, false),
                       is_forward_decl(this, false),
@@ -252,6 +280,7 @@ public:
                     : base_type(id, name),
                       ast_externable(this, false, true),
                       xi_function_base(this, return_type, parameters, body),
+                      xi_namespace_member_base(this),
                       lowered_func(this, nullptr),
                       is_inline(this, false),
                       is_forward_decl(this, false),
@@ -263,6 +292,7 @@ public:
             : base_type((base_type&) f),
               ast_externable(f),
               xi_function_base(this, (return_type_t*)f.return_type, (list<parameter_decl_t>*)f.parameters, f.body),
+              xi_namespace_member_base(f),
               lowered_func(this, f.lowered_func),
               is_inline(this, f.is_inline),
               is_forward_decl(this, f.is_forward_decl),
@@ -281,11 +311,13 @@ public:
 /**
  * Base class for type members
  */
-struct xi_member_decl : public implement_tree<tree_type_id::xi_member_decl> {
+struct xi_member_decl : public implement_tree<tree_type_id::xi_member_decl>,
+                        public xi_namespace_member_base {
 public:
 
     explicit inline xi_member_decl(tree_type_id id, std::string name, ast_type* parent = nullptr, bool is_static = false) noexcept
             : base_type(id, name),
+              xi_namespace_member_base(this),
               is_static(this, is_static),
               parent(this, parent) {
         /* do nothing */
@@ -293,6 +325,7 @@ public:
 
     explicit inline xi_member_decl(const xi_member_decl& m) noexcept
             : base_type((base_type&) m),
+              xi_namespace_member_base(m),
               is_static(this, m.is_static),
               parent(this, m.parent) {
         /* do nothing */

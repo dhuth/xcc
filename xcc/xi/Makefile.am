@@ -17,6 +17,7 @@ libxi_a_SOURCES    += xi_tc_op.cpp
 libxi_a_SOURCES	   += xi_tc_stmt.cpp
 libxi_a_SOURCES    += xi_tree.cpp
 libxi_a_SOURCES    += xi_walker.cpp
+libxi_a_SOURCES    += xi_widen.cpp
 libxi_a_SOURCES    += xi-parser.cpp
 libxi_a_SOURCES    += xi-lex.cpp
 

@@ -12,10 +12,10 @@ namespace xcc {
 xi_tc_walker::xi_tc_walker() noexcept {
 
     // function declarations
-    this->add(&xi_tc_walker::visit_xi_function_decl);
-    this->add(&xi_tc_walker::visit_xi_method_decl);
-    this->add(&xi_tc_walker::visit_xi_operator_function_decl);
-    this->add(&xi_tc_walker::visit_xi_operator_method_decl);
+    //this->add(&xi_tc_walker::visit_xi_function_decl);
+    //this->add(&xi_tc_walker::visit_xi_method_decl);
+    //this->add(&xi_tc_walker::visit_xi_operator_function_decl);
+    //this->add(&xi_tc_walker::visit_xi_operator_method_decl);
 
     // expressions
     this->add(&xi_tc_walker::tc_id_expr);
@@ -40,6 +40,7 @@ void xi_tc_walker::visit_xi_operator_function_decl(xi_operator_function_decl* fd
 void xi_tc_walker::visit_xi_operator_method_decl(xi_operator_method_decl* fdecl, xi_builder& b) {
     //...
 }
+
 
 static bool __widens_from(xi_reference_type* tp_from, ast_type* tp_to, int& cost, const xi_builder& b) {
     ast_type* utp_from = tp_from->type;
@@ -76,40 +77,15 @@ static bool __widens_to(ast_type* tp_from, xi_reference_type* tp_to, int& cost, 
     }
 }
 
-// TODO: needs some major rework...
-bool xi_builder::widens(ast_type* tp_from, ast_type* tp_to, int& cost) const {
-    assert(tp_from != nullptr);
-    assert(tp_to   != nullptr);
-
-    if(this->sametype(tp_from, tp_to)) return true;
-    //TODO: is there an explicit conversion function (?)
-    //TODO: ...
-
-    switch(tp_from->get_tree_type()) {
-    case tree_type_id::xi_reference_type:   return __widens_from(tp_from->as<xi_reference_type>(), tp_to, cost, *this);
+ast_expr* tc_maybe_cast(ast_type* to_type, ast_expr* from_expr, xi_builder& b) {
+    ast_type* from_type     = from_expr->type;
+    if(b.widens(from_type, to_type)) {
+        return b.widen(to_type, from_expr);
     }
-
-    switch(tp_to->get_tree_type()) {
-    case tree_type_id::xi_reference_type:   return __widens_to(tp_from, tp_to->as<xi_reference_type>(), cost, *this);
+    else if(b.coercable(to_type, from_expr)) {
+        return b.coerce(to_type, from_expr);
     }
-
-    return ast_builder::widens(tp_from, tp_to, cost);
-}
-
-ast_expr* xi_builder::widen(ast_type* tp_to, ast_expr* e) const {
-    ast_type* tp_from = e->type;
-
-    assert(tp_from != nullptr);
-
-    if(this->sametype(tp_from, tp_to)) return e;
-    // TODO: is there an explicit conversion function (?)
-    // TODO: ...
-
-    switch(tp_from->get_tree_type()) {
-    case tree_type_id::xi_reference_type:   return __widen_from(tp_from->as<xi_reference_type>(), tp_to, e, *this);
-    }
-
-    return ast_builder::widen(tp_to, e);
+    //TODO: Handle user error
 }
 
 bool xi_builder::semantic_pass() noexcept {

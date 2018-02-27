@@ -9,6 +9,7 @@
 #include "xi_context.hpp"
 #include "error.hpp"
 #include "xi_lower.hpp"
+#include "xi_widen.hpp"
 
 namespace xcc {
 
@@ -18,8 +19,15 @@ xi_builder::xi_builder(translation_unit& tu) noexcept
           _const_types(     this->get_universal_typeset()),
           _reference_types( this->get_universal_typeset()),
           _object_types(    this->get_universal_typeset()),
-          _tuple_types(     this->get_universal_typeset()) {
+          _tuple_types(     this->get_universal_typeset()),
+          _the_widen_func(new xi_widen_func()),
+          _the_widens_func(new xi_widens_func()) {
     // do nothing ...
+}
+
+xi_builder::~xi_builder() noexcept {
+    delete _the_widen_func;
+    delete _the_widens_func;
 }
 
 xi_auto_type* xi_builder::get_auto_type() const noexcept {

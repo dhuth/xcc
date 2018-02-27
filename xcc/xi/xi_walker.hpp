@@ -19,39 +19,42 @@ void maybe_push_context(ast_tree*, xi_builder& b);
 void maybe_pop_context(ast_tree*, xi_builder& b);
 
 template<typename... TParameters>
-struct xi_postorder_walker : public dispatch_postorder_tree_walker<ast_tree, xi_builder&, TParameters...> {
+struct xi_postorder_walker : public dispatch_postorder_tree_walker<ast_tree, TParameters..., xi_builder&> {
 public:
 
-    inline ast_tree* operator()(ast_tree* t, xi_builder& b) noexcept {
-        return this->visit(t, b);
+    inline ast_tree* operator()(ast_tree* t, TParameters... p, xi_builder& b) noexcept {
+        return this->visit(t, p..., b);
     }
 
-    void begin(tree_type_id, ast_tree* t, xi_builder& b, TParameters...) override {
-        maybe_push_context(t, b);
+    void begin(tree_type_id, ast_tree* t, TParameters... p, xi_builder& b) override {
+        maybe_push_context(t, p..., b);
     }
-    void end(tree_type_id, ast_tree* t, xi_builder& b, TParameters...) override {
-        maybe_pop_context(t, b);
+    void end(tree_type_id, ast_tree* t, TParameters... p, xi_builder& b) override {
+        maybe_pop_context(t, p..., b);
     }
 };
 
 template<typename... TParameters>
-struct xi_preorder_walker : public dispatch_preorder_tree_walker<ast_tree, xi_builder&, TParameters...> {
+struct xi_preorder_walker : public dispatch_preorder_tree_walker<ast_tree, TParameters..., xi_builder&> {
 public:
 
-    inline ast_tree* operator()(ast_tree* t, xi_builder& b) noexcept {
-        return this->visit(t, b);
+    inline ast_tree* operator()(ast_tree* t, TParameters... p, xi_builder& b) noexcept {
+        return this->visit(t, p..., b);
     }
 
-    void begin(tree_type_id, ast_tree* t, xi_builder& b, TParameters...) override {
-        maybe_push_context(t, b);
+    void begin(tree_type_id, ast_tree* t, TParameters... p, xi_builder& b) override {
+        maybe_push_context(t, p..., b);
     }
-    void end(tree_type_id, ast_tree* t, xi_builder& b, TParameters...) override {
-        maybe_pop_context(t, b);
+    void end(tree_type_id, ast_tree* t, TParameters... p, xi_builder& b) override {
+        maybe_pop_context(t, p..., b);
     }
 };
 
 template<typename TReturn, typename... TParameters>
-using xi_visitor = dispatch_visitor<TReturn, xi_builder&, TParameters...>;
+using xi_visitor = dispatch_visitor<TReturn, TParameters..., xi_builder&>;
+
+template<typename TReturn, typename... TParameters>
+using xi_const_visitor = dispatch_visitor<TReturn, TParameters..., const xi_builder&>;
 
 template<typename T> ptr<tree_list<T>> gather_nodes(ast_namespace_decl*);
 

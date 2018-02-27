@@ -190,8 +190,13 @@ public:
 };
 
 
-template<typename T>    using strong_ref = __bound_vec_reference<T, &__tree_base::_strong_references>;
-template<typename T>    using weak_ref = __bound_vec_reference<T, &__tree_base::_weak_references>;
+template<typename T>    using strong_ref    = __bound_vec_reference<T, &__tree_base::_strong_references>;
+template<typename T>    using weak_ref      = __bound_vec_reference<T, &__tree_base::_weak_references>;
+
+// byref argument aliases
+template<typename T>    using sref          = strong_ref<T>&;
+template<typename T>    using wref          = weak_ref<T>&;
+template<typename T>    using ref           = reference<T>&;
 
 }
 
