@@ -14,6 +14,9 @@ xcc_core_sources       += ast_context.cpp
 xcc_core_sources	   += ast_eval.cpp
 xcc_core_sources       += ast_metadata.cpp
 xcc_core_sources       += ast_printer.cpp
+xcc_core_sources       += ast_type.cpp
+xcc_core_sources       += ast_type_func.cpp
+xcc_core_sources       += ast_type_set.cpp
 xcc_core_sources       += llvm_metadata.cpp
 
 xcc_core_cppflags       = @llvm_cppflags@

@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include <functional>
 
-#include "ast_type_conv_fwd.hpp"
+#include "ast_type_fwd.hpp"
 
 namespace xcc {
 
@@ -88,7 +88,7 @@ public:
     __ast_builder_impl(
             translation_unit& tu,
             ast_name_mangler* mangler,
-            ast_typeset_base* ts) noexcept;
+            ast_type_provider* tp) noexcept;
     virtual ~__ast_builder_impl() noexcept;
 
     /**
@@ -225,14 +225,13 @@ public:
      * Semantic Analysis *
      * ================= */
 
-            bool                                sametype(ast_type*, ast_type*)                                      const noexcept;
-    virtual ast_type*                           maxtype(__Max_arg_types)                                            const noexcept;
-    virtual bool                                widens(__Widens_arg_types)                                          const;
-    virtual bool                                widens(__Widen_arg_types)                                           const;
-    virtual ast_expr*                           widen(__Widen_arg_types)                                            const; //TODO: noexcept
-            bool                                coercable(__Coerce_arg_types)                                       const noexcept;
-    virtual bool                                coercable(__Coercable_arg_types)                                    const noexcept;
-    virtual ast_expr*                           coerce(__Coerce_arg_types)                                          const noexcept;
+            bool                                sametype(__Sametype_arg_types)                                      const noexcept;
+            bool                                widens(__Widens_arg_types)                                          const noexcept;
+            bool                                widens(__Widens_arg_types_nc)                                       const noexcept;
+            //bool                                coercable(__Coercable_arg_types)                                    const noexcept;
+            //bool                                coercable(__Coercable_arg_types_nc)                                 const noexcept;
+            ast_type*                           maxtype(__Maxtype_arg_types)                                        const noexcept;
+            ast_expr*                           cast(__Cast_arg_types)                                              const noexcept;
 
 
     /* ================================= *
@@ -322,20 +321,7 @@ public:
      */
             void                                insert_at_global_scope(ast_decl*)                                         noexcept;
 
-protected:
-    virtual ast_widen_func*                     settup_widen_func()                                                 const noexcept;
-    virtual ast_widens_func*                    settup_widens_func()                                                const noexcept;
-    virtual ast_coerce_func*                    settup_coerce_func()                                                const noexcept;
-    virtual ast_coercable_func*                 settup_coercable_func()                                             const noexcept;
-    virtual ast_max_func*                       settup_max_func()                                                   const noexcept;
-    virtual ast_cast_func*                      settup_cast_func()                                                  const noexcept;
 private:
-
-            // Low level cast functions
-            ast_expr*                           cast_to(ast_integer_type*, ast_expr*)                               const;
-            ast_expr*                           cast_to(ast_real_type*,    ast_expr*)                               const;
-            ast_expr*                           cast_to(ast_pointer_type*, ast_expr*)                               const;
-            ast_expr*                           cast_to(ast_record_type*,  ast_expr*)                               const;
 
     //TODO: break up into create_default_integer / real / boolean / string ...
     virtual void                                create_default_types()                                                    noexcept;
@@ -355,12 +341,6 @@ private:
     std::map<uint32_t, ptr<ast_integer_type>>                           _signed_integer_types;                      //! Signed integer types by bitwidth
     std::map<uint32_t, ptr<ast_real_type>>                              _real_types;                                //! Floating point types by bitwidth
 
-    //TODO: rethink this
-    ast_typeset_base&                                                   _pointer_types;                             //! The pointer type set
-    ast_typeset_base&                                                   _function_types;                            //! The function type set
-    ast_typeset_base&                                                   _array_types;                               //! The array type set
-    ast_typeset_base&                                                   _record_types;                              //! The record type set
-
     /* ============= *
      * Common values *
      * ============= */
@@ -369,23 +349,23 @@ private:
     ptr<ast_expr>                                                       _true_value;                                //! The default true value
     ptr<ast_expr>                                                       _false_value;                               //! The default false value
 
-    /* ========================= *
-     * Sementic function objects *
-     * ========================= */
+    /* ========================== *
+     * Type info function objects *
+     * ========================== */
 
-    ast_widen_func*                                                     _the_widen_func;
+    ast_sametype_func*                                                  _the_sametype_func;
     ast_widens_func*                                                    _the_widens_func;
-    ast_coercable_func*                                                 _the_coercable_func;
-    ast_coerce_func*                                                    _the_coerce_func;
-    ast_max_func*                                                       _the_max_func;
+    //ast_coercable_func*                                                 _the_coercable_func;
+    ast_maxtype_func*                                                   _the_maxtype_func;
     ast_cast_func*                                                      _the_cast_func;
+    ast_typeset*                                                        _the_typeset;
 
     template<typename, typename>
     friend struct ast_builder;
 
     //TODO: rethink this
     ptr<ast_name_mangler>                                               _mangler_ptr;                              //! A pointer to the name mangling function
-    ptr<ast_typeset_base>                                               _the_typeset_ptr;                          //! A pointer to the main typeset
+    ptr<ast_type_provider>                                              _type_provider_ptr;                        //! A pointer to type info provider
 
     int                                                                 _next_local_id;
 
@@ -395,8 +375,8 @@ private:
 /**
  * The base class for abstract syntax builders
  */
-template<typename TMangler              = ast_default_name_mangler,
-         typename TTypeSet              = ast_typeset>
+template<typename _Mangler              = ast_default_name_mangler,
+         typename _TypeProvider         = ast_type_provider>
 struct ast_builder : public __ast_builder_impl {
 public:
 
@@ -407,15 +387,15 @@ public:
     ast_builder(translation_unit& tu) noexcept
             : __ast_builder_impl(
                     tu,
-                    new TMangler(),
-                    new TTypeSet()) { }
+                    new _Mangler(),
+                    new _TypeProvider(*this)) { }
     virtual ~ast_builder() noexcept {
         // do nothing
     }
 
 protected:
 
-    inline TTypeSet&        get_universal_typeset() { return (TTypeSet&) *((ast_typeset_base*) _the_typeset_ptr); }
+//    inline TTypeSet&        get_universal_typeset() { return (TTypeSet&) *((ast_typeset_base*) _the_typeset_ptr); }
 
 };
 

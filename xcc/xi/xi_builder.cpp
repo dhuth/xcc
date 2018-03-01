@@ -5,11 +5,11 @@
  *      Author: derick
  */
 
+#include <xi_type_func.hpp>
 #include "xi_builder.hpp"
 #include "xi_context.hpp"
 #include "error.hpp"
 #include "xi_lower.hpp"
-#include "xi_widen.hpp"
 
 namespace xcc {
 

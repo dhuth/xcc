@@ -907,33 +907,6 @@ public:
     }
 };
 
-
-/**
- * Type comparer for the xi language
- */
-struct xi_type_comparer final : public ast_type_comparer {
-public:
-
-    explicit inline xi_type_comparer() = default;
-
-    bool operator()(ast_type* const&, ast_type* const&) const override final;
-
-};
-
-/**
- * Type hasher for the xi language
- */
-struct xi_type_hasher final : public ast_type_hasher {
-public:
-
-    explicit inline xi_type_hasher() = default;
-
-    size_t operator()(ast_type* const&) const override final;
-
-};
-
-typedef ast_typeset_impl<xi_type_hasher, xi_type_comparer>          xi_typeset;
-
 } // namespace xcc
 
 namespace std {

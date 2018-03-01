@@ -695,6 +695,15 @@ public:
 };
 
 
+inline bool is_void_type(ast_tree* t)     noexcept { return t->is<ast_void_type>(); }
+inline bool is_integer_type(ast_tree* t)  noexcept { return t->is<ast_integer_type>(); }
+inline bool is_real_type(ast_tree* t)     noexcept { return t->is<ast_real_type>(); }
+inline bool is_array_type(ast_tree* t)    noexcept { return t->is<ast_array_type>(); }
+inline bool is_pointer_type(ast_tree* t)  noexcept { return t->is<ast_pointer_type>(); }
+inline bool is_function_type(ast_tree* t) noexcept { return t->is<ast_function_type>(); }
+inline bool is_record_type(ast_tree* t)   noexcept { return t->is<ast_record_type>(); }
+
+
 /**
  * A constant integer value
  */
@@ -1744,137 +1753,6 @@ TDestTreeType* copyloc(TDestTreeType *t, TSrcMinTreeType* fmin, TSrcMaxTreeType*
     t->source_location->last    = fmax->source_location->last;
     return t;
 }
-
-/**
- * A class for comparing ast_types
- */
-struct ast_type_comparer {
-public:
-
-    ast_type_comparer() = default;
-    virtual ~ast_type_comparer() = default;
-
-    virtual bool operator()(ast_type* const&, ast_type* const&) const;
-
-protected:
-
-    bool same_typelist(list<ast_type>* lhs, list<ast_type>* rhs) const noexcept;
-
-};
-
-
-/**
- * A class for hashing ast_types
- */
-struct ast_type_hasher {
-public:
-
-    ast_type_hasher() = default;
-    virtual ~ast_type_hasher() = default;
-
-    virtual size_t operator()(ast_type* const&) const;
-
-protected:
-
-    size_t hash_typelist(list<ast_type>*) const noexcept;
-
-};
-
-
-/**
- * A class for comparing ast_exprs
- */
-struct ast_expr_comparer {
-public:
-
-    ast_expr_comparer();
-    virtual ~ast_expr_comparer() = default;
-
-    virtual bool operator()(ast_expr* const&, ast_expr* const&) const;
-
-protected:
-
-    bool same_exprlist(list<ast_expr>* lhs, list<ast_expr>* rhs) const noexcept;
-
-};
-
-
-/**
- * A mapped set of ast_types indexed by pointer
- */
-struct ast_typeset_base {
-
-    virtual ~ast_typeset_base() = default;
-
-    /**
-     * Get a pointer to the same type. If the type does not exist in the set, it is placed in the set
-     * @param p     the type to look for
-     * @return      the given new type, or one already in the set
-     */
-    virtual ast_type* get(ast_type*) noexcept = 0;
-    /**
-     * Compare to types.
-     * @param l
-     * @param r
-     * @return true if both types are the same
-     */
-    virtual bool      compare(ast_type*, ast_type*) noexcept = 0;
-
-    /**
-     * Convenience function for calling ast_typeset::get
-     * @param args  arguments to the constructor
-     * @return      a new type, or one already in the set
-     */
-    template<typename T, typename... TArgs>
-    inline ast_type* get_new(TArgs... args) noexcept {
-        auto newtype = box<ast_type>(new T(args...));
-        return this->get(newtype);
-    }
-
-    /**
-     * Convenience function for calling ast_typeset::get
-     * @param p     a type to look for
-     * @return      the given new type, or one already in the set, cast to a base type
-     */
-    template<typename TTarget>
-    inline TTarget* get_as(TTarget* p) noexcept {
-        return this->get(p)->template as<TTarget>();
-    }
-
-    /**
-     * Convenience function for calling ast_typeset::get
-     * @param args  arguments to the constructor
-     * @return      a new type, or one already in the set
-     */
-    template<typename TTarget, typename... TArgs>
-    inline TTarget* get_new_as(TArgs... args) noexcept {
-        return this->get_new<TTarget>(args...)-> template as<TTarget>();
-    }
-};
-
-
-template<typename THasher           = ast_type_hasher,
-         typename TPred             = ast_type_comparer>
-struct ast_typeset_impl final : public ast_typeset_base {
-
-    ast_type* get(ast_type* tp) noexcept override final {
-        auto iter = _map.find(tp);
-        if(iter == _map.end()) {
-            _map[tp] = box<ast_type>(tp);
-            return tp;
-        }
-        return iter->first;
-    }
-
-    bool compare(ast_type* l, ast_type* r) noexcept override final {
-        return _comparer(l, r);
-    }
-
-    TPred                                                       _comparer;
-    std::unordered_map<ast_type*,ptr<ast_type>,THasher,TPred>   _map;
-};
-
-typedef ast_typeset_impl<>                                  ast_typeset;
 
 }
 

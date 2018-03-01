@@ -37,11 +37,6 @@ private:
 
 };
 
-
-struct xi_widen_rule {
-    std::function<bool(ast_type*, ast_expr*, xi_builder&)>  is_candidate;
-};
-
 ast_expr* tc_single_expr(ast_expr*, xi_builder&);
 ast_expr* tc_maybe_cast(ast_type*, ast_expr*, xi_builder&);
 

@@ -5,6 +5,7 @@
  *      Author: derick
  */
 
+#include <ast_type_func.hpp>
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -14,38 +15,36 @@
 #include "error.hpp"
 #include "ircodegen.hpp"
 #include "cstr.hpp"
-#include "ast_type_conv.hpp"
 
+#include "ast_type.hpp"
 
 namespace xcc {
 
 __ast_builder_impl::__ast_builder_impl(
         translation_unit& tu,
         ast_name_mangler* mangler,
-        ast_typeset_base* ts) noexcept
+        ast_type_provider* tp) noexcept
             : _mangler_ptr(mangler),
+              _type_provider_ptr(tp),
               get_mangled_name(*mangler),
               tu(tu),
               _the_nop_stmt(new ast_nop_stmt()),
               _the_break_stmt(new ast_break_stmt()),
               _the_continue_stmt(new ast_continue_stmt()),
-              _the_typeset_ptr(ts),
-              _pointer_types(*ts),
-              _array_types(*ts),
-              _function_types(*ts),
-              _record_types(*ts),
               _next_local_id(0) {
+
+    tp->initialize(*this);
+
+    _the_sametype_func      = tp->get_sametype_func();
+    _the_widens_func        = tp->get_widens_func();
+    _the_maxtype_func       = tp->get_maxtype_func();
+    _the_cast_func          = tp->get_cast_func();
+    _the_typeset            = tp->get_typeset();
+
+    this->create_default_types();
 
     this->global_namespace = this->make_namespace_decl("global", new list<ast_decl>());
     this->push_namespace(this->global_namespace);
-    this->create_default_types();
-
-    _the_widen_func         = this->settup_widen_func();
-    _the_widens_func        = this->settup_widens_func();
-    _the_coerce_func        = this->settup_coerce_func();
-    _the_coercable_func     = this->settup_coercable_func();
-    _the_max_func           = this->settup_max_func();
-    _the_cast_func          = this->settup_cast_func();
 }
 
 __ast_builder_impl::~__ast_builder_impl() noexcept {
@@ -92,19 +91,19 @@ ast_real_type* __ast_builder_impl::get_real_type(uint32_t bitwidth) const noexce
 }
 
 ast_pointer_type* __ast_builder_impl::get_pointer_type(ast_type* eltype) noexcept {
-    return this->_pointer_types.get_new_as<ast_pointer_type>(eltype);
+    return _the_typeset->get_new<ast_pointer_type>(eltype);
 }
 
 ast_array_type* __ast_builder_impl::get_array_type(ast_type* eltype, uint32_t size) noexcept {
-    return this->_array_types.get_new_as<ast_array_type>(eltype, size);
+    return _the_typeset->get_new<ast_array_type>(eltype, size);
 }
 
 ast_function_type* __ast_builder_impl::get_function_type(ast_type* rtype, ptr<list<ast_type>> params) noexcept {
-    return this->_function_types.get_new_as<ast_function_type>(rtype, params);
+    return _the_typeset->get_new<ast_function_type>(rtype, params);
 }
 
 ast_record_type* __ast_builder_impl::get_record_type(ptr<list<ast_type>> types) noexcept {
-    return this->_record_types.get_new_as<ast_record_type>(types);
+    return _the_typeset->get_new<ast_record_type>(types);
 }
 
 ast_type* __ast_builder_impl::get_string_type(const std::string& s) noexcept {
@@ -221,25 +220,14 @@ ast_expr* __ast_builder_impl::make_null() noexcept {
     return this->make_zero(this->get_pointer_type(this->get_void_type()));
 }
 
-ast_expr* __ast_builder_impl::make_cast_expr(ast_type* desttype, ast_expr* expr) const noexcept {
-    return this->make_lower_cast_expr(desttype, expr);
-}
-
-ast_expr* __ast_builder_impl::make_lower_cast_expr(ast_type* desttype, ast_expr* expr) const noexcept {
-    switch(desttype->get_tree_type()) {
-    case tree_type_id::ast_integer_type:            return this->cast_to(desttype->as<ast_integer_type>(), expr);
-    case tree_type_id::ast_real_type:               return this->cast_to(desttype->as<ast_real_type>(),    expr);
-    case tree_type_id::ast_pointer_type:            return this->cast_to(desttype->as<ast_pointer_type>(), expr);
-    case tree_type_id::ast_record_type:             return this->cast_to(desttype->as<ast_record_type>(),  expr);
-    default:
-        __throw_unhandled_ast_type(__FILE__, __LINE__, desttype, "__ast_builder_impl::make_zero");
-    }
+ast_expr* __ast_builder_impl::make_cast_expr(ast_type* tt, ast_expr* fe) const noexcept {
+    return _the_cast_func->visit(tt, fe);
 }
 
 static ast_expr* make_arithmetic_op_expr(__ast_builder_impl* builder, ast_op op, ast_expr* lhs, ast_expr* rhs) {
     auto    t       = builder->maxtype(lhs->type, rhs->type);
-    auto    wlhs    = builder->widen(t, lhs);
-    auto    wrhs    = builder->widen(t, rhs);
+    auto    wlhs    = builder->cast(t, lhs);
+    auto    wrhs    = builder->cast(t, rhs);
 
     ast_op  new_op  = ast_op::none;
 
@@ -287,8 +275,8 @@ static ast_expr* make_arithmetic_op_expr(__ast_builder_impl* builder, ast_op op,
 
 static ast_expr* make_comparison_op_expr(__ast_builder_impl* builder, ast_op op, ast_expr* lhs, ast_expr* rhs) {
     auto    t       = builder->maxtype(lhs->type, rhs->type);
-    auto    wlhs    = builder->widen(t, lhs);
-    auto    wrhs    = builder->widen(t, rhs);
+    auto    wlhs    = builder->cast(t, lhs);
+    auto    wrhs    = builder->cast(t, rhs);
 
     ast_op  new_op  = ast_op::none;
 
@@ -355,8 +343,8 @@ static ast_expr* make_bitwise_op_expr(__ast_builder_impl* builder, ast_op op, as
 
     assert(t->is<ast_integer_type>());
 
-    auto    wlhs    = builder->widen(t, lhs);
-    auto    wrhs    = builder->widen(t, rhs);
+    auto    wlhs    = builder->cast(t, lhs);
+    auto    wrhs    = builder->cast(t, rhs);
 
     ast_op  new_op  = ast_op::none;
 
@@ -532,7 +520,7 @@ ast_expr* __ast_builder_impl::make_lower_call_expr(ast_expr* fexpr, list<ast_exp
 }
 
 ast_expr* __ast_builder_impl::make_assign_expr(ast_expr* lhs, ast_expr* rhs) noexcept {
-    auto temp           = this->make_temp_decl(this->widen(lhs->type, rhs));
+    auto temp           = this->make_temp_decl(this->cast(lhs->type, rhs));
     auto temp_expr      = this->make_declref_expr(temp);
     auto stmt           = this->make_assign_stmt(lhs, temp_expr);
     return new ast_stmt_expr(lhs->type, temp, stmt);
@@ -607,313 +595,30 @@ ast_stmt* __ast_builder_impl::make_for_stmt(ast_stmt* init_stmt, ast_expr* cond,
 }
 
 bool __ast_builder_impl::sametype(ast_type* lhs, ast_type* rhs) const noexcept {
-    return _the_typeset_ptr->compare(lhs, rhs);
+    return _the_sametype_func->visit(lhs, rhs);
 }
 
-static ast_type* __maxtype(const __ast_builder_impl* builder, ast_integer_type* lhs, ast_type* rhs) {
-    uint32_t                lhs_width       = lhs->bitwidth;
-    bool                    lhs_is_unsigned = lhs->is_unsigned;
-
-    switch(rhs->get_tree_type()) {
-    case tree_type_id::ast_integer_type:
-        {
-            uint32_t        rhs_width       = rhs->as<ast_integer_type>()->bitwidth;
-            bool            rhs_is_unsigned = rhs->as<ast_integer_type>()->is_unsigned;
-
-            return builder->get_integer_type(
-                    std::max(lhs_width, rhs_width),
-                    lhs_is_unsigned & rhs_is_unsigned);
-        }
-    case tree_type_id::ast_real_type:
-        {
-            uint32_t        rhs_width       = rhs->as<ast_real_type>()->bitwidth;
-
-            return builder->get_real_type(
-                    std::max(lhs_width, rhs_width));
-        }
-    default:
-        __throw_unhandled_ast_type(__FILE__, __LINE__, rhs, "__maxtype(int)");
-    }
+ast_type* __ast_builder_impl::maxtype(__Maxtype_args(lhs, rhs)) const noexcept {
+    return _the_maxtype_func->visit(lhs, rhs);
 }
 
-static ast_type* __maxtype(const __ast_builder_impl* builder, ast_real_type* lhs, ast_type* rhs) {
-    uint32_t                lhs_width       = lhs->bitwidth;
-
-    switch(rhs->get_tree_type()) {
-    case tree_type_id::ast_real_type:
-        {
-            uint32_t        rhs_width       = rhs->as<ast_real_type>()->bitwidth;
-
-            return builder->get_real_type(std::max(lhs_width, rhs_width));
-        }
-    case tree_type_id::ast_integer_type:
-        {
-            uint32_t        rhs_width       = rhs->as<ast_integer_type>()->bitwidth;
-
-            return builder->get_real_type(std::max(lhs_width, rhs_width));
-        }
-    default:
-        __throw_unhandled_ast_type(__FILE__, __LINE__, rhs, "__maxtype(real)");
-    }
-}
-
-ast_type* __ast_builder_impl::maxtype(ast_type* lhs, ast_type* rhs) const noexcept {
-    switch(lhs->get_tree_type()) {
-    case tree_type_id::ast_integer_type:
-        return __maxtype(this, lhs->as<ast_integer_type>(), rhs);
-    case tree_type_id::ast_real_type:
-        return __maxtype(this, lhs->as<ast_real_type>(), rhs);
-    }
-    throw std::runtime_error("unhandled type " + std::to_string((int) lhs->get_tree_type()) + " in maxtype\n");
-}
-
-static inline ast_expr* bitcast_to(ast_type* t, ast_expr* e) noexcept {
-    auto cexpr = new ast_cast(t, ast_op::bitcast, e);
-    cexpr->value_type = e->value_type;
-    return cexpr;
-}
-
-ast_expr* __ast_builder_impl::cast_to(ast_integer_type* itype, ast_expr* expr) const {
-    uint32_t    to_bitwidth       = itype->bitwidth;
-    bool        to_is_unsigned    = itype->is_unsigned;
-    switch(expr->type->get_tree_type()) {
-    case tree_type_id::ast_integer_type:
-        {
-            uint32_t    from_bitwidth       = expr->type->as<ast_integer_type>()->bitwidth;
-            bool        from_is_unsigned    = expr->type->as<ast_integer_type>()->is_unsigned;
-
-            if(to_bitwidth < from_bitwidth) {
-                return new ast_cast(itype, ast_op::trunc, expr);
-            }
-            else if(to_bitwidth > from_bitwidth) {
-                if(to_is_unsigned) {
-                    return new ast_cast(itype, ast_op::zext, expr);
-                }
-                else {
-                    return new ast_cast(itype, ast_op::sext, expr);
-                }
-            }
-            else {
-                return bitcast_to(itype, expr);
-            }
-        }
-    case tree_type_id::ast_real_type:
-        {
-            if(to_is_unsigned) {
-                return this->cast_to(itype, this->cast_to(this->get_integer_type(to_bitwidth, false), expr));
-            }
-
-            uint32_t    from_bitwidth       = expr->type->as<ast_real_type>()->bitwidth;
-
-            if(to_bitwidth >= from_bitwidth) {
-                return new ast_cast(itype, ast_op::ftoi, expr);
-            }
-            else {
-                //TODO: ???
-                return new ast_cast(itype, ast_op::ftoi, expr);
-            }
-        }
-        break;
-    case tree_type_id::ast_pointer_type:
-        {
-            if(!to_is_unsigned) {
-                return this->cast_to(this->get_integer_type(to_bitwidth, true), expr);
-            }
-
-            return new ast_cast(itype, ast_op::utop, expr);
-        }
-    default:
-        __throw_unhandled_ast_type(__FILE__, __LINE__, expr, "__ast_builder_impl::cast_to(int)");
-    }
-}
-
-
-ast_expr* __ast_builder_impl::cast_to(ast_real_type* rtype, ast_expr* expr) const {
-    uint32_t    to_bitwidth     = rtype->bitwidth;
-
-    switch(expr->type->get_tree_type()) {
-    case tree_type_id::ast_real_type:
-        {
-            uint32_t    from_bitwidth   = expr->type->as<ast_real_type>()->bitwidth;
-
-            if(to_bitwidth > from_bitwidth) {
-                return new ast_cast(rtype, ast_op::fext, expr);
-            }
-            else if(to_bitwidth < from_bitwidth) {
-                return new ast_cast(rtype, ast_op::ftrunc, expr);
-            }
-            else {
-                return expr;
-            }
-        }
-    case tree_type_id::ast_integer_type:
-        {
-            uint32_t    from_bitwidth       = expr->type->as<ast_integer_type>()->bitwidth;
-            bool        from_is_unsigned    = expr->type->as<ast_integer_type>()->is_unsigned;
-
-            if(to_bitwidth >= from_bitwidth) {
-                if(from_is_unsigned) {
-                    return new ast_cast(rtype, ast_op::utof, expr);
-                }
-                else {
-                    return new ast_cast(rtype, ast_op::itof, expr);
-                }
-            }
-            else {
-                return this->cast_to(rtype, this->cast_to(this->get_integer_type(to_bitwidth, from_is_unsigned), expr));
-            }
-        }
-    default:
-        __throw_unhandled_ast_type(__FILE__, __LINE__, expr, "__ast_builder_impl::cast_to(real)");
-    }
-}
-
-ast_expr* __ast_builder_impl::cast_to(ast_pointer_type* ptype, ast_expr* expr) const {
-    ast_type*   eltype      = ptype->element_type;
-
-    switch(expr->type->get_tree_type()) {
-    case tree_type_id::ast_pointer_type:
-        return bitcast_to(ptype, expr);
-    case tree_type_id::ast_integer_type:
-        {
-            uint32_t    bitwidth    = expr->as<ast_integer_type>()->bitwidth;
-            bool        is_unsigned = expr->as<ast_integer_type>()->is_unsigned;
-            if(!is_unsigned) {
-                return this->cast_to(ptype, this->cast_to(this->get_integer_type(bitwidth, true), expr));
-            }
-            return new ast_cast(ptype, ast_op::utop, expr);
-        }
-    case tree_type_id::ast_array_type:
-        {
-            return new ast_addressof(ptype,
-                    this->make_index_expr(expr, this->make_zero(this->get_size_type())));
-        }
-    default:
-        __throw_unhandled_ast_type(__FILE__, __LINE__, expr, "__ast_builder_impl::cast_to(pointer)");
-    }
-}
-
-ast_expr* __ast_builder_impl::cast_to(ast_record_type* rtype, ast_expr* expr) const {
-    if(this->sametype(rtype, expr->type)) {
-        return expr;
-    }
-    throw std::runtime_error("I'm lazy\n");
-}
-
-bool __ast_builder_impl::widens(ast_type* f, ast_type* t) const {
+bool __ast_builder_impl::widens(__Widens_args_nc(tt, fe)) const {
     int cost = 0;
-    return this->widens(f, t, cost);
+    return this->widens(tt, fe, cost);
 }
 
-bool __ast_builder_impl::widens(ast_type* from_type, ast_type* to_type, int& cost) const {
-    switch(from_type->get_tree_type()) {
-    case tree_type_id::ast_integer_type:
-        {
-            uint32_t    bw_from = from_type->as<ast_integer_type>()->bitwidth;
-            uint32_t    bw_to;
-            bool        isu_from = from_type->as<ast_integer_type>()->is_unsigned;
-            bool        isu_to;
-            if(to_type->is<ast_integer_type>()) {
-                bw_to = to_type->as<ast_integer_type>()->bitwidth;
-                isu_to = to_type->as<ast_integer_type>()->is_unsigned;
-            }
-            else if(to_type->is<ast_real_type>()) {
-                bw_to = to_type->as<ast_real_type>()->bitwidth;
-                isu_to = false;
-            }
-            else {
-                break;
-            }
-
-            if(isu_from) {
-                if(bw_from < bw_to)                         { cost += 1; return true;  }
-                else if(bw_from == bw_to)                   {            return true;  }
-                else                                        {            return false; }
-            }
-            else {
-                if((bw_from < bw_to) && (!isu_to))          { cost += 1; return true;  }
-                else if((bw_from == bw_to) && (!isu_to))    {            return true;  }
-                else                                        {            return false; }
-            }
-        }
-    case tree_type_id::ast_real_type:
-        {
-            if(to_type->is<ast_integer_type>()) {
-                return 0;
-            }
-            else if(to_type->is<ast_real_type>()) {
-                uint32_t bw_from = from_type->as<ast_real_type>()->bitwidth;
-                uint32_t bw_to   = to_type->as<ast_real_type>()->bitwidth;
-                if(bw_from < bw_to)                         { cost += 1; return true;  }
-                else if(bw_from == bw_to)                   {            return true;  }
-                else                                        {            return false; }
-            }
-            break;
-        }
-    case tree_type_id::ast_array_type:
-        {
-            if(to_type->is<ast_pointer_type>()) {
-                ast_type* peltype = to_type->as<ast_pointer_type>()->element_type;
-                ast_type* aeltype = from_type->as<ast_array_type>()->element_type;
-                if(this->sametype(peltype, aeltype))        { cost += 1; return true;  }
-                else                                        {            return false; }
-            }
-            break;
-        }
-    }
-    throw std::runtime_error("unhandled " + std::string(from_type->get_tree_type_name()) + " -> " +
-                                            std::string(to_type->get_tree_type_name())   + " in __ast_builder_impl::widens\n");
+bool __ast_builder_impl::widens(__Widens_args(tt, fe, cost)) const {
+    return _the_widens_func->visit(tt, fe, cost);
 }
 
-ast_expr* __ast_builder_impl::widen(ast_type* typedest, ast_expr* expr) const {
-    switch(typedest->get_tree_type()) {
-    case tree_type_id::ast_integer_type:        return this->cast_to(typedest->as<ast_integer_type>(), expr);
-    case tree_type_id::ast_real_type:           return this->cast_to(typedest->as<ast_real_type>(),    expr);
-    case tree_type_id::ast_pointer_type:        return this->cast_to(typedest->as<ast_pointer_type>(), expr);
-    default:
-        __throw_unhandled_ast_type(__FILE__, __LINE__, typedest, "__ast_builder_impl::widen");
-    }
-}
-
-bool __ast_builder_impl::coercable(ast_type* typedest, ast_expr* expr) const noexcept {
-    int cost = 0;
-    return this->coercable(typedest, expr, cost);
-}
-
-bool __ast_builder_impl::coercable(ast_type* typedest, ast_expr* expr, int& cost) const noexcept {
-    switch(expr->get_tree_type()) {
-    case tree_type_id::ast_integer:
-        return
-                typedest->is<ast_real_type>() ||
-                typedest->is<ast_integer_type>();
-    case tree_type_id::ast_real:
-        return
-                typedest->is<ast_real_type>();
-    }
-    return false;
-}
-
-ast_expr* __ast_builder_impl::coerce(ast_type* typedest, ast_expr* expr) const noexcept {
-    switch(expr->get_tree_type()) {
-    case tree_type_id::ast_integer:
-        switch(typedest->get_tree_type()) {
-        case tree_type_id::ast_integer_type:        return this->cast_to(typedest->as<ast_integer_type>(), expr);
-        case tree_type_id::ast_real_type:           return this->cast_to(typedest->as<ast_real_type>(), expr);
-        default:
-            __throw_unhandled_tree_type(__FILE__, __LINE__, typedest, "__ast_builder_impl::coerce");
-        }
-        break;
-    case tree_type_id::ast_real:
-        switch(typedest->get_tree_type()) {
-        case tree_type_id::ast_real_type:           return this->cast_to(typedest->as<ast_real_type>(), expr);
-        default:
-            __throw_unhandled_tree_type(__FILE__, __LINE__, typedest, "__ast_builder_impl::coerce");
-        }
-        break;
-    default:
-        __throw_unhandled_tree_type(__FILE__, __LINE__, expr, "__ast_builder_impl::coerce");
-    }
-}
+//bool __ast_builder_impl::coercable(__Coercable_args_nc(tt, fe)) const noexcept {
+//    int cost = 0;
+//    return this->coercable(tt, fe, cost);
+//}
+//
+//bool __ast_builder_impl::coercable(__Coercable_args(tt, fe, cost)) const noexcept {
+//    return _the_coercable_func->visit(tt, fe, cost);
+//}
 
 void __ast_builder_impl::push_namespace(ast_namespace_decl* ns) noexcept {
     this->push_context<ast_namespace_context>(ns);
@@ -945,14 +650,6 @@ ptr<list<ast_decl>> __ast_builder_impl::find_all_declarations(ast_context* conte
 
 ptr<list<ast_decl>> __ast_builder_impl::find_all_declarations(const char* name) noexcept {
     return this->find_all_declarations(this->context, name);
-}
-
-ast_widen_func* __ast_builder_impl::settup_widen_func() const noexcept {
-    return new ast_widen_func(*this);
-}
-
-ast_widens_func* __ast_builder_impl::settup_widens_func() const noexcept {
-    return new ast_widens_func(*this);
 }
 
 }
