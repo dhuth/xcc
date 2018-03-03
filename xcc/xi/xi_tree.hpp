@@ -170,6 +170,14 @@ public:
 };
 
 
+inline bool is_id_type(ast_tree* t)             { return t->is<xi_id_type>(); }
+inline bool is_const_type(ast_tree* t)          { return t->is<xi_const_type>(); }
+inline bool is_auto_type(ast_tree* t)           { return t->is<xi_auto_type>(); }
+inline bool is_reference_type(ast_tree* t)      { return t->is<xi_reference_type>(); }
+inline bool is_decl_type(ast_tree* t)           { return t->is<xi_decl_type>(); }
+inline bool is_tuple_type(ast_tree* t)          { return t->is<xi_tuple_type>(); }
+
+
 /**
  * A parameter to a function
  */

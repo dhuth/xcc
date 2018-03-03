@@ -46,6 +46,8 @@ private:
     __Decl_func(ast_record);
 #undef  __Decl_func
 
+protected:
+
     ast_builder_impl_t&                                     _builder;
 };
 
@@ -69,6 +71,7 @@ private:
     __Decl_func(ast_record);
 #undef  __Decl_func
 
+protected:
     ast_builder_impl_t&                                     _builder;
 };
 
@@ -92,6 +95,7 @@ private:
     __Decl_func(ast_record);
 #undef __Decl_func(t)
 
+protected:
     ast_builder_impl_t&                                     _builder;
 };
 
@@ -111,6 +115,7 @@ private:
     __Decl_func(ast_pointer);
 #undef __Decl_func(t)
 
+protected:
     ast_builder_impl_t&                                     _builder;
 };
 
@@ -130,6 +135,7 @@ private:
     __Decl_func(ast_pointer);
 #undef __Decl_func(t)
 
+protected:
     ast_builder_impl_t&                                     _builder;
 };
 

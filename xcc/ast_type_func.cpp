@@ -224,7 +224,7 @@ CAST_FUNC(ast_real, tt, fe) {
             return new ast_cast(tt, ast_op::ftrunc, fe);
         }
         else {
-            return fe; // same type
+            return fe;                      // SAME TYPE
         }
     }
 
