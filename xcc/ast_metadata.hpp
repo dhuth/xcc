@@ -46,7 +46,6 @@ private:
     ast_variable_decl*          read_variable_decl(llvm::MDTuple*);
     ast_parameter_decl*         read_parameter_decl(llvm::MDTuple*);
     ast_function_decl*          read_function_decl(llvm::MDTuple*);
-    ast_typedef_decl*           read_typedef_decl(llvm::MDTuple*);
 
     __ast_builder_impl&                                     _ast_builder;
 
@@ -73,7 +72,6 @@ private:
     llvm::MDTuple*              write_variable_decl(ast_variable_decl*);
     llvm::MDTuple*              write_parameter_decl(ast_parameter_decl*);
     llvm::MDTuple*              write_function_decl(ast_function_decl*);
-    llvm::MDTuple*              write_typedef_decl(ast_typedef_decl*);
 
     __ast_builder_impl&                                     _ast_builder;
 

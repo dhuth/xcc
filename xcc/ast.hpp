@@ -481,33 +481,6 @@ public:
 
 
 /**
- * Named type declaration
- */
-struct ast_typedef_decl final : public extend_tree<tree_type_id::ast_typedef_decl, ast_decl> {
-public:
-
-    /**
-     * @param name
-     * @param type
-     */
-    inline ast_typedef_decl(std::string name, ast_type* type)
-            : base_type(name),
-              type(this, type) {
-        // do nothing
-    }
-
-    inline ast_typedef_decl(const ast_typedef_decl& t) noexcept
-            : base_type((base_type&) t),
-              type(this, t.type) {
-        // do nothing
-    }
-
-    property<ast_type>                                          type;
-
-};
-
-
-/**
  * The void type
  */
 struct ast_void_type final : public extend_tree<tree_type_id::ast_void_type, ast_type> {

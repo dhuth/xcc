@@ -28,7 +28,6 @@ ast_metadata_writer::ast_metadata_writer(llvm::LLVMContext& llvm_context, __ast_
     this->addmethod(&ast_metadata_writer::write_variable_decl);
     this->addmethod(&ast_metadata_writer::write_parameter_decl);
     this->addmethod(&ast_metadata_writer::write_function_decl);
-    this->addmethod(&ast_metadata_writer::write_typedef_decl);
 
 }
 
@@ -93,14 +92,6 @@ llvm::MDTuple* ast_metadata_writer::write_function_decl(ast_function_decl* f) {
             f->parameters);
 }
 
-llvm::MDTuple* ast_metadata_writer::write_typedef_decl(ast_typedef_decl* t) {
-    return this->write_tuple(
-            t->name,
-            t->generated_name,
-            t->source_location,
-            t->type);
-}
-
 
 ast_metadata_reader::ast_metadata_reader(llvm::LLVMContext& llvm_context, __ast_builder_impl& builder) noexcept
         : llvm_metadata_reader(llvm_context),
@@ -120,7 +111,6 @@ ast_metadata_reader::ast_metadata_reader(llvm::LLVMContext& llvm_context, __ast_
     this->addmethod(&ast_metadata_reader::read_variable_decl);
     this->addmethod(&ast_metadata_reader::read_parameter_decl);
     this->addmethod(&ast_metadata_reader::read_function_decl);
-    this->addmethod(&ast_metadata_reader::read_typedef_decl);
 }
 
 ast_void_type* ast_metadata_reader::read_void_type(llvm::MDTuple*) {
@@ -231,18 +221,6 @@ ast_function_decl* ast_metadata_reader::read_function_decl(llvm::MDTuple* md) {
     return f;
 }
 
-ast_typedef_decl* ast_metadata_reader::read_typedef_decl(llvm::MDTuple* md) {
-    std::string                 name;
-    std::string                 generated_name;
-    source_span                 location;
-    ast_type*                   type;
-
-    this->read_tuple(md, name, generated_name, location, type);
-    auto d = new ast_typedef_decl(name, type);
-    this->set_decl_data(d, generated_name, location);
-
-    return d;
-}
 }
 
 

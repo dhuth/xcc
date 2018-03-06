@@ -27,7 +27,6 @@ tree_type(ast_parameter_decl,           ast_decl)
 tree_type(ast_local_decl,               ast_decl)
 tree_type(ast_temp_decl,                ast_decl)
 tree_type(ast_function_decl,            ast_decl)
-tree_type(ast_typedef_decl,             ast_decl)
 
 
 

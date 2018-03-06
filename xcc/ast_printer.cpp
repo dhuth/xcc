@@ -242,10 +242,6 @@ static void print_function_decl(ast_function_decl* func, std::ostream& s) {
             func->is_extern_visible);
 }
 
-static void print_typedef_decl(ast_typedef_decl* decl, std::ostream& s) {
-    ast_printer::print(s, "%0 = type %1;", decl->name, decl->type);
-}
-
 static void print_nop_stmt(ast_nop_stmt*, std::ostream& s) {
     ast_printer::print(s, ";");
 }
@@ -359,7 +355,6 @@ ast_printer::ast_printer()
     ast_printer::add(&print_temp_decl);
     ast_printer::add(&print_parameter_decl);
     ast_printer::add(&print_function_decl);
-    ast_printer::add(&print_typedef_decl);
 
     ast_printer::add(&print_nop_stmt);
     ast_printer::add(&print_expr_stmt);
