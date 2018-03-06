@@ -133,7 +133,7 @@ public:
      * @param
      * @return
      */
-    virtual ast_function_type*                  get_function_type(ast_type*, ptr<list<ast_type>>)                         noexcept;
+    virtual ast_function_type*                  get_function_type(ast_type*, ptr<list<ast_type>>, bool)                   noexcept;
     /**
      * Get a record type node
      * @param

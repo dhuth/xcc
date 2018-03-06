@@ -205,7 +205,12 @@ static void print_array_type(ast_array_type* atype, std::ostream& s) {
 }
 
 static void print_function_type(ast_function_type* ftype, std::ostream& s) {
-    ast_printer::print(s, "%0(%{1:, })", ftype->return_type, ftype->parameter_types);
+    if(ftype->is_varargs) {
+        ast_printer::print(s, "%0(%{1:, } ...)", ftype->return_type, ftype->parameter_types);
+    }
+    else {
+        ast_printer::print(s, "%0(%{1:, })", ftype->return_type, ftype->parameter_types);
+    }
 }
 
 static void print_record_type(ast_record_type* rtype, std::ostream& s) {
@@ -233,13 +238,24 @@ static void print_parameter_decl(ast_parameter_decl* p, std::ostream& s) {
 }
 
 static void print_function_decl(ast_function_decl* func, std::ostream& s) {
-    ast_printer::print(s, "%0 = function %1(%{2: ,}) [is_extern=%4, is_extern_visible=%5] %3",
-            func->name,
-            func->return_type,
-            func->parameters,
-            func->body,
-            func->is_extern,
-            func->is_extern_visible);
+    // print return type and name
+    ast_printer::print(s, "%1 %0");
+
+    // print args
+    if(func->is_varargs) {
+        ast_printer::print(s, "(%{0: ,} ...) ", func->parameters);
+    }
+    else {
+        ast_printer::print(s, "(%{0: .}) ", func->parameters);
+    }
+
+    // print visibility
+    if(func->is_extern)             s << "e";
+    if(func->is_c_extern)           s << "c";
+    if(func->is_extern_visible)     s << "v";
+
+    // print body
+    ast_printer::print(s, "%0", func->body);
 }
 
 static void print_nop_stmt(ast_nop_stmt*, std::ostream& s) {

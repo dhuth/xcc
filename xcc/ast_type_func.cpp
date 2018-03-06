@@ -107,7 +107,8 @@ SAMETYPE_FUNC(ast_function, lhs, rhs) {
     if(is_function_type(rhs)) {
         return
                 this->visit(lhs->return_type, rhs->as<ast_function_type>()->return_type) &&
-                this->sametype_list(lhs->parameter_types, rhs->as<ast_function_type>()->parameter_types);
+                this->sametype_list(lhs->parameter_types, rhs->as<ast_function_type>()->parameter_types) &&
+                lhs->is_varargs == rhs->as<ast_function_type>()->is_varargs;
     }
     return false;
 }

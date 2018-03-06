@@ -458,6 +458,7 @@ public:
               return_type(this, return_type),
               parameters(this, parameters),
               body(this, body),
+              is_varargs(this, false),
               is_c_extern(this, false) {
         // do nothing
     }
@@ -468,6 +469,7 @@ public:
               return_type(this, f.return_type),
               parameters(this, f.parameters),
               body(this, f.body),
+              is_varargs(this, f.is_varargs),
               is_c_extern(this, f.is_c_extern) {
         // do nothing
     }
@@ -475,6 +477,7 @@ public:
     property<ast_type>                                          return_type;        //!<
     property<list<ast_parameter_decl>>                          parameters;         //!<
     property<ast_stmt>                                          body;               //!<
+    property<bool>                                              is_varargs;         //!<
     property<bool>                                              is_c_extern;        //!< use c style mangling (none)
 
 };
@@ -622,22 +625,25 @@ public:
      * @param return_type
      * @param parameter_types
      */
-    inline ast_function_type(ast_type* return_type, list<ast_type>* parameter_types) noexcept
+    inline ast_function_type(ast_type* return_type, list<ast_type>* parameter_types, bool is_varargs) noexcept
             : base_type(),
               return_type(this, return_type),
-              parameter_types(this, parameter_types) {
+              parameter_types(this, parameter_types),
+              is_varargs(this, is_varargs) {
         // do nothing
     }
 
     inline ast_function_type(const ast_function_type& f) noexcept
             : base_type((base_type&) f),
               return_type(this, f.return_type),
-              parameter_types(this, f.parameter_types) {
+              parameter_types(this, f.parameter_types),
+              is_varargs(this, f.is_varargs) {
         // do nothing
     }
 
     property<ast_type>                                          return_type;        //!<
     property<list<ast_type>>                                    parameter_types;    //!<
+    property<bool>                                              is_varargs;         //!<
 
 };
 

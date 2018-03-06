@@ -52,7 +52,7 @@ llvm::MDTuple* ast_metadata_writer::write_array_type(ast_array_type* a) {
 }
 
 llvm::MDTuple* ast_metadata_writer::write_function_type(ast_function_type* f) {
-    return this->write_tuple(f->return_type, f->parameter_types);
+    return this->write_tuple(f->return_type, f->parameter_types, f->is_varargs);
 }
 
 llvm::MDTuple* ast_metadata_writer::write_record_type(ast_record_type* r) {
@@ -89,7 +89,8 @@ llvm::MDTuple* ast_metadata_writer::write_function_decl(ast_function_decl* f) {
             f->generated_name,
             f->source_location,
             f->return_type,
-            f->parameters);
+            f->parameters,
+            f->is_varargs);
 }
 
 
@@ -150,9 +151,10 @@ ast_array_type* ast_metadata_reader::read_array_type(llvm::MDTuple* md) {
 ast_function_type* ast_metadata_reader::read_function_type(llvm::MDTuple* md) {
     ast_type*           ret;
     list<ast_type>*     args;
+    bool                is_varargs;
 
-    this->read_tuple(md, ret, args);
-    return _ast_builder.get_function_type(ret, args);
+    this->read_tuple(md, ret, args, is_varargs);
+    return _ast_builder.get_function_type(ret, args, is_varargs);
 }
 
 ast_record_type* ast_metadata_reader::read_record_type(llvm::MDTuple* md) {
@@ -211,12 +213,14 @@ ast_function_decl* ast_metadata_reader::read_function_decl(llvm::MDTuple* md) {
     source_span                 location;
     ast_type*                   return_type;
     list<ast_parameter_decl>*   parameters;
+    bool                        is_varargs;
 
-    this->read_tuple(md, name, generated_name, location, return_type, parameters);
+    this->read_tuple(md, name, generated_name, location, return_type, parameters, is_varargs);
     auto f = new ast_function_decl(name, return_type, parameters, nullptr);
     this->set_decl_data(f, generated_name, location);
     this->set_externable_data(f);
     f->is_c_extern              = true;
+    f->is_varargs               = is_varargs;
 
     return f;
 }

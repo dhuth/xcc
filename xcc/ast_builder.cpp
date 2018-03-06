@@ -98,8 +98,8 @@ ast_array_type* __ast_builder_impl::get_array_type(ast_type* eltype, uint32_t si
     return _the_typeset->get_new<ast_array_type>(eltype, size);
 }
 
-ast_function_type* __ast_builder_impl::get_function_type(ast_type* rtype, ptr<list<ast_type>> params) noexcept {
-    return _the_typeset->get_new<ast_function_type>(rtype, params);
+ast_function_type* __ast_builder_impl::get_function_type(ast_type* rtype, ptr<list<ast_type>> params, bool is_varargs) noexcept {
+    return _the_typeset->get_new<ast_function_type>(rtype, params, is_varargs);
 }
 
 ast_record_type* __ast_builder_impl::get_record_type(ptr<list<ast_type>> types) noexcept {
@@ -127,12 +127,13 @@ ast_type* __ast_builder_impl::get_declaration_type(ast_decl* decl) noexcept {
         {
             ast_function_decl*      fdecl   = decl->as<ast_function_decl>();
             ast_type*               rtype   = fdecl->return_type;
+            bool                    is_var  = fdecl->is_varargs;
             std::vector<ast_type*>  pvec;
             for(auto p: fdecl->parameters) {
                 pvec.push_back(p->type);
             }
             list<ast_type>*         plist = new list<ast_type>(pvec);
-            return this->get_function_type(rtype, box(plist));
+            return this->get_function_type(rtype, box(plist), is_var);
         }
     case tree_type_id::ast_temp_decl:
         return decl->as<ast_temp_decl>()->type;
@@ -498,24 +499,56 @@ ast_expr* __ast_builder_impl::make_call_expr(ast_expr* fexpr, list<ast_expr>* ar
     return this->make_lower_call_expr(fexpr, args);
 }
 
-ast_expr* __ast_builder_impl::make_lower_call_expr(ast_expr* fexpr, list<ast_expr>* args) const noexcept {
-    assert(fexpr->type->is<ast_function_type>());
-
-    auto ftype = fexpr->type->as<ast_function_type>();
-    list<ast_expr>* new_args = new list<ast_expr>();
-    for(uint32_t i = 0; i < args->size(); i++) {
-        auto ptp    = ftype->parameter_types[i];
-        auto narg   = (*args)[i];
-
-        new_args->push_back(this->cast(ptp, narg));
+static inline bool is_pointer_to_function(ast_expr* e) noexcept {
+    if(is_pointer_type(e->type)) {
+        auto ptype = e->type->as<ast_pointer_type>();
+        if(is_function_type(ptype->element_type)) {
+            return true;
+        }
     }
+    return false;
+}
 
-    ast_type* t = fexpr->type->as<ast_function_type>()->return_type;
-    if(fexpr->is<ast_declref>() && fexpr->as<ast_declref>()->declaration->is<ast_function_decl>()) {
-        return new ast_call(t, fexpr->as<ast_declref>(), new_args);
+static ptr<list<ast_expr>> make_arg_expr_list(ast_function_type* ftype, list<ast_expr>* args, const __ast_builder_impl& b) noexcept {
+    if(ftype->is_varargs) {
+        assert(ftype->parameter_types->size() <= args->size());
     }
     else {
-        return new ast_invoke(t, fexpr, new_args);
+        assert(ftype->parameter_types->size() == args->size());
+    }
+
+    auto new_args       = new list<ast_expr>();
+    auto args_itr       = begin(*args);
+    auto args_itr_end   = end(*args);
+    for(size_t i = 0; i < ftype->parameter_types->size(); i++) {
+        auto ptp        = ftype->parameter_types[i];
+        auto narg       = *args_itr;
+        new_args->push_back(b.cast(ptp, narg));
+        args_itr++;
+    }
+
+    while(args_itr != args_itr_end) {
+        new_args->push_back(*args_itr);
+        args_itr++;
+    }
+
+    return box(new_args);
+}
+
+ast_expr* __ast_builder_impl::make_lower_call_expr(ast_expr* fexpr, list<ast_expr>* args) const noexcept {
+    if(fexpr->is<ast_declref>() && is_function_type(fexpr->type)) {
+        auto ftype      = fexpr->type->as<ast_function_type>();
+        auto arglist    = make_arg_expr_list(ftype, args, *this);
+        return new ast_call(ftype->return_type, fexpr->as<ast_declref>(), arglist);
+    }
+    else if(is_pointer_to_function(fexpr)) {
+        auto ftype      = fexpr->type->as<ast_pointer_type>()->element_type->as<ast_function_type>();
+        auto arglist    = make_arg_expr_list(ftype, args, *this);
+        return new ast_invoke(ftype->return_type, fexpr, arglist);
+    }
+    else {
+        //TODO: this should be an error
+        return nullptr;
     }
 }
 
