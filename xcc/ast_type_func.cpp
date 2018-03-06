@@ -17,7 +17,7 @@ namespace xcc {
  * ===================== */
 
 ast_sametype_func::ast_sametype_func(const ast_builder_impl_t& builder) noexcept
-        : _builder(builder) {
+        : _builder((ast_builder_impl_t&)builder) {
     this->addmethod(&SAMETYPE_METHOD_NAME(ast_void));
     this->addmethod(&SAMETYPE_METHOD_NAME(ast_integer));
     this->addmethod(&SAMETYPE_METHOD_NAME(ast_real));
@@ -131,7 +131,7 @@ SAMETYPE_FUNC(ast_record, lhs, rhs) {
  * ================= */
 
 ast_cast_func::ast_cast_func(const ast_builder_impl_t& builder) noexcept
-        : _builder(builder) {
+        : _builder((ast_builder_impl_t&)builder) {
     this->addmethod(&CAST_METHOD_NAME(ast_integer));
     this->addmethod(&CAST_METHOD_NAME(ast_real));
     this->addmethod(&CAST_METHOD_NAME(ast_pointer));
@@ -297,7 +297,7 @@ CAST_FUNC(ast_pointer, tt, fe) {
  * ==================== */
 
 ast_maxtype_func::ast_maxtype_func(const ast_builder_impl_t& builder) noexcept
-        : _builder(builder) {
+        : _builder((ast_builder_impl_t&)builder) {
     this->addmethod(&MAXTYPE_METHOD_NAME(ast_integer));
     this->addmethod(&MAXTYPE_METHOD_NAME(ast_real));
     this->addmethod(&MAXTYPE_METHOD_NAME(ast_pointer));
@@ -363,6 +363,38 @@ MAXTYPE_FUNC(ast_real, lhs, rhs) {
     __throw_unhandled_ast_type(__FILE__, __LINE__, rhs, "MAXTYPE_FUNC(ast_real)");
 }
 
+/* ------------------------- *
+ * Maxtype for pointer types *
+ * ------------------------- */
+
+MAXTYPE_FUNC(ast_pointer, lhs, rhs) {
+    ast_type*           l_el = lhs->element_type;
+
+    // rhs is another pointer type
+    if(is_pointer_type(rhs)) {
+        if(_builder.sametype(l_el, rhs->as<ast_pointer_type>()->element_type)) {
+            return lhs;                                     // SAME TYPE
+        }
+
+        if(is_void_type(l_el)) {
+            return lhs;
+        }
+        else if(is_void_type(rhs->as<ast_pointer_type>())) {
+            return rhs;
+        }
+        else {
+            // Throw hands in air and just return lhs
+            return lhs;
+        }
+    }
+
+    // rhs is an unsigned integer type
+    if(is_integer_type(rhs)) {
+        return lhs;
+    }
+
+    __throw_unhandled_ast_type(__FILE__, __LINE__, rhs, "MAXTYPE_FUNC(ast_pointer)");
+}
 
 
 /* =================== *
@@ -370,7 +402,7 @@ MAXTYPE_FUNC(ast_real, lhs, rhs) {
  * =================== */
 
 ast_widens_func::ast_widens_func(const ast_builder_impl_t& builder) noexcept
-        : _builder(builder) {
+        : _builder((ast_builder_impl_t&)builder) {
     this->addmethod(&WIDENS_METHOD_NAME(ast_void));
     this->addmethod(&WIDENS_METHOD_NAME(ast_integer));
     this->addmethod(&WIDENS_METHOD_NAME(ast_real));

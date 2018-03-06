@@ -8,9 +8,7 @@
 #ifndef XCC_XI_XI_TYPE_HPP_
 #define XCC_XI_XI_TYPE_HPP_
 
-#include "xi_builder.hpp"
-//#include "xi_type_func.hpp"
-//#include "xi_type_set.hpp"
+#include "ast_type.hpp"
 
 namespace xcc {
 

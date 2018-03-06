@@ -17,7 +17,7 @@ namespace xcc {
 
 xi_sametype_func::xi_sametype_func(const ast_builder_impl_t& b) noexcept
         : ast_sametype_func(b),
-          _xi_builder((const xi_builder&)b){
+          _xi_builder((xi_builder&)b){
     this->addmethod(&XI_SAMETYPE_METHOD_NAME(xi_auto));
     this->addmethod(&XI_SAMETYPE_METHOD_NAME(xi_const));
     this->addmethod(&XI_SAMETYPE_METHOD_NAME(xi_reference));
@@ -74,10 +74,7 @@ XI_SAMETYPE_FUNC(xi_tuple, lhs, rhs) {
  * ---------------------- */
 
 XI_SAMETYPE_FUNC(xi_decl, lhs, rhs) {
-    if(is_decl_type(rhs)) {
-        return lhs->declaration == rhs->as<xi_decl_type>()->declaration;
-    }
-    return false;
+    __throw_unhandled_ast_type(__FILE__, __LINE__, rhs, "SAMETYPE_FUNC(xi_decl)");
 }
 
 /* ================= *
@@ -86,7 +83,7 @@ XI_SAMETYPE_FUNC(xi_decl, lhs, rhs) {
 
 xi_cast_func::xi_cast_func(const ast_builder_impl_t& b) noexcept
         : ast_cast_func(b),
-          _xi_builder((const xi_builder&) b) {
+          _xi_builder((xi_builder&) b) {
     this->addmethod(&XI_CAST_METHOD_NAME(xi_const));
     this->addmethod(&XI_CAST_METHOD_NAME(xi_reference));
     this->addmethod(&XI_CAST_METHOD_NAME(xi_tuple));
@@ -105,26 +102,6 @@ static inline ast_expr* bitcast_to(ast_type* tt, ast_expr* fe) noexcept {
  * ----------------------- */
 
 XI_CAST_FUNC(xi_const, tt, fe) {
-    ast_type*       te = tt->type;
-
-    // Cast from another const type
-    // ----------------------------
-    if(is_const_type(fe->type)) {
-        auto        ft = fe->type->as<xi_const_type>();
-        if(_builder.sametype(te, ft)) {
-            return fe;                                      // SAME TYPE
-        }
-        else {
-            return bitcast_to(tt, this->visit(te, bitcast_to(ft, fe)));
-        }
-    }
-
-    // Cast from non-const same type
-    // -----------------------------
-    if(_builder.sametype(te, fe->type)) {
-        return bitcast_to(tt, fe);
-    }
-
     __throw_unhandled_ast_type(__FILE__, __LINE__, fe->type, "CAST_FUNC(xi_const)");
 }
 
@@ -133,21 +110,6 @@ XI_CAST_FUNC(xi_const, tt, fe) {
  * --------------------------- */
 
 XI_CAST_FUNC(xi_reference, tt, fe) {
-    ast_type*       te_t = tt->type;
-
-    // Cast from another reference type
-    // --------------------------------
-    if(is_reference_type(fe->type)) {
-        auto        ft   = fe->type->as<xi_reference_type>();
-        ast_type*   fe_t = ft->type;
-        if(_builder.sametype(te_t, fe_t)) {
-            return fe;                                      // SAME TYPE
-        }
-        else {
-            //TODO: pointer type conversion
-        }
-    }
-
     __throw_unhandled_ast_type(__FILE__, __LINE__, fe->type, "CAST_FUNC(xi_reference)");
 }
 
@@ -155,32 +117,112 @@ XI_CAST_FUNC(xi_reference, tt, fe) {
  * Rules for cast to tuple *
  * ----------------------- */
 
+XI_CAST_FUNC(xi_tuple, tt, fe) {
+    __throw_unhandled_ast_type(__FILE__, __LINE__, fe->type, "CAST_FUNC(xi_tuple)");
+}
+
 /* ---------------------- *
  * Rules for cast to decl *
  * ---------------------- */
+
+XI_CAST_FUNC(xi_decl, tt, fe) {
+    __throw_unhandled_ast_type(__FILE__, __LINE__, fe->type, "CAST_FUNC(xi_decl)");
+}
 
 /* ------------------------- *
  * Rules for cast to pointer *
  * ------------------------- */
 
 XI_CAST_FUNC(ast_pointer, tt, fe) {
-    ast_type*       te_t = tt->element_type;
+    __throw_unhandled_ast_type(__FILE__, __LINE__, fe->type, "CAST_FUNC(ast_pointer) xi version");
+}
 
-    // Cast from another pointer type
-    // ------------------------------
-    if(is_pointer_type(fe->type)) {
-        auto        ft      = fe->as<ast_pointer_type>();
-        ast_type*   fe_t    = ft->element_type;
+/* =================== *
+ * = Widens Function = *
+ * =================== */
 
-        if(_builder.sametype(te_t, fe_t)) {
-            return fe;                                      // SAME TYPE
+xi_widens_func::xi_widens_func(const ast_builder_impl_t& b) noexcept
+        : ast_widens_func(b),
+          _xi_builder((xi_builder&) b) {
+    this->addmethod(&XI_WIDENS_METHOD_NAME(xi_const));
+    this->addmethod(&XI_WIDENS_METHOD_NAME(xi_reference));
+    this->addmethod(&XI_WIDENS_METHOD_NAME(xi_tuple));
+    this->addmethod(&XI_WIDENS_METHOD_NAME(xi_decl));
+    this->addmethod(&XI_WIDENS_METHOD_NAME(ast_pointer));
+}
+
+#define WIDENS_RETURN_FALSE             return false;
+#define WIDENS_RETURN_NOWORK            return true;
+#define WIDENS_RETURN_WORK(c, n)        { c += n; return true; }
+
+/* ------------------------- *
+ * Rules for widens to const *
+ * ------------------------- */
+
+XI_WIDENS_FUNC(xi_const, tt, fe, cost) {
+    __throw_unhandled_ast_type(__FILE__, __LINE__, fe->type, "WIDENS_FUNC(xi_const)");
+}
+
+/* ----------------------------- *
+ * Rules for widens to reference *
+ * ----------------------------- */
+
+XI_WIDENS_FUNC(xi_reference, tt, fe, cost) {
+    __throw_unhandled_ast_type(__FILE__, __LINE__, fe->type, "WIDENS_FUNC(xi_reference)");
+}
+
+/* ------------------------- *
+ * Rules for widens to tuple *
+ * ------------------------- */
+
+XI_WIDENS_FUNC(xi_tuple, tt, fe, cost) {
+    __throw_unhandled_ast_type(__FILE__, __LINE__, fe->type, "WIDENS_FUNC(xi_tuple)");
+}
+
+/* ------------------------ *
+ * Rules for widens to decl *
+ * ------------------------ */
+
+XI_WIDENS_FUNC(xi_decl, tt, fe, cost) {
+    __throw_unhandled_ast_type(__FILE__, __LINE__, fe->type, "WIDENS_FUNC(xi_decl)");
+}
+
+/* --------------------------- *
+ * Rules for widens to pointer *
+ * --------------------------- */
+
+XI_WIDENS_FUNC(ast_pointer, tt, fe, cost) {
+    ast_type* ft = fe->type;
+
+    // from another pointer type
+    // -------------------------
+    if(is_pointer_type(ft)) {
+        ast_type* tpel      = tt->element_type;
+        ast_type* fpel      = ft->as<ast_pointer_type>()->element_type;
+
+        if(_builder.sametype(tpel, fpel)) {
+            WIDENS_RETURN_NOWORK
         }
-        else {
-            //TODO: pointer type conversion
+        else if(is_void_type(tpel)) {
+            WIDENS_RETURN_WORK(cost, 4)
         }
     }
 
-    __throw_unhandled_ast_type(__FILE__, __LINE__, fe->type, "CAST_FUNC(ast_pointer) xi version");
+    // from an array type
+    // ------------------
+    if(is_array_type(ft)) {
+        //TODO: check that expression is addressable
+        ast_type* tp_el     = tt->element_type;
+        ast_type* fa_el     = ft->as<ast_array_type>()->element_type;
+
+        if(_builder.sametype(tp_el, fa_el)) {
+            WIDENS_RETURN_WORK(cost, 1)
+        }
+        else {
+            WIDENS_RETURN_FALSE
+        }
+    }
+    WIDENS_RETURN_FALSE
 }
 
 }

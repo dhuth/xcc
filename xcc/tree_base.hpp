@@ -190,6 +190,10 @@ protected:
 
 };
 
+
+/**
+ * Helper class for extending base tree types
+ */
 template<tree_type_id VType, typename TBase = __tree_base>
 struct __extend_tree : public TBase {
 private:
@@ -211,6 +215,8 @@ public:
     explicit inline __extend_tree(const base_type& other) : TBase(other) { }
 
 };
+
+
 
 template<tree_type_id tp, typename base = __tree_base>
 using extend_tree = __extend_tree<tp, base>;

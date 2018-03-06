@@ -24,7 +24,6 @@ struct ast_cast_func;
 
 // defined in ast_type_set.hpp
 struct ast_typeset;
-struct ast_typehash_func;
 
 #define __Sametype_param_args(rh)                           ast_type* rh
 #define __Widens_param_args(fe, c)                          ast_expr* fe, int& c

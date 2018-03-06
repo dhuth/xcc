@@ -70,25 +70,25 @@ static ptr<list<ast_decl>> find_all_declarations(
 }
 
 
-ast_decl* xi_builder::find_declaration(xi_qname* qname) const noexcept {
+ast_decl* xi_builder::find_declaration(ref<xi_qname> qname) const noexcept {
     auto start_iter = begin(qname->names);
     auto end_iter   = end(qname->names);
     return xcc::find_declaration(this->context, begin(qname->names), end(qname->names), true);
 }
 
-ptr<list<ast_decl>> xi_builder::find_all_declarations(xi_qname* qname) const noexcept {
+ptr<list<ast_decl>> xi_builder::find_all_declarations(ref<xi_qname> qname) const noexcept {
     auto start_iter = begin(qname->names);
     auto end_iter   = end(qname->names);
     return xcc::find_all_declarations(this->context, begin(qname->names), end(qname->names), true, false);
 }
 
-xi_member_decl* xi_builder::find_member(ast_type* tp, xi_qname* name) const noexcept {
+xi_member_decl* xi_builder::find_member(ast_type* tp, ref<xi_qname> name) const noexcept {
     //TODO: visibility
     //TODO: look for extension members (???)
     return xcc::find_declaration(xcc::push_context(this->context, tp), begin(name->names), end(name->names), false)->as<xi_member_decl>();
 }
 
-ptr<list<xi_member_decl>> xi_builder::find_all_members(ast_type* tp, xi_qname* name) const noexcept {
+ptr<list<xi_member_decl>> xi_builder::find_all_members(ast_type* tp, ref<xi_qname> name) const noexcept {
     //TODO: visibility
     //TODO: look for extension members (???)
     return map(xcc::find_all_declarations(xcc::push_context(this->context, tp), begin(name->names), end(name->names), false, false),

@@ -38,6 +38,13 @@ struct ast_locatable {
         /* do nothing */
     }
 
+    explicit inline ast_locatable(tree_t* t, const ast_locatable& l) noexcept
+            : ast_locatable(t, l.source_location) {
+        /* do nothing */
+    }
+
+    ast_locatable(const ast_locatable&) = delete;
+
     property<source_span>                           source_location;    //! the location of this node in the source code
 };
 
@@ -58,6 +65,13 @@ struct ast_externable {
               is_extern_visible(p, is_extern_visible) {
         // do nothing
     }
+
+    explicit inline ast_externable(tree_t* p, const ast_externable& e) noexcept
+            : ast_externable(p, e.is_extern, e.is_extern_visible) {
+        /* do nothing */
+    }
+
+    ast_externable(const ast_externable&) = delete;
 
     property<bool>                                  is_extern;          //! is defined externally
     property<bool>                                  is_extern_visible;  //! is visible outside of this module
@@ -147,7 +161,7 @@ public:
      */
     inline ast_decl(const ast_decl& d) noexcept
             : base_type((base_type&) d),
-              ast_locatable((ast_locatable&) d),
+              ast_locatable(this, d),
               name(this, d.name),
               generated_name(this, d.generated_name) {
         // do nothing
@@ -189,7 +203,7 @@ public:
      */
     inline ast_expr(const ast_expr& e) noexcept
             : base_type((base_type&) e),
-              ast_locatable(e),
+              ast_locatable(this, e),
               value_type(this, e.value_type),
               type(this, e.type) {
         // do nothing
@@ -223,7 +237,7 @@ public:
      */
     inline ast_stmt(const ast_stmt& s) noexcept
             : base_type((base_type&) s),
-              ast_locatable((ast_locatable&) s){
+              ast_locatable(this, s){
         // do nothing
     }
 
@@ -312,7 +326,7 @@ public:
      */
     explicit inline ast_variable_decl(const ast_variable_decl& v) noexcept
             : base_type((base_type&) v),
-              ast_externable(v),
+              ast_externable(this, v),
               type(this, v.type),
               initial_value(this, v.initial_value) {
         // do nothing
@@ -450,7 +464,7 @@ public:
 
     explicit inline ast_function_decl(const ast_function_decl& f) noexcept
             : base_type((base_type&) f),
-              ast_externable(f),
+              ast_externable(this, f),
               return_type(this, f.return_type),
               parameters(this, f.parameters),
               body(this, f.body),

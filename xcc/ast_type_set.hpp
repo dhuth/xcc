@@ -17,7 +17,10 @@ namespace xcc {
 struct ast_typeset {
 public:
 
-    explicit inline ast_typeset(ast_sametype_func*) noexcept;
+    explicit inline ast_typeset(ast_sametype_func* st) noexcept
+            : _sametype(st) {
+        // do nothing
+    }
 
     ast_type* get(ast_type*) noexcept;
 
@@ -29,7 +32,7 @@ public:
         if(new_t != old_t) {
             delete new_t;
         }
-        return old_t;
+        return old_t->template as<_T>();
     }
 
 protected:

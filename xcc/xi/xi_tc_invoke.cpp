@@ -41,7 +41,6 @@ static ptr<list<ast_type>> __get_parameter_types(ast_decl* d) {
 
 static bool __check_candidate(ast_decl* decl, ptr<list<ast_expr>> args, ast_expr*& callexpr, int& cost, xi_builder& b) {
     //TODO: handle generics
-    auto arg_types                  = map(args, [&](ast_expr* e)->ast_type* { return e->type; });
     auto param_types                = __get_parameter_types(decl);
 
     //TODO: handle vararg functions...
@@ -50,7 +49,6 @@ static bool __check_candidate(ast_decl* decl, ptr<list<ast_expr>> args, ast_expr
     }
 
     auto            arg_expr_iter   = begin(args);
-    auto            arg_type_iter   = begin(arg_types);
     auto            param_type_iter = begin(param_types);
     list<ast_expr>* oargs           = new list<ast_expr>();
 
@@ -60,13 +58,10 @@ static bool __check_candidate(ast_decl* decl, ptr<list<ast_expr>> args, ast_expr
 
         auto param_type_to  = *param_type_iter;
         auto arg_from       = *arg_expr_iter;
-        auto arg_type_from  = *arg_type_iter;
+        //auto arg_type_from  = *arg_type_iter;
 
-        if(b.widens(arg_type_from, param_type_to, arg_cost)) {
-            oargs->push_back(b.widen(param_type_to, arg_from));
-        }
-        else if(b.coercable(param_type_to, arg_from, arg_cost)) {
-            oargs->push_back(b.coerce(param_type_to, arg_from));
+        if(b.widens(param_type_to, arg_from, arg_cost)) {
+            oargs->push_back(b.cast(param_type_to, arg_from));
         }
         else {
             delete oargs;
@@ -75,7 +70,6 @@ static bool __check_candidate(ast_decl* decl, ptr<list<ast_expr>> args, ast_expr
 
         cost += arg_cost;
         arg_expr_iter++;
-        arg_type_iter++;
         param_type_iter++;
     }
 

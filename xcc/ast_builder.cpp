@@ -507,7 +507,7 @@ ast_expr* __ast_builder_impl::make_lower_call_expr(ast_expr* fexpr, list<ast_exp
         auto ptp    = ftype->parameter_types[i];
         auto narg   = (*args)[i];
 
-        new_args->push_back(this->make_lower_cast_expr(ptp, narg));
+        new_args->push_back(this->cast(ptp, narg));
     }
 
     ast_type* t = fexpr->type->as<ast_function_type>()->return_type;
@@ -540,7 +540,7 @@ ast_stmt* __ast_builder_impl::make_assign_stmt(ast_expr* lhs, ast_expr* rhs) con
 
 ast_stmt* __ast_builder_impl::make_lower_assign_stmt(ast_expr* lhs, ast_expr* rhs) const noexcept {
     auto dest = lhs;
-    auto src  = this->make_lower_cast_expr(lhs->type, rhs);
+    auto src  = this->cast(lhs->type, rhs);
 
     return new ast_assign_stmt(dest, src);
 }
@@ -602,12 +602,16 @@ ast_type* __ast_builder_impl::maxtype(__Maxtype_args(lhs, rhs)) const noexcept {
     return _the_maxtype_func->visit(lhs, rhs);
 }
 
-bool __ast_builder_impl::widens(__Widens_args_nc(tt, fe)) const {
+ast_expr* __ast_builder_impl::cast(__Cast_args(tt, fe)) const noexcept {
+    return _the_cast_func->visit(tt, fe);
+}
+
+bool __ast_builder_impl::widens(__Widens_args_nc(tt, fe)) const noexcept {
     int cost = 0;
     return this->widens(tt, fe, cost);
 }
 
-bool __ast_builder_impl::widens(__Widens_args(tt, fe, cost)) const {
+bool __ast_builder_impl::widens(__Widens_args(tt, fe, cost)) const noexcept {
     return _the_widens_func->visit(tt, fe, cost);
 }
 

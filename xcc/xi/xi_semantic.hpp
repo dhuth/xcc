@@ -38,7 +38,6 @@ private:
 };
 
 ast_expr* tc_single_expr(ast_expr*, xi_builder&);
-ast_expr* tc_maybe_cast(ast_type*, ast_expr*, xi_builder&);
 
 }
 

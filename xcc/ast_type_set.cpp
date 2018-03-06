@@ -10,12 +10,6 @@
 
 namespace xcc {
 
-
-ast_typeset::ast_typeset(ast_sametype_func* st) noexcept
-        : _sametype(st) {
-    // do nothing
-}
-
 ast_typeset::bin_t& ast_typeset::getbin(ast_type* t) noexcept {
     auto id = t->get_tree_type();
     if(_bins.find(id) == _bins.end()) {

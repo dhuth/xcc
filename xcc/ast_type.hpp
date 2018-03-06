@@ -15,6 +15,7 @@
 namespace xcc {
 
 struct ast_type_provider {
+public:
 
     explicit ast_type_provider() noexcept = default;
     virtual ~ast_type_provider() = default;

@@ -41,53 +41,6 @@ void xi_tc_walker::visit_xi_operator_method_decl(xi_operator_method_decl* fdecl,
     //...
 }
 
-
-static bool __widens_from(xi_reference_type* tp_from, ast_type* tp_to, int& cost, const xi_builder& b) {
-    ast_type* utp_from = tp_from->type;
-    if(tp_to->is<xi_reference_type>()) {
-        cost += 2;
-        return b.widens(utp_from, tp_to->as<xi_reference_type>()->type, cost);
-    }
-    else {
-        cost += 2;
-        return b.widens(utp_from, tp_to, cost);
-    }
-}
-
-static ast_expr* __widen_from(xi_reference_type* tp_from, ast_type* tp_to, ast_expr* e, const xi_builder& b) {
-    ast_type* utp_from = tp_from->type;
-    if(tp_to->is<xi_reference_type>()) {
-        // static cast
-        assert(false);
-    }
-    else {
-        return b.widen(tp_to, b.make_xi_deref_expr(e));
-    }
-}
-
-static bool __widens_to(ast_type* tp_from, xi_reference_type* tp_to, int& cost, const xi_builder& b) {
-    ast_type* utp_to = tp_to->type;
-    if(tp_from->is<xi_reference_type>()) {
-        cost += 2;
-        return b.widens(tp_from->as<xi_reference_type>()->type, utp_to, cost);
-    }
-    else {
-        cost += 2;
-        return b.widens(tp_from, utp_to, cost);
-    }
-}
-
-ast_expr* tc_maybe_cast(ast_type* to_type, ast_expr* from_expr, xi_builder& b) {
-    ast_type* from_type     = from_expr->type;
-    if(b.widens(from_type, to_type)) {
-        return b.widen(to_type, from_expr);
-    }
-    else if(b.coercable(to_type, from_expr)) {
-        return b.coerce(to_type, from_expr);
-    }
-    //TODO: Handle user error
-}
-
 bool xi_builder::semantic_pass() noexcept {
     xi_tc_walker tcwalker;
 

@@ -14,12 +14,16 @@ namespace xcc {
 
 using tvec_t = std::vector<ptr<__tree_base>>;
 
-template<typename>  struct __reference;
-template<typename>  struct __reference_impl_base;
-template<typename>  struct __pick_reference_impl;
+template<typename>                          struct __reference;
+template<typename>                          struct __reference_impl_base;
+template<typename>                          struct __pick_reference_impl;
+template<typename, tvec_t __tree_base::*>   struct __bound_vec_reference;
 
-template<typename T>    using reference             = __reference<T>;
-template<typename T>    using reference_impl_base   = __reference_impl_base<T>;
+template<typename T>                        using reference             = __reference<T>;
+template<typename T>                        using reference_impl_base   = __reference_impl_base<T>;
+
+template<typename T>                        using strong_ref    = __bound_vec_reference<T, &__tree_base::_strong_references>;
+template<typename T>                        using weak_ref      = __bound_vec_reference<T, &__tree_base::_weak_references>;
 
 template<typename _TreeType>
 struct __reference_base {
@@ -37,6 +41,8 @@ public:
     __reference_base(const __reference_base&) = delete;
     __reference_base(__reference_base&&) = delete;
 
+    // by vector & index
+    // -----------------
     static getfunc_t getbyindex(tvec_t& vec, size_t idx) noexcept {
         return [=,&vec]() -> _TreeType* {
             return static_cast<_TreeType*>(unbox(vec[idx]));
@@ -105,6 +111,13 @@ public:
         return t;
     }
 
+    // Copy-Assign operator
+    inline _TreeType* operator=(const __reference_impl_base& other) {
+        _TreeType* t = other.get();
+        this->set(t);
+        return t;
+    }
+
     inline _TreeType* operator->() const noexcept {
         return this->get();
     }
@@ -124,21 +137,6 @@ public:
     inline bool operator!=(const reference<_TreeType>& p) const noexcept {
         return this->get() != p.get();
     }
-
-protected:
-
-//    _TreeType* __get() const noexcept {
-//        return static_cast<_TreeType*>(unbox(_vector[_index]));
-//    }
-
-//    void __set(_TreeType* t) noexcept {
-//        _vector[_index] = box<__tree_base>(t);
-//    }
-
-private:
-
-//    tvec_t&                                                 _vector;
-//    size_t                                                  _index;
 
 };
 
@@ -188,10 +186,6 @@ public:
     using __reference<_TreeType>::operator=;
 
 };
-
-
-template<typename T>    using strong_ref    = __bound_vec_reference<T, &__tree_base::_strong_references>;
-template<typename T>    using weak_ref      = __bound_vec_reference<T, &__tree_base::_weak_references>;
 
 // byref argument aliases
 template<typename T>    using sref          = strong_ref<T>&;

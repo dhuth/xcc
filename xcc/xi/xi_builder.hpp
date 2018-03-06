@@ -16,8 +16,11 @@
 
 namespace xcc {
 
+struct xi_type_provider;
+
+
 struct xi_builder : public ast_builder<xi_name_mangler,
-                                       xi_typeset> {
+                                       xi_type_provider> {
 public:
 
     explicit xi_builder(translation_unit&) noexcept;
@@ -88,10 +91,11 @@ public:
     ast_type*                                   get_return_type()                                                                                       const noexcept;
 
     // Defined in xi_lookup.cpp
-    ast_decl*                                   find_declaration(xi_qname*)                                                                             const noexcept;
-    ptr<list<ast_decl>>                         find_all_declarations(xi_qname*)                                                                        const noexcept;
-    xi_member_decl*                             find_member(ast_type*, xi_qname*)                                                                       const noexcept;
-    ptr<list<xi_member_decl>>                   find_all_members(ast_type*, xi_qname*)                                                                  const noexcept;
+    ast_decl*                                   find_declaration(ref<xi_qname>)                                                                         const noexcept;
+    ptr<list<ast_decl>>                         find_all_declarations(ref<xi_qname>)                                                                    const noexcept;
+    xi_member_decl*                             find_member(ast_type*, ref<xi_qname>)                                                                   const noexcept;
+    ptr<list<xi_member_decl>>                   find_all_members(ast_type*, ref<xi_qname>)                                                              const noexcept;
+
 
     void                                        push_xi_function(xi_function_decl*)                                                                           noexcept;
     void                                        push_xi_struct(xi_struct_decl*)                                                                               noexcept;
@@ -113,6 +117,8 @@ public:
     bool                                        lower_pass(ircode_context&/* error log info*/)                                                                noexcept;
 
 private:
+
+    ptr<xi_auto_type>                                       _the_auto_type;
 
     std::stack<ptr<xi_type_decl>>                           _nesting_types;
     std::stack<ptr<ast_decl>>                               _nesting_closure_decls;

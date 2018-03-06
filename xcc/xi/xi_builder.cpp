@@ -5,29 +5,20 @@
  *      Author: derick
  */
 
-#include <xi_type_func.hpp>
+
 #include "xi_builder.hpp"
 #include "xi_context.hpp"
 #include "error.hpp"
-#include "xi_lower.hpp"
+#include "xi_type.hpp"
 
 namespace xcc {
 
 xi_builder::xi_builder(translation_unit& tu) noexcept
-        : ast_builder<xi_name_mangler, xi_typeset>(tu),
-          _the_auto_type(new xi_auto_type()),
-          _const_types(     this->get_universal_typeset()),
-          _reference_types( this->get_universal_typeset()),
-          _object_types(    this->get_universal_typeset()),
-          _tuple_types(     this->get_universal_typeset()),
-          _the_widen_func(new xi_widen_func()),
-          _the_widens_func(new xi_widens_func()) {
-    // do nothing ...
+        : ast_builder<xi_name_mangler, xi_type_provider>(tu) {
+    _the_auto_type = new xi_auto_type();
 }
 
 xi_builder::~xi_builder() noexcept {
-    delete _the_widen_func;
-    delete _the_widens_func;
 }
 
 xi_auto_type* xi_builder::get_auto_type() const noexcept {
@@ -35,19 +26,19 @@ xi_auto_type* xi_builder::get_auto_type() const noexcept {
 }
 
 xi_const_type* xi_builder::get_const_type(ast_type* type) noexcept {
-    return this->_const_types.get_new_as<xi_const_type>(type);
+    return this->get_typeset()->get_new<xi_const_type>(type);
 }
 
 xi_reference_type* xi_builder::get_reference_type(ast_type* type) noexcept {
-    return this->_reference_types.get_new_as<xi_reference_type>(type);
+    return this->get_typeset()->get_new<xi_reference_type>(type);
 }
 
 xi_decl_type* xi_builder::get_object_type(ast_decl* decl) noexcept {
-    return this->_object_types.get_new_as<xi_decl_type>(decl);
+    return this->get_typeset()->get_new<xi_decl_type>(decl);
 }
 
 xi_tuple_type* xi_builder::get_tuple_type(list<ast_type>* types) noexcept {
-    return this->_tuple_types.get_new_as<xi_tuple_type>(types);
+    return this->get_typeset()->get_new<xi_tuple_type>(types);
 }
 
 ast_type* xi_builder::get_declaration_type(ast_decl* decl) noexcept {
@@ -151,7 +142,7 @@ ast_expr* xi_builder::make_xi_index(ast_expr* e, list<ast_expr>* args) const noe
 ast_expr* xi_builder::make_xi_member_expr(ast_expr* expr, xi_member_decl* member) noexcept {
     if(expr->type->is<xi_reference_type>()) {
         return this->make_xi_member_expr(
-                this->widen(expr->type->as<xi_reference_type>()->type, expr),
+                this->cast(expr->type->as<xi_reference_type>()->type, expr),
                 member);
     }
     return copyloc(new xi_member_expr(this->get_declaration_type(member), expr, member), expr);

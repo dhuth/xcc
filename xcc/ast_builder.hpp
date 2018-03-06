@@ -190,7 +190,6 @@ public:
     virtual ast_expr*                           make_op_expr(ast_op, ast_expr*, ast_expr*)                                noexcept;
             ast_expr*                           make_lower_op_expr(ast_op, ast_expr*, ast_expr*)                          noexcept;
     virtual ast_expr*                           make_cast_expr(ast_type*, ast_expr*)                                const noexcept;
-            ast_expr*                           make_lower_cast_expr(ast_type*, ast_expr*)                          const noexcept;
     virtual ast_declref*                        make_declref_expr(ast_decl*)                                              noexcept;
     virtual ast_expr*                           make_memberref_expr(ast_expr*, uint32_t)                                  noexcept;
     virtual ast_expr*                           make_deref_expr(ast_expr*)                                          const noexcept;
@@ -388,14 +387,16 @@ public:
             : __ast_builder_impl(
                     tu,
                     new _Mangler(),
-                    new _TypeProvider(*this)) { }
+                    new _TypeProvider()) {
+        // do nothing
+    }
     virtual ~ast_builder() noexcept {
         // do nothing
     }
 
 protected:
 
-//    inline TTypeSet&        get_universal_typeset() { return (TTypeSet&) *((ast_typeset_base*) _the_typeset_ptr); }
+    inline ast_typeset* get_typeset() const noexcept { return _the_typeset; }
 
 };
 
