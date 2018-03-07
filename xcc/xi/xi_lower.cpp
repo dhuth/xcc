@@ -87,10 +87,7 @@ static void lower_methods(ptr<list<xi_function_decl>> flist, xi_builder& b) {
  * =============== */
 
 static ast_parameter_decl* lower_parameter(xi_parameter_decl* d, xi_builder& b) {
-    auto new_param      = new ast_parameter_decl((std::string) d->name, d->type);
-    copy_declaration_info(new_param, d);
-    d->lowered_parameter = new_param;
-    return new_param;
+    return d;
 }
 
 static ast_function_decl* lower_function(xi_function_decl* fdecl, xi_builder& b) {
@@ -138,7 +135,7 @@ static void lower_function_list(ptr<list<xi_function_decl>> flist, translation_u
         return dref->declaration->is<xi_parameter_decl>();
     });
     for(auto pref: prefs) {
-        pref->declaration = pref->declaration->as<xi_parameter_decl>()->lowered_parameter;
+        pref->declaration = pref->declaration->as<ast_parameter_decl>();
     }
 }
 

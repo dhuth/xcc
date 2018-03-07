@@ -7,6 +7,30 @@
 namespace xcc {
 
 /**
+ * Common properties for all nodes that belong to a namespace
+ */
+struct xi_namespace_member_base {
+
+    explicit inline xi_namespace_member_base(tree_t* p) noexcept
+            : ns(p) {
+        /* do nothing */
+    }
+
+    explicit inline xi_namespace_member_base(tree_t* p, ast_namespace_decl* ns) noexcept
+            : ns(p, ns) {
+        /* do nothing */
+    }
+
+    explicit inline xi_namespace_member_base(tree_t* p, const xi_namespace_member_base& o) noexcept
+            : ns(p, o.ns) {
+        /* do nothing */
+    }
+
+    weak_ref<ast_namespace_decl>                                    ns;
+};
+
+
+/**
  * QName
  */
 struct xi_qname : public implement_tree<tree_type_id::xi_qname> {
@@ -185,21 +209,14 @@ struct xi_parameter_decl : public implement_tree<tree_type_id::xi_parameter_decl
 public:
 
     explicit inline xi_parameter_decl(std::string name, ast_type* type) noexcept
-            : base_type(name),
-              type(this, type),
-              lowered_parameter(this, nullptr) {
+            : base_type(name, type) {
         /* do nothing */
     }
 
     explicit inline xi_parameter_decl(const xi_parameter_decl& p) noexcept
-            : base_type((base_type&) p),
-              type(this, p.type),
-              lowered_parameter(this, p.lowered_parameter) {
+            : base_type((base_type&) p) {
         /* do nothing */
     }
-
-    property<ast_type>                                              type;
-    weak_ref<ast_parameter_decl>                                    lowered_parameter;
 
 };
 
@@ -236,25 +253,6 @@ struct xi_function_base {
 
 
 /**
- * Common properties for all nodes that belong to a namespace
- */
-struct xi_namespace_member_base {
-
-    explicit inline xi_namespace_member_base(tree_t* p) noexcept
-            : ns(p) {
-        /* do nothing */
-    }
-
-    explicit inline xi_namespace_member_base(tree_t* p, const xi_namespace_member_base& o) noexcept
-            : ns(p, o.ns) {
-        /* do nothing */
-    }
-
-    weak_ref<ast_namespace_decl>                                    ns;
-};
-
-
-/**
  * A function
  */
 struct xi_function_decl : public implement_tree<tree_type_id::xi_function_decl>,
@@ -263,13 +261,10 @@ struct xi_function_decl : public implement_tree<tree_type_id::xi_function_decl>,
                           public xi_namespace_member_base {
 public:
 
-    typedef xi_parameter_decl                                       parameter_decl_t;
-    typedef ast_type                                                return_type_t;
-
     explicit inline xi_function_decl(
             std::string                 name,
-            return_type_t*              return_type,
-            list<parameter_decl_t>*     parameters,
+            ast_type*                   return_type,
+            list<xi_parameter_decl>*    parameters,
             bool                        is_vararg,
             ast_stmt*                   body) noexcept
                     : base_type(name),
@@ -286,8 +281,8 @@ public:
     explicit inline xi_function_decl(
             tree_type_id                id,
             std::string                 name,
-            return_type_t*              return_type,
-            list<parameter_decl_t>*     parameters,
+            ast_type*                   return_type,
+            list<xi_parameter_decl>*    parameters,
             bool                        is_vararg,
             ast_stmt*                   body) noexcept
                     : base_type(id, name),
@@ -381,13 +376,10 @@ struct xi_method_decl : public implement_tree<tree_type_id::xi_method_decl>,
                         public xi_function_base {
 public:
 
-    typedef xi_parameter_decl                                       parameter_decl_t;
-    typedef ast_type                                                return_type_t;
-
     explicit inline xi_method_decl(
             std::string                 name,
-            return_type_t*              return_type,
-            list<parameter_decl_t>*     parameters,
+            ast_type*                   return_type,
+            list<xi_parameter_decl>*    parameters,
             bool                        is_vararg,
             ast_stmt*                   body) noexcept
                     : base_type(name),
@@ -401,8 +393,8 @@ public:
     explicit inline xi_method_decl(
             tree_type_id                id,
             std::string                 name,
-            return_type_t*              return_type,
-            list<parameter_decl_t>*     parameters,
+            ast_type*                   return_type,
+            list<xi_parameter_decl>*    parameters,
             bool                        is_vararg,
             ast_stmt*                   body) noexcept
                     : base_type(id, name),
@@ -846,14 +838,11 @@ public:
 struct xi_operator_function_decl : public implement_tree<tree_type_id::xi_operator_function_decl> {
 public:
 
-    typedef tree_type_info<type_id>::base_type::return_type_t       return_type_t;
-    typedef tree_type_info<type_id>::base_type::parameter_decl_t    parameter_decl_t;
-
     explicit inline xi_operator_function_decl(
             std::string                         name,
             xi_op_expr::xi_operator             op,
-            return_type_t*                      return_type,
-            list<parameter_decl_t>*             parameters,
+            ast_type*                           return_type,
+            list<xi_parameter_decl>*            parameters,
             bool                                is_vararg,
             ast_stmt*                           body) noexcept
                     : base_type(name, return_type, parameters, is_vararg, body),
@@ -877,14 +866,11 @@ public:
 struct xi_operator_method_decl : public implement_tree<tree_type_id::xi_operator_method_decl> {
 public:
 
-    typedef tree_type_info<type_id>::base_type::return_type_t       return_type_t;
-    typedef tree_type_info<type_id>::base_type::parameter_decl_t    parameter_decl_t;
-
     explicit inline xi_operator_method_decl(
             std::string                         name,
             xi_op_expr::xi_operator             op,
-            return_type_t*                      return_type,
-            list<parameter_decl_t>*             parameters,
+            ast_type*                           return_type,
+            list<xi_parameter_decl>*            parameters,
             bool                                is_vararg,
             ast_stmt*                           body) noexcept
                     : base_type(name, return_type, parameters, is_vararg, body),
@@ -905,21 +891,25 @@ public:
 /**
  * A more expressive namespace object
  */
-struct xi_namespace_decl final : public implement_tree<tree_type_id::xi_namespace_decl> {
+struct xi_namespace_decl final : public implement_tree<tree_type_id::xi_namespace_decl>,
+                                 public xi_namespace_member_base {
 public:
 
     explicit inline xi_namespace_decl(std::string name) noexcept
-            : base_type(name) {
+            : base_type(name),
+              xi_namespace_member_base(this) {
         /* do nothing */
     }
 
     explicit inline xi_namespace_decl(std::string name, list<ast_decl>* declarations) noexcept
-            : base_type(name, declarations) {
+            : base_type(name, declarations),
+              xi_namespace_member_base(this) {
         /* do nothing */
     }
 
     explicit inline xi_namespace_decl(const xi_namespace_decl& n) noexcept
-            : base_type((base_type&)n) {
+            : base_type((base_type&)n),
+              xi_namespace_member_base(this, n){
         /* do nothing */
     }
 };

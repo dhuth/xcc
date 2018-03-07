@@ -26,23 +26,38 @@ private:
 
 };
 
-struct dom_assign_parent_walker final : public xi_preorder_walker<> {
+
+struct dom_nesting_walker final : public xi_preorder_walker<> {
 public:
 
-    explicit inline dom_assign_parent_walker() noexcept {
-        //...
+    explicit inline dom_nesting_walker() noexcept {
+        this->add(&dom_nesting_walker::visit_xi_namespace_decl);
+        this->add(&dom_nesting_walker::visit_xi_member_decl);
+        this->add(&dom_nesting_walker::visit_xi_function_decl);
     }
 
 protected:
 
-    void begin(tree_type_id, ast_tree*, xi_builder&) override final;
-    void end(tree_type_id, ast_tree*, xi_builder&) override final;
+//    void begin(tree_type_id, ast_tree*, xi_builder&) override final;
+//    void end(tree_type_id, ast_tree*, xi_builder&) override final;
 
-    void visit_xi_struct_decl(xi_struct_decl*,                          xi_builder&);
-    void visit_xi_field_decl(xi_field_decl*,                            xi_builder&);
-    void visit_xi_method_decl(xi_method_decl*,                          xi_builder&);
-    void visit_xi_operator_method_decl(xi_operator_method_decl*,        xi_builder&);
+    void visit_xi_namespace_decl(xi_namespace_decl*,                    xi_builder&);
+    void visit_xi_member_decl(xi_member_decl*,                          xi_builder&);
+    void visit_xi_function_decl(xi_function_decl*,                      xi_builder&);
 
+};
+
+
+struct dom_swap_decl_walker final : public xi_preorder_walker<> {
+public:
+
+    explicit inline dom_swap_decl_walker() noexcept {
+        this->add(&dom_swap_decl_walker::visit_xi_decl_type);
+    }
+
+protected:
+
+    void visit_xi_decl_type(xi_decl_type*,                              xi_builder&);
 };
 
 }

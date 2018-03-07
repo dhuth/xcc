@@ -183,8 +183,8 @@ xi_operator_function_decl* xi_metadata_reader::read_xi_operator_function_decl(ll
     std::string                                             generated_name;
     source_span                                             location;
     xi_operator                                             op;
-    xi_operator_function_decl::return_type_t*               return_type;
-    list<xi_operator_function_decl::parameter_decl_t>*      parameters;
+    ast_type*                                               return_type;
+    list<xi_parameter_decl>*                                parameters;
     bool                                                    is_vararg;
 
     this->read_tuple(md,
@@ -208,8 +208,8 @@ xi_operator_method_decl* xi_metadata_reader::read_xi_operator_method_decl(llvm::
     ast_type*                                               parent;
     bool                                                    is_static;
     xi_operator                                             op;
-    xi_operator_method_decl::return_type_t*                 return_type;
-    list<xi_operator_method_decl::parameter_decl_t>*        parameters;
+    ast_type*                                               return_type;
+    list<xi_parameter_decl>*                                parameters;
     bool                                                    is_vararg;
 
     this->read_tuple(md,

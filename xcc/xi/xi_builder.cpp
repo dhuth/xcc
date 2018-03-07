@@ -15,7 +15,7 @@ namespace xcc {
 
 xi_builder::xi_builder(translation_unit& tu) noexcept
         : ast_builder<xi_name_mangler, xi_type_provider>(tu) {
-    _the_auto_type = new xi_auto_type();
+    _the_auto_type = this->get_typeset()->get_new<xi_auto_type>();
 }
 
 xi_builder::~xi_builder() noexcept {
@@ -163,36 +163,6 @@ ast_stmt* xi_builder::make_xi_while_stmt(ast_expr* expr, ast_stmt* stmt) const n
 
 ast_stmt* xi_builder::make_xi_return_stmt(ast_expr* expr) const noexcept {
     return new ast_return_stmt(expr);
-}
-
-void xi_builder::push_xi_function(xi_function_decl* decl) noexcept {
-    this->context = this->context->push_context<xi_function_context>(decl);
-    _nesting_closure_decls.push(decl);
-}
-
-void xi_builder::leave_xi_function() noexcept {
-    this->pop_context();
-    _nesting_closure_decls.pop();
-}
-
-void xi_builder::push_xi_struct(xi_struct_decl* s) noexcept {
-    this->context = this->context->push_context<xi_struct_context>(s);
-    _nesting_types.push(s);
-}
-
-void xi_builder::leave_xi_struct() noexcept {
-    this->pop_context();
-    _nesting_types.pop();
-}
-
-void xi_builder::push_xi_method(xi_method_decl* m) noexcept {
-    this->context = this->context->push_context<xi_method_context>(m);
-    _nesting_closure_decls.push(m);
-}
-
-void xi_builder::leave_xi_method() noexcept {
-    this->pop_context();
-    _nesting_closure_decls.pop();
 }
 
 }

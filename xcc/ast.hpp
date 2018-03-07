@@ -112,7 +112,7 @@ public:
 /**
  * Base class for all type ast nodes
  */
-struct ast_type : public extend_tree<tree_type_id::ast_type, ast_tree> {
+struct ast_type : public implement_tree<tree_type_id::ast_type> {
 public:
 
     /**
@@ -139,7 +139,7 @@ public:
 /**
  * Base class for all declaration ast nodes
  */
-struct ast_decl : public extend_tree<tree_type_id::ast_decl, ast_tree>,
+struct ast_decl : public implement_tree<tree_type_id::ast_decl>,
                   public ast_locatable {
 public:
 
@@ -178,10 +178,11 @@ enum class ast_value_catagory : uint64_t {
     lvalue
 };
 
+
 /**
  * Base class for all expression ast nodes
  */
-struct ast_expr : public extend_tree<tree_type_id::ast_expr, ast_tree>,
+struct ast_expr : public implement_tree<tree_type_id::ast_expr>,
                   public ast_locatable {
 public:
 
@@ -218,7 +219,7 @@ public:
 /**
  * Base class for all statement ast nodes
  */
-struct ast_stmt : public extend_tree<tree_type_id::ast_stmt, ast_tree>,
+struct ast_stmt : public implement_tree<tree_type_id::ast_stmt>,
                   public ast_locatable {
 public:
 
@@ -355,6 +356,18 @@ public:
     }
 
     /**
+     * Passing constructor for derived types
+     * @param id
+     * @param name
+     * @param type
+     */
+    explicit inline ast_parameter_decl(tree_type_id id, std::string name, ast_type* type) noexcept
+            : base_type(id, name),
+              type(this, type) {
+        // do nothing
+    }
+
+    /**
      * Passing constructor for cloning
      */
     explicit inline ast_parameter_decl(const ast_parameter_decl& p) noexcept
@@ -486,7 +499,7 @@ public:
 /**
  * The void type
  */
-struct ast_void_type final : public extend_tree<tree_type_id::ast_void_type, ast_type> {
+struct ast_void_type final : public implement_tree<tree_type_id::ast_void_type> {
 public:
 
     /**
@@ -507,7 +520,7 @@ public:
 /**
  * An integer type
  */
-struct ast_integer_type final : public extend_tree<tree_type_id::ast_integer_type, ast_type> {
+struct ast_integer_type final : public implement_tree<tree_type_id::ast_integer_type> {
 
     /**
      * @param bitwidth
@@ -536,7 +549,7 @@ struct ast_integer_type final : public extend_tree<tree_type_id::ast_integer_typ
 /**
  * A floating point type
  */
-struct ast_real_type final : public extend_tree<tree_type_id::ast_real_type, ast_type> {
+struct ast_real_type final : public implement_tree<tree_type_id::ast_real_type> {
 public:
 
     /**
@@ -562,7 +575,7 @@ public:
 /**
  * An array type
  */
-struct ast_array_type final : public extend_tree<tree_type_id::ast_array_type, ast_type> {
+struct ast_array_type final : public implement_tree<tree_type_id::ast_array_type> {
 public:
 
     /**
@@ -592,7 +605,7 @@ public:
 /**
  * A pointer type
  */
-struct ast_pointer_type final : public extend_tree<tree_type_id::ast_pointer_type, ast_type> {
+struct ast_pointer_type final : public implement_tree<tree_type_id::ast_pointer_type> {
 public:
 
     /**
@@ -618,7 +631,7 @@ public:
 /**
  * A function type
  */
-struct ast_function_type final : public extend_tree<tree_type_id::ast_function_type, ast_type> {
+struct ast_function_type final : public implement_tree<tree_type_id::ast_function_type> {
 public:
 
     /**
@@ -651,7 +664,7 @@ public:
 /**
  * A record type
  */
-struct ast_record_type final : public extend_tree<tree_type_id::ast_record_type, ast_type> {
+struct ast_record_type final : public implement_tree<tree_type_id::ast_record_type> {
 public:
 
     /**
@@ -700,7 +713,7 @@ inline bool is_record_type(ast_tree* t)   noexcept { return t->is<ast_record_typ
 /**
  * A constant integer value
  */
-struct ast_integer final : public extend_tree<tree_type_id::ast_integer, ast_expr> {
+struct ast_integer final : public implement_tree<tree_type_id::ast_integer> {
 public:
 
     /**
@@ -737,7 +750,7 @@ public:
 /**
  * A constant floating point value
  */
-struct ast_real final : public extend_tree<tree_type_id::ast_real, ast_expr> {
+struct ast_real final : public implement_tree<tree_type_id::ast_real> {
 public:
 
     /**
@@ -764,7 +777,7 @@ public:
 /**
  * A constant string value
  */
-struct ast_string final : public extend_tree<tree_type_id::ast_string, ast_expr> {
+struct ast_string final : public implement_tree<tree_type_id::ast_string> {
 public:
 
     /**
@@ -791,7 +804,7 @@ public:
 /**
  * An array value
  */
-struct ast_array final : public extend_tree<tree_type_id::ast_array, ast_expr> {
+struct ast_array final : public implement_tree<tree_type_id::ast_array> {
 public:
 
     /**
@@ -818,7 +831,7 @@ public:
 /**
  * A record value
  */
-struct ast_record final : public extend_tree<tree_type_id::ast_record, ast_expr> {
+struct ast_record final : public implement_tree<tree_type_id::ast_record> {
 public:
 
     /**
@@ -972,7 +985,7 @@ public:
 /**
  * A binary operator expression
  */
-struct ast_binary_op final : public extend_tree<tree_type_id::ast_binary_op, ast_expr> {
+struct ast_binary_op final : public implement_tree<tree_type_id::ast_binary_op> {
 public:
 
     /**
@@ -1007,7 +1020,7 @@ public:
 /**
  * A unary operator expression
  */
-struct ast_unary_op final : public extend_tree<tree_type_id::ast_unary_op, ast_expr> {
+struct ast_unary_op final : public implement_tree<tree_type_id::ast_unary_op> {
 public:
 
     /**
@@ -1038,7 +1051,7 @@ public:
 /**
  * An array index expression
  */
-struct ast_index final : public extend_tree<tree_type_id::ast_index, ast_expr> {
+struct ast_index final : public implement_tree<tree_type_id::ast_index> {
 public:
 
     /**
@@ -1069,7 +1082,7 @@ public:
 /**
  * A reference to a parameter, local, or global variable
  */
-struct ast_declref final : public extend_tree<tree_type_id::ast_declref, ast_expr> {
+struct ast_declref final : public implement_tree<tree_type_id::ast_declref> {
 public:
 
     /**
@@ -1095,7 +1108,7 @@ public:
 /**
  * A reference to a record member
  */
-struct ast_memberref final : public extend_tree<tree_type_id::ast_memberref, ast_expr> {
+struct ast_memberref final : public implement_tree<tree_type_id::ast_memberref> {
 public:
 
     inline ast_memberref(ast_type* type, ast_expr* objexpr, uint32_t member) noexcept
@@ -1122,7 +1135,7 @@ public:
 /**
  * A pointer dereference expression
  */
-struct ast_deref final : public extend_tree<tree_type_id::ast_deref, ast_expr> {
+struct ast_deref final : public implement_tree<tree_type_id::ast_deref> {
 public:
 
     /**
@@ -1149,7 +1162,7 @@ public:
 /**
  * An address of expression
  */
-struct ast_addressof final : public extend_tree<tree_type_id::ast_addressof, ast_expr> {
+struct ast_addressof final : public implement_tree<tree_type_id::ast_addressof> {
 public:
 
     /**
@@ -1176,7 +1189,7 @@ public:
 /**
  * A function call by address expression
  */
-struct ast_invoke final : public extend_tree<tree_type_id::ast_invoke, ast_expr> {
+struct ast_invoke final : public implement_tree<tree_type_id::ast_invoke> {
 public:
 
     /**
@@ -1207,7 +1220,7 @@ public:
 /**
  * A function call by name expression
  */
-struct ast_call final : public extend_tree<tree_type_id::ast_call, ast_expr> {
+struct ast_call final : public implement_tree<tree_type_id::ast_call> {
 public:
 
     /**
@@ -1238,7 +1251,7 @@ public:
 /**
  * A list of stmts evaluated for side effects, and then an expression
  */
-struct ast_stmt_expr final : public extend_tree<tree_type_id::ast_stmt_expr, ast_expr> {
+struct ast_stmt_expr final : public implement_tree<tree_type_id::ast_stmt_expr> {
 public:
 
 
@@ -1265,7 +1278,7 @@ public:
 /**
  * A no operation stmt (does nothing)
  */
-struct ast_nop_stmt final : public extend_tree<tree_type_id::ast_nop_stmt, ast_stmt> {
+struct ast_nop_stmt final : public implement_tree<tree_type_id::ast_nop_stmt> {
 public:
 
     /**
@@ -1284,7 +1297,7 @@ public:
 /**
  * An expression statement
  */
-struct ast_expr_stmt final : public extend_tree<tree_type_id::ast_expr_stmt, ast_stmt> {
+struct ast_expr_stmt final : public implement_tree<tree_type_id::ast_expr_stmt> {
 public:
 
     /**
@@ -1310,7 +1323,7 @@ public:
 /**
  * Variable assignment statement
  */
-struct ast_assign_stmt final : public extend_tree<tree_type_id::ast_assign_stmt, ast_stmt> {
+struct ast_assign_stmt final : public implement_tree<tree_type_id::ast_assign_stmt> {
 public:
 
     /**
@@ -1340,7 +1353,7 @@ public:
 /**
  * Declaration of a local variable
  */
-struct ast_decl_stmt final : public extend_tree<tree_type_id::ast_decl_stmt, ast_stmt> {
+struct ast_decl_stmt final : public implement_tree<tree_type_id::ast_decl_stmt> {
 public:
 
     inline ast_decl_stmt(ast_local_decl* decl) noexcept
@@ -1361,9 +1374,9 @@ public:
 
 /**
  * A block statement with local variable declarations that are initialized
- *  at the begining of the block, and destroyed at the end
+ *  at the beginning of the block, and destroyed at the end
  */
-struct ast_block_stmt final : public extend_tree<tree_type_id::ast_block_stmt, ast_stmt> {
+struct ast_block_stmt final : public implement_tree<tree_type_id::ast_block_stmt> {
 public:
 
     /**
@@ -1403,7 +1416,7 @@ public:
 /**
  * An if statement
  */
-struct ast_if_stmt final : public extend_tree<tree_type_id::ast_if_stmt, ast_stmt> {
+struct ast_if_stmt final : public implement_tree<tree_type_id::ast_if_stmt> {
 public:
 
     /**
@@ -1437,7 +1450,7 @@ public:
 /**
  * A while statement
  */
-struct ast_while_stmt final : public extend_tree<tree_type_id::ast_while_stmt, ast_stmt> {
+struct ast_while_stmt final : public implement_tree<tree_type_id::ast_while_stmt> {
 public:
 
     /**
@@ -1467,7 +1480,7 @@ public:
 /**
  * A for statement
  */
-struct ast_for_stmt final : public extend_tree<tree_type_id::ast_for_stmt, ast_stmt> {
+struct ast_for_stmt final : public implement_tree<tree_type_id::ast_for_stmt> {
 public:
 
     /**
@@ -1504,7 +1517,7 @@ public:
 /**
  * A return statement
  */
-struct ast_return_stmt final : public extend_tree<tree_type_id::ast_return_stmt, ast_stmt> {
+struct ast_return_stmt final : public implement_tree<tree_type_id::ast_return_stmt> {
 public:
 
     /**
@@ -1530,7 +1543,7 @@ public:
 /**
  * A break statement
  */
-struct ast_break_stmt final : public extend_tree<tree_type_id::ast_break_stmt, ast_stmt> {
+struct ast_break_stmt final : public implement_tree<tree_type_id::ast_break_stmt> {
 public:
 
     /**
@@ -1549,7 +1562,7 @@ public:
 /**
  * A continue statement
  */
-struct ast_continue_stmt final : public extend_tree<tree_type_id::ast_continue_stmt, ast_stmt> {
+struct ast_continue_stmt final : public implement_tree<tree_type_id::ast_continue_stmt> {
 public:
 
     inline ast_continue_stmt() noexcept { }

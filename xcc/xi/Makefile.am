@@ -4,6 +4,7 @@ noinst_LIBRARIES    = libxi.a
 libxi_a_SOURCES     = xi.cpp
 libxi_a_SOURCES    += xi_builder.cpp
 libxi_a_SOURCES    += xi_context.cpp
+libxi_a_SOURCES    += xi_decl.cpp
 libxi_a_SOURCES    += xi_dom.cpp
 libxi_a_SOURCES    += xi_lookup.cpp
 libxi_a_SOURCES    += xi_lower.cpp

@@ -89,6 +89,18 @@ public:
 
     // Defined in xi_walker.cpp
     ast_type*                                   get_return_type()                                                                                       const noexcept;
+    ast_namespace_decl*                         get_nesting_namespace()                                                                                 const noexcept;
+    ast_type*                                   get_nesting_type()                                                                                      const noexcept;
+
+    void                                        push_xi_namespace(xi_namespace_decl*)                                                                         noexcept;
+    void                                        push_xi_function(xi_function_decl*)                                                                           noexcept;
+    void                                        push_xi_struct(xi_struct_decl*)                                                                               noexcept;
+    void                                        push_xi_method(xi_method_decl*)                                                                               noexcept;
+
+    void                                        leave_xi_namespace()                                                                                          noexcept;
+    void                                        leave_xi_function()                                                                                           noexcept;
+    void                                        leave_xi_struct()                                                                                             noexcept;
+    void                                        leave_xi_method()                                                                                             noexcept;
 
     // Defined in xi_lookup.cpp
     ast_decl*                                   find_declaration(ref<xi_qname>)                                                                         const noexcept;
@@ -97,13 +109,8 @@ public:
     ptr<list<xi_member_decl>>                   find_all_members(ast_type*, ref<xi_qname>)                                                              const noexcept;
 
 
-    void                                        push_xi_function(xi_function_decl*)                                                                           noexcept;
-    void                                        push_xi_struct(xi_struct_decl*)                                                                               noexcept;
-    void                                        push_xi_method(xi_method_decl*)                                                                               noexcept;
-
-    void                                        leave_xi_function()                                                                                           noexcept;
-    void                                        leave_xi_struct()                                                                                             noexcept;
-    void                                        leave_xi_method()                                                                                             noexcept;
+    // Defined in xi_decl.cpp
+    bool                                        samedecl(ast_decl*, ast_decl*)                                                                          const noexcept;
 
     /* --------------------- *
      * Major compiler passes *
@@ -120,7 +127,8 @@ private:
 
     ptr<xi_auto_type>                                       _the_auto_type;
 
-    std::stack<ptr<xi_type_decl>>                           _nesting_types;
+    std::stack<ptr<ast_namespace_decl>>                     _nesting_namespaces;
+    std::stack<ptr<ast_type>>                               _nesting_types;
     std::stack<ptr<ast_decl>>                               _nesting_closure_decls;
 
 };
