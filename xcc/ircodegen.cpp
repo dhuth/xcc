@@ -386,7 +386,7 @@ void ircode_context::generate_function_decl(ast_function_decl* func) {
     }
 
     llvm::Function* fvalue;
-    auto ftype = llvm::FunctionType::get(rtype, llvm::ArrayRef<llvm::Type*>(param_types), false);
+    auto ftype = llvm::FunctionType::get(rtype, llvm::ArrayRef<llvm::Type*>(param_types), func->is_varargs);
     if(func->is_extern_visible) {
         fvalue = llvm::Function::Create(
                 ftype,

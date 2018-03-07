@@ -134,7 +134,43 @@ XI_CAST_FUNC(xi_decl, tt, fe) {
  * ------------------------- */
 
 XI_CAST_FUNC(ast_pointer, tt, fe) {
-    __throw_unhandled_ast_type(__FILE__, __LINE__, fe->type, "CAST_FUNC(ast_pointer) xi version");
+    ast_type*       t_elt = tt->element_type;
+
+    // Cast from another pointer type
+    // ------------------------------
+    if(is_pointer_type(fe->type)) {
+        ast_type*   f_elt = fe->type->as<ast_pointer_type>()->element_type;
+        if(_builder.sametype(t_elt, f_elt)) return fe;  // same type
+        else                                return bitcast_to(tt, fe);
+    }
+
+    // Cast from an integer type
+    // -------------------------
+    if(is_integer_type(fe->type)) {
+        auto            ft = fe->type->as<ast_integer_type>();
+        uint32_t        fw = ft->bitwidth;
+        bool            fu = ft->is_unsigned;
+        if(!fu) {
+            return this->visit(tt,
+                    this->visit(_builder.get_integer_type(fw, true), fe));
+        }
+        else {
+            return new ast_cast(tt, ast_op::utop, fe);
+        }
+    }
+
+    // Cast from an array type
+    // -----------------------
+    if(is_array_type(fe->type)) {
+        //TODO: check that array expression is addressable
+        auto            ft      = fe->type->as<ast_array_type>();
+        ast_type*       f_elt   = ft->element_type;
+
+        return new ast_addressof(tt,
+                _builder.make_index_expr(fe, _builder.make_zero(_builder.get_size_type())));
+    }
+
+    __throw_unhandled_ast_type(__FILE__, __LINE__, fe->type, "CAST_FUNC(ast_pointer)");
 }
 
 /* =================== *
