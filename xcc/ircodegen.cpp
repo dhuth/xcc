@@ -57,7 +57,7 @@ llvm::Type* ircode_type_generator::generate_function_type(ast_function_type* fty
     for(auto p: ftype->parameter_types) {
         params.push_back(this->visit(p));
     }
-    return llvm::FunctionType::get(rtype, llvm::ArrayRef<llvm::Type*>(params), false);
+    return llvm::FunctionType::get(rtype, llvm::ArrayRef<llvm::Type*>(params), ftype->is_varargs);
 }
 
 llvm::Type* ircode_type_generator::generate_record_type(ast_record_type* rtype) {

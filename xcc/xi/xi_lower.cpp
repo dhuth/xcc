@@ -39,12 +39,12 @@ static xi_function_decl* __lower_method_cont(xi_method_decl* mtd, xi_function_de
 }
 
 static inline xi_function_decl* lower_operator_method(xi_operator_method_decl* mtd) noexcept {
-    auto func = new xi_operator_function_decl((std::string) mtd->name, (xi_operator) mtd->op, mtd->return_type, mtd->parameters, mtd->body);
+    auto func = new xi_operator_function_decl((std::string) mtd->name, (xi_operator) mtd->op, mtd->return_type, mtd->parameters, mtd->is_vararg, mtd->body);
     return __lower_method_cont(mtd, func);
 }
 
 static inline xi_function_decl* lower_method(xi_method_decl* mtd) noexcept {
-    auto func = new xi_function_decl((std::string) mtd->name, mtd->return_type, mtd->parameters, mtd->body);
+    auto func = new xi_function_decl((std::string) mtd->name, mtd->return_type, mtd->parameters, mtd->is_vararg, mtd->body);
     return __lower_method_cont(mtd, func);
 }
 
@@ -107,6 +107,7 @@ static ast_function_decl* lower_function(xi_function_decl* fdecl, xi_builder& b)
     copy_externable_info(nfunc, fdecl);
 
     nfunc->is_c_extern          = fdecl->is_c_extern;
+    nfunc->is_varargs           = fdecl->is_vararg;
     fdecl->lowered_func         = nfunc;
     return nfunc;
 }
@@ -149,7 +150,7 @@ bool xi_builder::lower_pass(ircode_context&) noexcept {
     ptr<list<xi_function_decl>> flist = filter(
             gather_nodes<xi_function_decl>(this->global_namespace),
             [&](xi_function_decl* fdecl) -> bool {
-        //TODO: fix
+        //TODO: pick non-generic functions only
         return true;
     });
 

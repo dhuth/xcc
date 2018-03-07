@@ -21,56 +21,45 @@ ast_expr* xi_builder::make_xi_call_expr(ast_decl* decl, list<ast_expr>* arg_list
     return new ast_call(rtype, this->make_declref_expr(decl), arg_list);
 }
 
-static ptr<list<ast_type>> __get_parameter_types(ast_decl* d) {
-    ptr<list<xi_parameter_decl>>                parameters;
-
-    switch(d->get_tree_type()) {
-    case tree_type_id::xi_function_decl:
-    case tree_type_id::xi_operator_function_decl:
-        parameters = static_cast<xi_function_base*>(d->as<xi_function_decl>())->parameters;
-        break;
-    case tree_type_id::xi_method_decl:
-    case tree_type_id::xi_operator_method_decl:
-        parameters = static_cast<xi_function_base*>(d->as<xi_method_decl>())->parameters;
-        break;
-    default:
-        __throw_unhandled_tree_type(__FILE__, __LINE__, d, "__get_parameter_types()");
-    }
-    return map(parameters, [&](xi_parameter_decl* p) -> ast_type* {return p->type;});
-}
-
 static bool __check_candidate(ast_decl* decl, ptr<list<ast_expr>> args, ast_expr*& callexpr, int& cost, xi_builder& b) {
-    //TODO: handle generics
-    auto param_types                = __get_parameter_types(decl);
+    auto            ftype       = b.get_declaration_type(decl)->as<ast_function_type>();
+    list<ast_type>* ptypes      = ftype->parameter_types;
 
-    //TODO: handle vararg functions...
-    if(args->size() != param_types->size()) {
-        return false;
+    if(ftype->is_varargs) {
+        if(args->size() < ptypes->size()) {
+            return false;
+        }
     }
-
-    auto            arg_expr_iter   = begin(args);
-    auto            param_type_iter = begin(param_types);
-    list<ast_expr>* oargs           = new list<ast_expr>();
+    else {
+        if(args->size() != ptypes->size()) {
+            return false;
+        }
+    }
 
     //TODO: maybe start binding generics
-    while(arg_expr_iter != end(args)) {
-        int arg_cost = 0;
+    auto        args_iter       = begin(args);
+    auto        args_iter_end   = end(args);
+    auto        parm_iter       = begin(*ptypes);
+    auto        parm_iter_end   = end(*ptypes);
+    auto        oargs           = box(new list<ast_expr>());
 
-        auto param_type_to  = *param_type_iter;
-        auto arg_from       = *arg_expr_iter;
-        //auto arg_type_from  = *arg_type_iter;
-
-        if(b.widens(param_type_to, arg_from, arg_cost)) {
-            oargs->push_back(b.cast(param_type_to, arg_from));
+    // Do non vararg parameters
+    while(parm_iter != parm_iter_end) {
+        if(b.widens(*parm_iter, *args_iter, cost)) {
+            oargs->push_back(b.cast(*parm_iter, *args_iter));
         }
         else {
-            delete oargs;
             return false;
         }
 
-        cost += arg_cost;
-        arg_expr_iter++;
-        param_type_iter++;
+        parm_iter++;
+        args_iter++;
+    }
+
+    // Do vararg parameters
+    while(args_iter != args_iter_end) {
+        oargs->push_back(*args_iter);
+        args_iter++;
     }
 
     callexpr = b.make_xi_call_expr(decl, oargs);

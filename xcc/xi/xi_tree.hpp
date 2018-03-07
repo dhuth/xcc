@@ -212,9 +212,10 @@ struct xi_function_base {
              typename TParameterType,
              typename enable_if_base_of<ast_type,          TReturnType, int>::type = 0,
              typename enable_if_base_of<xi_parameter_decl, TParameterType, int>::type = 0>
-    explicit inline xi_function_base(tree_t* p, TReturnType* return_type, tree_list<TParameterType>* parameters, ast_stmt* body) noexcept
+    explicit inline xi_function_base(tree_t* p, TReturnType* return_type, tree_list<TParameterType>* parameters, bool is_vararg, ast_stmt* body) noexcept
             : return_type(p, return_type),
               parameters(p, parameters),
+              is_vararg(p, is_vararg),
               body(p, body) {
         /* do nothing */
     }
@@ -222,12 +223,14 @@ struct xi_function_base {
     explicit inline xi_function_base(tree_t* p, const xi_function_base& o) noexcept
             : return_type(p, o.return_type),
               parameters(p, o.parameters),
+              is_vararg(p, o.is_vararg),
               body(p, o.body) {
         /* do nothing */
     }
 
     property<ast_type>                                              return_type;    //! The functions return type
     property<list<xi_parameter_decl>>                               parameters;     //! Function parameters
+    property<bool>                                                  is_vararg;      //! Takes extra parameters
     property<ast_stmt>                                              body;           //! Function body
 };
 
@@ -267,10 +270,11 @@ public:
             std::string                 name,
             return_type_t*              return_type,
             list<parameter_decl_t>*     parameters,
+            bool                        is_vararg,
             ast_stmt*                   body) noexcept
                     : base_type(name),
                       ast_externable(this, false, true),
-                      xi_function_base(this, return_type, parameters, body),
+                      xi_function_base(this, return_type, parameters, is_vararg, body),
                       xi_namespace_member_base(this),
                       lowered_func(this, nullptr),
                       is_inline(this, false),
@@ -284,10 +288,11 @@ public:
             std::string                 name,
             return_type_t*              return_type,
             list<parameter_decl_t>*     parameters,
+            bool                        is_vararg,
             ast_stmt*                   body) noexcept
                     : base_type(id, name),
                       ast_externable(this, false, true),
-                      xi_function_base(this, return_type, parameters, body),
+                      xi_function_base(this, return_type, parameters, is_vararg, body),
                       xi_namespace_member_base(this),
                       lowered_func(this, nullptr),
                       is_inline(this, false),
@@ -383,10 +388,11 @@ public:
             std::string                 name,
             return_type_t*              return_type,
             list<parameter_decl_t>*     parameters,
+            bool                        is_vararg,
             ast_stmt*                   body) noexcept
                     : base_type(name),
                       ast_externable(this),
-                      xi_function_base(this, return_type, parameters, body),
+                      xi_function_base(this, return_type, parameters, is_vararg, body),
                       lowered_func(this, nullptr),
                       is_forward_decl(this, false) {
         /* do nothing */
@@ -397,10 +403,11 @@ public:
             std::string                 name,
             return_type_t*              return_type,
             list<parameter_decl_t>*     parameters,
+            bool                        is_vararg,
             ast_stmt*                   body) noexcept
                     : base_type(id, name),
                       ast_externable(this),
-                      xi_function_base(this, return_type, parameters, body),
+                      xi_function_base(this, return_type, parameters, is_vararg, body),
                       lowered_func(this, nullptr),
                       is_forward_decl(this, false) {
         /* do nothing */
@@ -847,8 +854,9 @@ public:
             xi_op_expr::xi_operator             op,
             return_type_t*                      return_type,
             list<parameter_decl_t>*             parameters,
+            bool                                is_vararg,
             ast_stmt*                           body) noexcept
-                    : base_type(name, return_type, parameters, body),
+                    : base_type(name, return_type, parameters, is_vararg, body),
                       op(this, op) {
         /* do nothing */
     }
@@ -877,8 +885,9 @@ public:
             xi_op_expr::xi_operator             op,
             return_type_t*                      return_type,
             list<parameter_decl_t>*             parameters,
+            bool                                is_vararg,
             ast_stmt*                           body) noexcept
-                    : base_type(name, return_type, parameters, body),
+                    : base_type(name, return_type, parameters, is_vararg, body),
                       op(this, op) {
         /* do nothing */
     }

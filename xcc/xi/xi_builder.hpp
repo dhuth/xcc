@@ -41,10 +41,10 @@ public:
      * --------------------------------- */
 
     ast_namespace_decl*                         make_namespace_decl(const char*, list<ast_decl>*)                                                       const noexcept override;
-    xi_function_decl*                           make_xi_function_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*)                      const noexcept;
-    xi_operator_function_decl*                  make_xi_operator_function_decl(xi_operator, ast_type*, list<xi_parameter_decl>*, ast_stmt*)             const noexcept;
-    xi_method_decl*                             make_xi_method_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*)                        const noexcept;
-    xi_operator_method_decl*                    make_xi_operator_method_decl(xi_operator, ast_type*, list<xi_parameter_decl>*, ast_stmt*)               const noexcept;
+    xi_function_decl*                           make_xi_function_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*, bool)                const noexcept;
+    xi_operator_function_decl*                  make_xi_operator_function_decl(xi_operator, ast_type*, list<xi_parameter_decl>*, ast_stmt*, bool)       const noexcept;
+    xi_method_decl*                             make_xi_method_decl(const char*, ast_type*, list<xi_parameter_decl>*, ast_stmt*, bool)                  const noexcept;
+    xi_operator_method_decl*                    make_xi_operator_method_decl(xi_operator, ast_type*, list<xi_parameter_decl>*, ast_stmt*, bool)         const noexcept;
     xi_parameter_decl*                          make_xi_parameter_decl(const char*, ast_type*)                                                          const noexcept;
     xi_struct_decl*                             make_xi_struct_decl(const char*, list<xi_member_decl>*)                                                 const noexcept;
     xi_field_decl*                              make_xi_field_decl(const char*, ast_type*)                                                              const noexcept;

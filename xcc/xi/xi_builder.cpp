@@ -52,7 +52,7 @@ ast_type* xi_builder::get_declaration_type(ast_decl* decl) noexcept {
                 map(decl->as<xi_function_decl>()->parameters,
                         [&](xi_parameter_decl* d)->ast_type* {
                             return this->get_declaration_type(d);
-        }));
+        }), decl->as<xi_function_decl>()->is_vararg);
     case tree_type_id::xi_method_decl:
     case tree_type_id::xi_operator_method_decl:
         return this->get_function_type(
@@ -60,7 +60,7 @@ ast_type* xi_builder::get_declaration_type(ast_decl* decl) noexcept {
                 map(decl->as<xi_method_decl>()->parameters,
                         [&](xi_parameter_decl* d)->ast_type* {
                             return this->get_declaration_type(d);
-        }));
+        }), decl->as<xi_method_decl>()->is_vararg);
     default:
         return __ast_builder_impl::get_declaration_type(decl);
     }
@@ -74,20 +74,20 @@ ast_namespace_decl* xi_builder::make_namespace_decl(const char* name, list<ast_d
     return new xi_namespace_decl(std::string(name), declarations);
 }
 
-xi_function_decl* xi_builder::make_xi_function_decl(const char* name, ast_type* return_type, list<xi_parameter_decl>* parameters, ast_stmt* body) const noexcept {
-    return new xi_function_decl(name, return_type, parameters, body);
+xi_function_decl* xi_builder::make_xi_function_decl(const char* name, ast_type* return_type, list<xi_parameter_decl>* parameters, ast_stmt* body, bool is_vararg) const noexcept {
+    return new xi_function_decl(name, return_type, parameters, is_vararg, body);
 }
 
-xi_operator_function_decl* xi_builder::make_xi_operator_function_decl(xi_operator op, ast_type* return_type, list<xi_parameter_decl>* parameters, ast_stmt* body) const noexcept {
-    return new xi_operator_function_decl(std::to_string(op).c_str(), op, return_type, parameters, body);
+xi_operator_function_decl* xi_builder::make_xi_operator_function_decl(xi_operator op, ast_type* return_type, list<xi_parameter_decl>* parameters, ast_stmt* body, bool is_vararg) const noexcept {
+    return new xi_operator_function_decl(std::to_string(op).c_str(), op, return_type, parameters, is_vararg, body);
 }
 
-xi_method_decl* xi_builder::make_xi_method_decl(const char* name, ast_type* return_type, list<xi_parameter_decl>* parameters, ast_stmt* body) const noexcept {
-    return new xi_method_decl(name, return_type, parameters, body);
+xi_method_decl* xi_builder::make_xi_method_decl(const char* name, ast_type* return_type, list<xi_parameter_decl>* parameters, ast_stmt* body, bool is_vararg) const noexcept {
+    return new xi_method_decl(name, return_type, parameters, is_vararg, body);
 }
 
-xi_operator_method_decl* xi_builder::make_xi_operator_method_decl(xi_operator op, ast_type* return_type, list<xi_parameter_decl>* parameters, ast_stmt* body) const noexcept {
-    return new xi_operator_method_decl(std::to_string(op).c_str(), op, return_type, parameters, body);
+xi_operator_method_decl* xi_builder::make_xi_operator_method_decl(xi_operator op, ast_type* return_type, list<xi_parameter_decl>* parameters, ast_stmt* body, bool is_vararg) const noexcept {
+    return new xi_operator_method_decl(std::to_string(op).c_str(), op, return_type, parameters, is_vararg, body);
 }
 
 xi_parameter_decl* xi_builder::make_xi_parameter_decl(const char* name, ast_type* type) const noexcept {

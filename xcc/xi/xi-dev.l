@@ -92,6 +92,7 @@ DBL_STRING_LITERAL                                      ["]({DBL_STRING_CHAR}|{D
 \:\:                                                    RETURN_OP(DOUBLE_COLON,             none)
 \;                                                      RETURN_OP(SEMICOLON,                none)
 \.                                                      RETURN_OP(DOT,                      none)
+\.\.\.                                                  RETURN_OP(DOT3,                     none)
 
             /* operators */
 

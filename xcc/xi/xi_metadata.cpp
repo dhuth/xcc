@@ -96,9 +96,10 @@ xi_function_decl* xi_metadata_reader::read_xi_function_decl(llvm::MDTuple* md) {
     source_span                     location;
     ast_type*                       return_type;
     list<xi_parameter_decl>*        parameters;
+    bool                            is_vararg;
 
-    this->read_tuple(md, name, generated_name, location, parameters);
-    auto f = new xi_function_decl(name, return_type, parameters, nullptr);
+    this->read_tuple(md, name, generated_name, location, parameters, is_vararg);
+    auto f = new xi_function_decl(name, return_type, parameters, is_vararg, nullptr);
     this->set_decl_data(f, generated_name, location);
     this->set_externable_data(f);
 
@@ -136,6 +137,7 @@ xi_method_decl* xi_metadata_reader::read_xi_method_decl(llvm::MDTuple* md) {
     bool                            is_static;
     ast_type*                       return_type;
     list<xi_parameter_decl>*        parameters;
+    bool                            is_vararg;
 
     this->read_tuple(md,
             name,
@@ -145,7 +147,7 @@ xi_method_decl* xi_metadata_reader::read_xi_method_decl(llvm::MDTuple* md) {
             is_static,
             return_type,
             parameters);
-    auto m = new xi_method_decl(name, return_type, parameters, nullptr);
+    auto m = new xi_method_decl(name, return_type, parameters, is_vararg, nullptr);
     this->set_decl_data(m, generated_name, location);
     this->set_member_data(m, parent, is_static);
 
@@ -183,6 +185,7 @@ xi_operator_function_decl* xi_metadata_reader::read_xi_operator_function_decl(ll
     xi_operator                                             op;
     xi_operator_function_decl::return_type_t*               return_type;
     list<xi_operator_function_decl::parameter_decl_t>*      parameters;
+    bool                                                    is_vararg;
 
     this->read_tuple(md,
             name,
@@ -191,7 +194,7 @@ xi_operator_function_decl* xi_metadata_reader::read_xi_operator_function_decl(ll
             op,
             return_type,
             parameters);
-    auto f = new xi_operator_function_decl(name, op, return_type, parameters, nullptr);
+    auto f = new xi_operator_function_decl(name, op, return_type, parameters, is_vararg, nullptr);
     this->set_decl_data(f, generated_name, location);
     this->set_externable_data(f);
 
@@ -207,6 +210,7 @@ xi_operator_method_decl* xi_metadata_reader::read_xi_operator_method_decl(llvm::
     xi_operator                                             op;
     xi_operator_method_decl::return_type_t*                 return_type;
     list<xi_operator_method_decl::parameter_decl_t>*        parameters;
+    bool                                                    is_vararg;
 
     this->read_tuple(md,
             name,
@@ -217,7 +221,7 @@ xi_operator_method_decl* xi_metadata_reader::read_xi_operator_method_decl(llvm::
             op,
             return_type,
             parameters);
-    auto m = new xi_operator_method_decl(name, op, return_type, parameters, nullptr);
+    auto m = new xi_operator_method_decl(name, op, return_type, parameters, is_vararg, nullptr);
     this->set_decl_data(m, generated_name, location);
     this->set_member_data(m, parent, is_static);
 
@@ -288,7 +292,8 @@ llvm::MDTuple* xi_metadata_writer::write_xi_function_decl(xi_function_decl* fd) 
             fd->generated_name,
             fd->source_location,
             fd->return_type,
-            fd->parameters);
+            fd->parameters,
+            fd->is_vararg);
     //TODO: ast function lowered to (?)
 }
 
@@ -311,7 +316,8 @@ llvm::MDTuple* xi_metadata_writer::write_xi_method_decl(xi_method_decl* md) {
             md->parent,
             md->is_static,
             md->return_type,
-            md->parameters);
+            md->parameters,
+            md->is_vararg);
     //TODO: ast function lowered to (?)
 }
 
@@ -333,7 +339,8 @@ llvm::MDTuple* xi_metadata_writer::write_xi_operator_function_decl(xi_operator_f
             fd->source_location,
             fd->op,
             fd->return_type,
-            fd->parameters);
+            fd->parameters,
+            fd->is_vararg);
     //TODO: ast function lowered to (?)
 }
 
@@ -346,7 +353,8 @@ llvm::MDTuple* xi_metadata_writer::write_xi_operator_method_decl(xi_operator_met
             md->is_static,
             md->op,
             md->return_type,
-            md->parameters);
+            md->parameters,
+            md->is_vararg);
     //TODO: ast function lowered to (?)
 }
 

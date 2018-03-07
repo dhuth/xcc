@@ -38,6 +38,7 @@
         OP_LPAREN                           "("
         OP_RPAREN                           ")"
         OP_DOT                              "."
+        OP_DOT3                             "..."
         OP_ARROW                            "->"
         OP_COMA                             ","
         OP_COLON                            ":"
@@ -199,12 +200,14 @@
 %type <decl>                                global-function-forward-decl
 %type <parameter_list>                      global-parameter-decl-list-opt
 %type <parameter_list>                      global-parameter-decl-list
+%type <parameter_list>                      global-vararg-parameter-list
 %type <parameter>                           global-parameter-decl
 %type <method_decl>                         global-method-decl-header
 %type <method_decl>                         global-method-decl-header-cont
 %type <decl>                                global-method-decl
 %type <decl>                                global-method-forward-decl
 %type <parameter_list>                      global-method-parameter-list
+%type <parameter_list>                      global-method-vararg-parameter-list
 %type <struct_decl>                         global-struct-decl-header
 %type <decl>                                global-struct-decl
 %type <decl>                                global-struct-forward-decl
@@ -433,11 +436,19 @@ global-function-decl-header-cont
                         : TOK_IDENTIFIER
                                     /* generics */
                             OP_LPAREN global-parameter-decl-list-opt OP_RPAREN
-                            global-function-return-type-decl                    { $$ = builder.make_xi_function_decl($1, $5, $3, nullptr); }
+                            global-function-return-type-decl                    { $$ = builder.make_xi_function_decl($1, $5, $3, nullptr, false); }
+                        | TOK_IDENTIFIER
+                                    /* generics */
+                            OP_LPAREN global-vararg-parameter-list OP_RPAREN
+                            global-function-return-type-decl                    { $$ = builder.make_xi_function_decl($1, $5, $3, nullptr, true); }
                         | named-op
                                     /* generics */
                             OP_LPAREN global-parameter-decl-list-opt OP_RPAREN
-                            global-function-return-type-decl                    { $$ = builder.make_xi_operator_function_decl($1, $5, $3, nullptr); }
+                            global-function-return-type-decl                    { $$ = builder.make_xi_operator_function_decl($1, $5, $3, nullptr, false); }
+                        | named-op
+                                    /* generics */
+                            OP_LPAREN global-vararg-parameter-list OP_RPAREN
+                            global-function-return-type-decl                    { $$ = builder.make_xi_operator_function_decl($1, $5, $3, nullptr, true); }
                         ;
 global-function-forward-decl
                         : global-function-decl-header OP_SEMICOLON              { $1->is_forward_decl = true; $$ = $1; }
@@ -452,11 +463,19 @@ global-method-decl-header-cont
                         : TOK_IDENTIFIER
                                     /* generics */
                             OP_LPAREN global-method-parameter-list OP_RPAREN
-                            global-function-return-type-decl                    { $$ = builder.make_xi_method_decl($1, $5, $3, nullptr); }
+                            global-function-return-type-decl                    { $$ = builder.make_xi_method_decl($1, $5, $3, nullptr, false); }
+                        | TOK_IDENTIFIER
+                                    /* generics */
+                            OP_LPAREN global-method-vararg-parameter-list OP_RPAREN
+                            global-function-return-type-decl                    { $$ = builder.make_xi_method_decl($1, $5, $3, nullptr, true); }
                         | named-op
                                     /* generics */
                             OP_LPAREN global-method-parameter-list OP_RPAREN
-                            global-function-return-type-decl                    { $$ = builder.make_xi_operator_method_decl($1, $5, $3, nullptr); }
+                            global-function-return-type-decl                    { $$ = builder.make_xi_operator_method_decl($1, $5, $3, nullptr, false); }
+                        | named-op
+                                    /* generics */
+                            OP_LPAREN global-method-vararg-parameter-list OP_RPAREN
+                            global-function-return-type-decl                    { $$ = builder.make_xi_operator_method_decl($1, $5, $3, nullptr, true); }
                         ;
 global-method-decl
                         : global-method-decl-header block-stmt                  { $1->body = $2; $$ = $1; }
@@ -474,9 +493,16 @@ global-method-parameter-list
                                                                                             $5);
                                                                                 }
                         ;
+global-method-vararg-parameter-list
+                        : global-method-parameter-list OP_COMA OP_DOT3          { $$ = $1; }
+                        ;
 global-parameter-decl-list-opt
                         : global-parameter-decl-list                            { $$ = $1; }
                         | %empty                                                { $$ = make_list<parameter_t>(); }
+                        ;
+global-vararg-parameter-list
+                        : global-parameter-decl-list OP_COMA OP_DOT3            { $$ = $1; }
+                        | OP_DOT3                                               { $$ = make_list<parameter_t>(); }
                         ;
 global-parameter-decl-list
                         : global-parameter-decl-list
