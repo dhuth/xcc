@@ -51,7 +51,7 @@ ast_type* xi_builder::get_return_type() const noexcept {
 
 ast_namespace_decl* xi_builder::get_nesting_namespace() const noexcept {
     if(_nesting_namespaces.size() > 0)      return unbox(_nesting_namespaces.top());
-    else                                    return unbox(this->get_global_namespace());
+    else                                    return unbox(this->global_namespace);
 }
 
 ast_type* xi_builder::get_nesting_type() const noexcept {

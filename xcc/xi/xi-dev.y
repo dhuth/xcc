@@ -192,30 +192,32 @@
 %type <decl_list>                           global-decl-list-opt
 %type <decl_list>                           global-decl-list
 %type <decl>                                global-decl
+
 %type <decl>                                namespace-decl
 %type <decl>                                namespace-decl-cont
-%type <function_decl>                       global-function-decl-header
-%type <function_decl>                       global-function-decl-header-cont
-%type <decl>                                global-function-decl
-%type <decl>                                global-function-forward-decl
-%type <parameter_list>                      global-parameter-decl-list-opt
-%type <parameter_list>                      global-parameter-decl-list
-%type <parameter_list>                      global-vararg-parameter-list
-%type <parameter>                           global-parameter-decl
-%type <method_decl>                         global-method-decl-header
-%type <method_decl>                         global-method-decl-header-cont
-%type <decl>                                global-method-decl
-%type <decl>                                global-method-forward-decl
-%type <parameter_list>                      global-method-parameter-list
-%type <parameter_list>                      global-method-vararg-parameter-list
-%type <struct_decl>                         global-struct-decl-header
-%type <decl>                                global-struct-decl
-%type <decl>                                global-struct-forward-decl
-%type <member_list>                         struct-member-decl-list-opt
-%type <member_list>                         struct-member-decl-list
+
+// Function Declarations
+%type <decl>                                function-decl
+%type <function_decl>                       function-decl-body
+%type <function_decl>                       function-decl-header
+%type <function_decl>                       function-decl-name
+%type <parameter_list>                      function-decl-parameters
+%type <parameter_list>                      function-decl-vararg-parameters
+%type <type>                                function-decl-return
+%type <parameter_list>                      parameter-decl-list
+%type <parameter>                           parameter-decl
+
+// Struct Declarations
+%type <decl>                                struct-decl
+%type <struct_decl>                         struct-decl-body
+%type <struct_decl>                         struct-decl-header
+%type <type_list>                           struct-decl-base-types-opt
+%type <member_list>                         struct-member-list-opt
+%type <member_list>                         struct-member-list
 %type <member>                              struct-member-decl
 %type <member>                              field-decl
 
+// Types
 %type <type>                                type
 %type <type>                                TOK_TYPE
 %type <type>                                non-ref-type
@@ -223,14 +225,17 @@
 %type <type>                                prefix-type
 %type <type>                                non-const-prefix-type
 %type <type>                                term-type
-%type <type>                                global-function-return-type-decl
 %type <type_list>                           type-list-opt
 %type <type_list>                           type-list
+%type <type>                                type-name
+%type <type_list>                           type-name-list
 
+// Expressions
 %type <expr>                                expr
 %type <expr>                                assign-expr
 %type <expr>                                logical-or-expr
 %type <expr>                                logical-and-expr
+%type <expr>                                logical-not-expr
 %type <expr>                                binary-or-expr
 %type <expr>                                binary-and-expr
 %type <expr>                                eq-expr
@@ -252,6 +257,7 @@
 
 %type <text>                                TOK_IDENTIFIER
 
+// Operators
 %type <op>                                  OP_ADD
 %type <op>                                  OP_SUB
 %type <op>                                  OP_MUL
@@ -338,6 +344,7 @@
 
 %type <op>                                  assign-op
 
+// Statements
 %type <stmt>                                block-stmt
 %type <decl>                                var-decl-stmt
 %type <stmt>                                non-decl-stmt
@@ -371,9 +378,9 @@ void yyerror(XILTYPE* loc, xi::parser&, xi_builder_t& builder, const char* msg);
 %start  translation-unit
 %%
 
-/* ---------------- *
- * Translation Unit *
- * ---------------- */
+/* ==================== *
+ * = Translation Unit = *
+ * ==================== */
 
 translation-unit
                         : global-decl-list-opt                                  {
@@ -391,13 +398,9 @@ global-decl-list
                         | global-decl                                           { $$ = make_list<decl_t>($1); }
                         ;
 global-decl
-                        : namespace-decl                                        { $$ = SETLOC($1, @1); }
-                        | global-function-forward-decl                          { $$ = SETLOC($1, @1); }
-                        | global-function-decl                                  { $$ = SETLOC($1, @1); }
-                        | global-struct-forward-decl                            { $$ = SETLOC($1, @1); }
-                        | global-struct-decl                                    { $$ = SETLOC($1, @1); }
-                        | global-method-forward-decl                            { $$ = SETLOC($1, @1); }
-                        | global-method-decl                                    { $$ = SETLOC($1, @1); }
+                        : /* attribute-list */ namespace-decl                   { $$ = SETLOC($1, @1); }
+                        | /* attribute-list */ function-decl                    { $$ = SETLOC($1, @1); }
+                        | /* attribute-list */ struct-decl                      { $$ = SETLOC($1, @1); }
                         ;
 
 /* ----- *
@@ -408,14 +411,11 @@ qname
                         : TOK_IDENTIFIER                                        { $$ = make_xi_qname($1);     }
                         | qname OP_DOUBLE_COLON TOK_IDENTIFIER                  { $$ = make_xi_qname($1, $3); }
                         ;
-//gname
-//                        : qname OP_LT generic-expr-list-opt OP_GT               { $$ = make_xi_gname($1, $3); }
-//                        | gname OP_DOUBLE_COLON TOK_IDENTIFIER                  { $$ = make_xi_gname($1, $3); }
-//                        ;
  
-/* ------------------- *
- * Global Declarations *
- * ------------------- */
+ 
+/* ======================= *
+ * = Global Declarations = *
+ * ======================= */
 
 namespace-decl
                         : KW_NAMESPACE namespace-decl-cont                      { $$ = $2; }
@@ -426,119 +426,99 @@ namespace-decl-cont
                         | TOK_IDENTIFIER
                             OP_DOUBLE_COLON namespace-decl-cont                 { $$ = builder.make_namespace_decl($1, make_list<decl_t>($3)); }
                         ;
-global-function-decl-header
-                        : /* attribute-list */ KW_FUNC          global-function-decl-header-cont { $$ = $2; }
-                        | /* attribute-list */ KW_FUNC_C        global-function-decl-header-cont { $2->is_c_extern = true; $$ = $2; }
-                        | /* attribute-list */ KW_FUNC_C_EXTERN global-function-decl-header-cont { $2->is_c_extern = true; $2->is_extern = true; $$ = $2; }
-                        | /* attribute-list */ KW_FUNC_EXTERN   global-function-decl-header-cont { $2->is_extern = true; $$ = $2; }
+
+
+// Function Declarations
+// ---------------------
+
+function-decl
+                        : KW_FUNC          function-decl-body                   { $$ = SETLOC($2, @2); }
+                        | KW_FUNC_C        function-decl-body                   { $$ = SETLOC($2, @2); $2->is_c_extern = true; }
+                        | KW_FUNC_C_EXTERN function-decl-body                   { $$ = SETLOC($2, @2); $2->is_c_extern = true; $2->is_extern = true; }
+                        | KW_FUNC_EXTERN   function-decl-body                   { $$ = SETLOC($2, @2); $2->is_extern = true; }
                         ;
-global-function-decl-header-cont
-                        : TOK_IDENTIFIER
-                                    /* generics */
-                            OP_LPAREN global-parameter-decl-list-opt OP_RPAREN
-                            global-function-return-type-decl                    { $$ = builder.make_xi_function_decl($1, $5, $3, nullptr, false); }
-                        | TOK_IDENTIFIER
-                                    /* generics */
-                            OP_LPAREN global-vararg-parameter-list OP_RPAREN
-                            global-function-return-type-decl                    { $$ = builder.make_xi_function_decl($1, $5, $3, nullptr, true); }
-                        | named-op
-                                    /* generics */
-                            OP_LPAREN global-parameter-decl-list-opt OP_RPAREN
-                            global-function-return-type-decl                    { $$ = builder.make_xi_operator_function_decl($1, $5, $3, nullptr, false); }
-                        | named-op
-                                    /* generics */
-                            OP_LPAREN global-vararg-parameter-list OP_RPAREN
-                            global-function-return-type-decl                    { $$ = builder.make_xi_operator_function_decl($1, $5, $3, nullptr, true); }
+function-decl-body
+                        : function-decl-header block-stmt                       { $1->body = $2; $$ = $1; }
+                        | function-decl-header OP_SEMICOLON                     { $1->is_forward_decl = true; $$ = $1; }
                         ;
-global-function-forward-decl
-                        : global-function-decl-header OP_SEMICOLON              { $1->is_forward_decl = true; $$ = $1; }
+
+function-decl-header
+                        : function-decl-name
+                            /* generic-decl */
+                            function-decl-parameters
+                            function-decl-return                                { $$ = $1; $1->parameters = $2; $1->return_type = $3; }
+                        | function-decl-name
+                            /* generic-decl */
+                            function-decl-vararg-parameters
+                            function-decl-return                                { $$ = $1; $1->parameters = $2; $1->return_type = $3; $1->is_vararg = true; }
                         ;
-global-function-decl
-                        : global-function-decl-header block-stmt                { $1->body = $2; $$ = $1; }
+function-decl-name
+                        : TOK_IDENTIFIER    { $$ = builder.make_xi_function_decl($1, nullptr, make_list<parameter_t>(), nullptr, false); }
+                        | named-op          { $$ = builder.make_xi_operator_function_decl($1, nullptr, make_list<parameter_t>(), nullptr, false); }
                         ;
-global-method-decl-header
-                        : /* attribute-list */ KW_FUNC global-method-decl-header-cont { $$ = $2; }
+function-decl-parameters
+                        : OP_LPAREN
+                            parameter-decl-list
+                            OP_RPAREN                                           { $$ = $2; }
+                        | OP_LPAREN
+                            OP_RPAREN                                           { $$ = make_list<parameter_t>(); }
                         ;
-global-method-decl-header-cont
-                        : TOK_IDENTIFIER
-                                    /* generics */
-                            OP_LPAREN global-method-parameter-list OP_RPAREN
-                            global-function-return-type-decl                    { $$ = builder.make_xi_method_decl($1, $5, $3, nullptr, false); }
-                        | TOK_IDENTIFIER
-                                    /* generics */
-                            OP_LPAREN global-method-vararg-parameter-list OP_RPAREN
-                            global-function-return-type-decl                    { $$ = builder.make_xi_method_decl($1, $5, $3, nullptr, true); }
-                        | named-op
-                                    /* generics */
-                            OP_LPAREN global-method-parameter-list OP_RPAREN
-                            global-function-return-type-decl                    { $$ = builder.make_xi_operator_method_decl($1, $5, $3, nullptr, false); }
-                        | named-op
-                                    /* generics */
-                            OP_LPAREN global-method-vararg-parameter-list OP_RPAREN
-                            global-function-return-type-decl                    { $$ = builder.make_xi_operator_method_decl($1, $5, $3, nullptr, true); }
+function-decl-vararg-parameters
+                        : OP_LPAREN
+                            parameter-decl-list OP_COMA OP_DOT3
+                            OP_RPAREN                                           { $$ = $2; }
+                        | OP_LPAREN
+                            OP_DOT3
+                            OP_RPAREN                                           { $$ = make_list<parameter_t>(); }
                         ;
-global-method-decl
-                        : global-method-decl-header block-stmt                  { $1->body = $2; $$ = $1; }
+function-decl-return
+                        : OP_ARROW type                                         { $$ = $2; }
+                        | %empty                                                { $$ = builder.get_void_type(); }
                         ;
-global-method-forward-decl
-                        : global-method-decl-header OP_SEMICOLON                { $1->is_forward_decl = true; $$ = $1; }
+parameter-decl-list
+                        : parameter-decl-list
+                            OP_COMA parameter-decl                              { $$ = make_list<parameter_t>($1, $3); }
+                        | parameter-decl                                        { $$ = make_list<parameter_t>($1); }
                         ;
-global-method-parameter-list
-                        : KW_SELF OP_COLON type                                 { $$ = make_list<parameter_t>(
-                                                                                            SETLOC(builder.make_xi_parameter_decl("self", $3), @$));
-                                                                                }
-                        | KW_SELF OP_COLON type OP_COMA
-                            global-parameter-decl-list                          { $$ = make_list<parameter_t>(
-                                                                                            SETLOC(builder.make_xi_parameter_decl("self", $3), @1, @3),
-                                                                                            $5);
-                                                                                }
-                        ;
-global-method-vararg-parameter-list
-                        : global-method-parameter-list OP_COMA OP_DOT3          { $$ = $1; }
-                        ;
-global-parameter-decl-list-opt
-                        : global-parameter-decl-list                            { $$ = $1; }
-                        | %empty                                                { $$ = make_list<parameter_t>(); }
-                        ;
-global-vararg-parameter-list
-                        : global-parameter-decl-list OP_COMA OP_DOT3            { $$ = $1; }
-                        | OP_DOT3                                               { $$ = make_list<parameter_t>(); }
-                        ;
-global-parameter-decl-list
-                        : global-parameter-decl-list
-                            OP_COMA global-parameter-decl                       { $$ = make_list<parameter_t>($1, $3); }
-                        | global-parameter-decl                                 { $$ = make_list<parameter_t>($1); }
-                        ;
-global-parameter-decl
+parameter-decl
                         : TOK_IDENTIFIER OP_COLON type                          { $$ = SETLOC(builder.make_xi_parameter_decl($1, $3), @$); }
                         |                OP_COLON type                          { $$ = SETLOC(builder.make_xi_parameter_decl("", $2), @$); }
                         |                         type                          { $$ = SETLOC(builder.make_xi_parameter_decl("", $1), @$); }
                         ;
-global-function-return-type-decl
-                        : OP_ARROW type                                         { $$ = $2; }
-                        | %empty                                                { $$ = builder.get_void_type(); }
+
+
+// Struct Declarations
+// -------------------
+
+struct-decl
+                        : KW_STRUCT struct-decl-body                            { $$ = SETLOC($2, @$); }
                         ;
-global-struct-decl-header
-                        :           /* attributes */
-                          KW_STRUCT
-                            TOK_IDENTIFIER
-                                    /* generics */                              { $$ = builder.make_xi_struct_decl($2, make_list<member_t>()); }
-                        ;
-global-struct-decl
-                        : global-struct-decl-header
+struct-decl-body
+                        : struct-decl-header
                             OP_LBRACE
-                                struct-member-decl-list-opt
-                            OP_RBRACE                                           { $1->members = $3; $$ = $1; }
+                                struct-member-list-opt
+                            OP_RBRACE                                           { $$ = $1; $1->members = $3; }
+                        | struct-decl-header OP_SEMICOLON                       { $$ = $1; $1->is_forward_decl = true; }
                         ;
-global-struct-forward-decl
-                        : global-struct-decl-header OP_SEMICOLON                { $1->is_forward_decl = true; $$ = $1; }
+
+struct-decl-header
+                        : TOK_IDENTIFIER
+                            /* generics */
+                            struct-decl-base-types-opt                          {
+                                                                                    $$ = builder.make_xi_struct_decl($1, make_list<member_t>());
+                                                                                    $$->base_types = $2;
+                                                                                }
                         ;
-struct-member-decl-list-opt
-                        : struct-member-decl-list                               { $$ = $1; }
+struct-decl-base-types-opt
+                        : %empty                                                { $$ = make_list<type_t>(); }
+                        | OP_COLON type-name-list                               { $$ = $2; }
+                        ;
+struct-member-list-opt
+                        : struct-member-list                                    { $$ = $1; }
                         | %empty                                                { $$ = make_list<member_t>(); }
                         ;
-struct-member-decl-list
-                        : struct-member-decl-list struct-member-decl            { $$ = make_list<member_t>($1, $2); }
+struct-member-list
+                        : struct-member-list struct-member-decl                 { $$ = make_list<member_t>($1, $2); }
                         | struct-member-decl                                    { $$ = make_list<member_t>($1); }
                         ;
 struct-member-decl
@@ -548,9 +528,10 @@ field-decl
                         : OP_DOT TOK_IDENTIFIER OP_COLON type OP_SEMICOLON      { $$ = SETLOC(builder.make_xi_field_decl($2, $4), @$); }
                         ;
 
-/* ---------- *
- * Statements *
- * ---------- */
+
+/* ============== *
+ * = Statements = *
+ * ============== */
 
 block-stmt
                         : OP_LBRACE stmt-list-opt OP_RBRACE                     { $$ = builder.make_block_stmt($2); }
@@ -601,6 +582,10 @@ while-stmt
                         ;
 s-body-stmt
                         :  block-stmt                                           { $$ = $1; }
+                        |  OP_COLON expr-stmt                                   { $$ = $2; }
+                        |  OP_COLON break-stmt                                  { $$ = $2; }
+                        |  OP_COLON continue-stmt                               { $$ = $2; }
+                        |  OP_COLON return-stmt                                 { $$ = $2; }
                         ;
 expr-stmt
                         : expr OP_SEMICOLON                                     { $$ = builder.make_expr_stmt($1); }
@@ -617,9 +602,9 @@ continue-stmt
                         : KW_CONTINUE OP_SEMICOLON                              { $$ = builder.make_continue_stmt(); }
                         ;
 
-/* ----------- *
- * Expressions *
- * ----------- */
+/* =============== *
+ * = Expressions = *
+ * =============== */
 
 expr-list-opt
                         : expr-list                                             { $$ = $1; }
@@ -639,10 +624,15 @@ assign-expr
                         ;
 logical-or-expr
                         : logical-or-expr OP_LOGICAL_OR logical-and-expr        { $$ = builder.make_xi_op($2, $1, $3); }
+                        | logical-or-expr OP_LOGICAL_XOR logical-and-expr       { $$ = builder.make_xi_op($2, $1, $3); }
                         | logical-and-expr                                      { $$ = $1; }
                         ;
 logical-and-expr
-                        : logical-and-expr OP_LOGICAL_AND binary-or-expr        { $$ = builder.make_xi_op($2, $1, $3); }
+                        : logical-and-expr OP_LOGICAL_AND logical-not-expr      { $$ = builder.make_xi_op($2, $1, $3); }
+                        | logical-not-expr                                      { $$ = $1; }
+                        ;
+logical-not-expr
+                        : OP_LOGICAL_NOT logical-not-expr                       { $$ = builder.make_xi_op($1, $2); }
                         | binary-or-expr                                        { $$ = $1; }
                         ;
 binary-or-expr
@@ -663,6 +653,7 @@ comp-expr
                         : add-expr OP_LT add-expr                               { $$ = builder.make_xi_op($2, $1, $3); }
                         | add-expr OP_LE add-expr                               { $$ = builder.make_xi_op($2, $1, $3); }
                         | add-expr OP_GT add-expr                               { $$ = builder.make_xi_op($2, $1, $3); }
+                        | add-expr OP_GE add-expr                               { $$ = builder.make_xi_op($2, $1, $3); }
                         | add-expr                                              { $$ = $1; }
                         ;
 add-expr
@@ -689,6 +680,7 @@ prefix-expr
                         : OP_MUL        prefix-expr                             { $$ = builder.make_xi_op(operator_t::__deref__, $2); }
                         | OP_BINARY_AND prefix-expr                             { $$ = builder.make_xi_op(operator_t::__address_of__, $2); }
                         | OP_SUB        prefix-expr                             { $$ = builder.make_xi_op(operator_t::__neg__, $2); }
+                        | OP_BINARY_NOT prefix-expr                             { $$ = builder.make_xi_op(operator_t::__bnot__, $2); }
                         | term-expr                                             { $$ = $1; }
                         ;
 term-expr
@@ -768,9 +760,9 @@ named-op
                         | OP_NAME_ASSIGN_SR                                     { $$ = $1; }
                         ;
 
-/* ---- *
- * Type *
- * ---- */
+/* ======== *
+ * = Type = *
+ * ======== */
 
 type
                         : OP_BINARY_AND non-ref-type                            { $$ = builder.get_reference_type($2); }
@@ -781,6 +773,10 @@ non-ref-type
                         ;
 postfix-type
                         : prefix-type                                           { $$ = $1; }
+//                        | postfix-type
+//                            OP_LBRACKET
+//                                expr-list
+//                            OP_RBRACKET                                         { $$ = builder.get_xi_array_type($1, $3); }
                         ;
 prefix-type
                         : KW_CONST non-const-prefix-type                        { $$ = builder.get_const_type($2); }
@@ -792,12 +788,18 @@ non-const-prefix-type
                         ;
 term-type
                         : TOK_TYPE                                              { $$ = $1; }
-                        | qname                                                 { $$ = SETLOC(builder.get_id_type($1), @$); }
-                        //| gname                                                 { $$ = SETLOC(builder.get_gid_type($1), @$); }
+                        | type-name                                             { $$ = $1; }
                         | OP_LPAREN type OP_RPAREN                              { $$ = $2; }
                         | OP_LPAREN
                             type OP_COMA type-list-opt
                           OP_RPAREN                                             { $$ = builder.get_tuple_type(make_list<type_t>($2, $4)); }
+                        ;
+type-name
+                        : qname                                                 { $$ = SETLOC(builder.get_id_type($1), @$); }
+                        ;
+type-name-list
+                        : type-name                                             { $$ = make_list<type_t>(); }
+                        | type-name-list OP_COMA type-name                      { $$ = make_list<type_t>($1, $3); }
                         ;
 type-list-opt
                         : type-list                                             { $$ = $1; }
