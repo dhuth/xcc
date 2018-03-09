@@ -1,3 +1,4 @@
+subdirs=check
 
 noinst_LIBRARIES    = libxi.a
 
@@ -42,3 +43,6 @@ xi-parser.cpp: $(srcdir)/xi-dev.y
 
 xi-lex.cpp: $(srcdir)/xi-dev.l
 	flex -o xi-lex.cpp $(srcdir)/xi-dev.l
+
+TESTS=@xi_lang_tests@
+TEST_EXTENSIONS=.sh

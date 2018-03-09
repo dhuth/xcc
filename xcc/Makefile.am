@@ -1,4 +1,4 @@
-SUBDIRS=xpp xi ardvark
+SUBDIRS=@xcc_lang_dirs@
 
 bin_PROGRAMS      		= xcc
 
@@ -18,6 +18,7 @@ xcc_core_sources       += ast_type.cpp
 xcc_core_sources       += ast_type_func.cpp
 xcc_core_sources       += ast_type_set.cpp
 xcc_core_sources       += llvm_metadata.cpp
+xcc_core_sources       += xcc.cpp
 
 xcc_core_cppflags       = @llvm_cppflags@
 xcc_core_cxxflags       = -std=c++17 -pthread -fno-rtti
@@ -32,31 +33,10 @@ tree_base.hpp:          $(srcdir)/all_tree_types.def.hpp
 
 xcc_CPPFLAGS            = $(xcc_core_cppflags)
 xcc_CXXFLAGS            = $(xcc_core_cxxflags)
-xcc_SOURCES             = $(xcc_core_sources) xcc.cpp
+xcc_SOURCES             = $(xcc_core_sources)
 xcc_LDADD               = $(xcc_core_libs)
 xcc_LDFLAGS             = $(xcc_core_ldflags)
 
 EXTRA_xcc_DEPENDENCIES  = @xcc_lang_libs@
-
-check_PROGRAMS          = check_tree
-check_PROGRAMS         += check_ast
-TESTS                   = $(check_PROGRAMS)
-
-check_libs              = $(xcc_core_libs) -lgtest
-check_ldflags           = $(xcc_core_ldflags) -L@gtest_libdir@
-check_cppflags			= $(xcc_core_cppflags) -I@gtest_include@
-check_cxxflags          = $(xcc_core_cxxflags) -pthread
-
-check_tree_SOURCES      = check_tree.cpp $(xcc_core_sources)
-check_tree_CPPFLAGS     = $(check_cppflags)
-check_tree_CXXFLAGS     = $(check_cxxflags)
-check_tree_LDADD        = $(check_libs)
-check_tree_LDFLAGS      = $(check_ldflags)
-
-check_ast_SOURCES       = check_ast.cpp $(xcc_core_sources)
-check_ast_CPPFLAGS      = $(check_cppflags)
-check_ast_CXXFLAGS      = $(check_cxxflags)
-check_ast_LDADD         = $(check_libs)
-check_ast_LDFLAGS       = $(check_ldflags)
 
 
