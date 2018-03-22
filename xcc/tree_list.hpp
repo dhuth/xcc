@@ -32,6 +32,13 @@ template<typename TList> struct __tree_list_type_traits {
     typedef typename TList::element_ref_t                   element_ref_t;
 };
 
+template<typename T> struct __is_tree : std::false_type { };
+template<typename T> struct __is_tree<__tree_list_tree<T>>  : std::true_type { };
+template<typename T> struct __is_tree<__tree_list_value<T>> : std::true_type { };
+
+template<typename T, typename R = T>
+using enable_if_tree_t = typename std::enable_if<
+        __is_tree<T>::value, R>::type;
 
 /**
  * Controls tree type conversion to and from the underlying list
@@ -593,6 +600,8 @@ public:
     typedef __reference_list_impl<tree_list<_TreeType>>     type;
 };
 
+
+
 template<typename _Element,
          typename _VecElement>
 inline typename list_base_t<_Element, _VecElement>::iterator_t
@@ -607,56 +616,17 @@ end(list_base_t<_Element, _VecElement>& l) noexcept {
    return l.end();
 }
 
-template<typename _Element>
-inline typename value_list<_Element>::iterator_t
-begin(ptr<value_list<_Element>> p) noexcept {
-    return p->begin();
-}
 
-template<typename _Element>
-inline typename value_list<_Element>::iterator_t
-end(ptr<value_list<_Element>> p) noexcept {
-    return p->end();
-}
+#define __define_begin_end(pt, lt)\
+        template<typename _Element> inline typename lt<_Element>::iterator_t begin(pt<lt<_Element>> p) noexcept { return p->begin(); }\
+        template<typename _Element> inline typename lt<_Element>::iterator_t end(  pt<lt<_Element>> p) noexcept { return p->end();   }
 
-template<typename _Element>
-inline typename tree_list<_Element>::iterator_t
-begin(ptr<tree_list<_Element>> p) noexcept {
-    return p->begin();
-}
+__define_begin_end(ptr, value_list)
+__define_begin_end(ptr, tree_list)
+__define_begin_end(ref, value_list)
+__define_begin_end(ref, tree_list)
 
-template<typename _Element>
-inline typename tree_list<_Element>::iterator_t
-end(ptr<tree_list<_Element>> p) noexcept {
-    return p->end();
-}
-
-
-
-template<typename _Element>
-inline typename tree_list<_Element>::iterator_t
-begin(ref<tree_list<_Element>> lref) noexcept {
-    return lref->begin();
-}
-
-template<typename _Element>
-inline typename tree_list<_Element>::iterator_t
-end(ref<tree_list<_Element>> lref) noexcept {
-    return lref->end();
-}
-
-template<typename _Element>
-inline typename value_list<_Element>::iterator_t
-begin(ref<value_list<_Element>> lref) noexcept {
-    return lref->begin();
-}
-
-template<typename _Element>
-inline typename value_list<_Element>::iterator_t
-end(ref<value_list<_Element>> lref) noexcept {
-    return lref->end();
-}
-
+#undef  __define_begin_end
 }
 
 

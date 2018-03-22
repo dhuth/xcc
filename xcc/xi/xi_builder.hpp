@@ -96,11 +96,13 @@ public:
     void                                        push_xi_function(xi_function_decl*)                                                                           noexcept;
     void                                        push_xi_struct(xi_struct_decl*)                                                                               noexcept;
     void                                        push_xi_method(xi_method_decl*)                                                                               noexcept;
+    void                                        push_xi_block(ast_block_stmt*)                                                                                noexcept;
 
     void                                        leave_xi_namespace()                                                                                          noexcept;
     void                                        leave_xi_function()                                                                                           noexcept;
     void                                        leave_xi_struct()                                                                                             noexcept;
     void                                        leave_xi_method()                                                                                             noexcept;
+    void                                        leave_xi_block()                                                                                              noexcept;
 
     // Defined in xi_lookup.cpp
     ast_decl*                                   find_declaration(ref<xi_qname>)                                                                         const noexcept;

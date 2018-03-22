@@ -1,3 +1,0 @@
-
-header(xpp/xpp.hpp)
-compiler(xpp, dev, (),  xcc::xppdev)

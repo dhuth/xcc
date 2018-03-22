@@ -45,6 +45,14 @@ static inline ast_decl* find_first_member(xi_type_decl* tp, const char* name) {
     return first(olist);
 }
 
+ptr<ast_decl> xi_block_context::find_first_impl(const char* name) {
+    return first_from_list(_block->decls, name);
+}
+
+void xi_block_context::find_all_impl(ptr<list<ast_decl>> lout, const char* name) {
+    all_from_list(_block->decls, lout, name);
+}
+
 ptr<ast_decl> xi_function_context::find_first_impl(const char* name) {
     // search parameters
     return first_from_list(this->func->parameters, name);

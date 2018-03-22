@@ -11,7 +11,7 @@ void maybe_push_context(ast_tree* t, xi_builder& b) {
     switch(t->get_tree_type()) {
     case tree_type_id::ast_namespace_decl:              b.push_namespace(t->as<ast_namespace_decl>());      break;
     case tree_type_id::xi_namespace_decl:               b.push_xi_namespace(t->as<xi_namespace_decl>());    break;
-    case tree_type_id::ast_block_stmt:                  b.push_block(t->as<ast_block_stmt>());              break;
+    case tree_type_id::ast_block_stmt:                  b.push_xi_block(t->as<ast_block_stmt>());           break;
     case tree_type_id::ast_function_decl:               b.push_function(t->as<ast_function_decl>());        break;
     case tree_type_id::xi_function_decl:                b.push_xi_function(t->as<xi_function_decl>());      break;
     case tree_type_id::xi_operator_function_decl:       b.push_xi_function(t->as<xi_function_decl>());      break;
@@ -25,7 +25,7 @@ void maybe_pop_context(ast_tree* t, xi_builder& b) {
     switch(t->get_tree_type()) {
     case tree_type_id::ast_namespace_decl:              b.pop_context();                                    break;
     case tree_type_id::xi_namespace_decl:               b.leave_xi_namespace();                             break;
-    case tree_type_id::ast_block_stmt:                  b.pop_context();                                    break;
+    case tree_type_id::ast_block_stmt:                  b.leave_xi_block();                                 break;
     case tree_type_id::ast_function_decl:               b.pop_context();                                    break;
     case tree_type_id::xi_function_decl:                b.leave_xi_function();                              break;
     case tree_type_id::xi_operator_function_decl:       b.leave_xi_function();                              break;
@@ -77,6 +77,14 @@ void xi_builder::push_xi_function(xi_function_decl* decl) noexcept {
 void xi_builder::leave_xi_function() noexcept {
     this->pop_context();
     _nesting_closure_decls.pop();
+}
+
+void xi_builder::push_xi_block(ast_block_stmt* stmt) noexcept {
+    this->context = this->context->push_context<xi_block_context>(stmt);
+}
+
+void xi_builder::leave_xi_block() noexcept {
+    this->pop_context();
 }
 
 void xi_builder::push_xi_struct(xi_struct_decl* s) noexcept {

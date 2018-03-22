@@ -13,6 +13,7 @@ libxi_a_SOURCES    += xi_metadata.cpp
 libxi_a_SOURCES    += xi_name_mangler.cpp
 libxi_a_SOURCES    += xi_printer.cpp
 libxi_a_SOURCES    += xi_semantic.cpp
+libxi_a_SOURCES    += xi_struct.cpp
 libxi_a_SOURCES    += xi_tc_id.cpp
 libxi_a_SOURCES    += xi_tc_invoke.cpp
 libxi_a_SOURCES    += xi_tc_op.cpp

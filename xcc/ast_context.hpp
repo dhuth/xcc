@@ -202,7 +202,7 @@ private:
 /**
  * A block context
  */
-struct ast_block_context final : public ast_context {
+struct ast_block_context : public ast_context {
 public:
 
     explicit inline ast_block_context(ast_context* prev, ast_block_stmt* block) noexcept

@@ -21,8 +21,27 @@ public:
             : ast_context(prev) {
         // do nothing
     }
-    virtual ~xi_context() = default;
 
+};
+
+
+struct xi_block_context final : public xi_context {
+public:
+
+    explicit inline xi_block_context(ast_context* prev, ast_block_stmt* block) noexcept
+            : xi_context(prev),
+              _block(block) {
+        // do nothing
+    }
+
+protected:
+
+    ptr<ast_decl>   find_first_impl(const char*) override;
+    void            find_all_impl(ptr<list<ast_decl>>, const char*) override;
+
+private:
+
+    ptr<ast_block_stmt>                                     _block;
 };
 
 
@@ -34,12 +53,11 @@ public:
               func(decl) {
         // do nothing
     }
-    virtual ~xi_function_context() = default;
 
 protected:
 
-    virtual ptr<ast_decl> find_first_impl(const char*) override final;
-    virtual void          find_all_impl(ptr<list<ast_decl>>, const char*) override final;
+    ptr<ast_decl>   find_first_impl(const char*) override;
+    void            find_all_impl(ptr<list<ast_decl>>, const char*) override;
 
 private:
 
@@ -56,12 +74,11 @@ public:
               methoddecl(methoddecl) {
         // do nothing
     }
-    virtual ~xi_method_context() = default;
 
 protected:
 
-    virtual ptr<ast_decl> find_first_impl(const char*) override final;
-    virtual void          find_all_impl(ptr<list<ast_decl>>, const char*) override final;
+    ptr<ast_decl>   find_first_impl(const char*) override;
+    void            find_all_impl(ptr<list<ast_decl>>, const char*) override;
 
 private:
 
@@ -78,12 +95,11 @@ public:
               typedecl(typedecl) {
         // do nothing
     }
-    virtual ~xi_type_context() = default;
 
 protected:
 
-    virtual ptr<ast_decl> find_first_impl(const char*) override;
-    virtual void          find_all_impl(ptr<list<ast_decl>>, const char*) override;
+    ptr<ast_decl>   find_first_impl(const char*) override;
+    void            find_all_impl(ptr<list<ast_decl>>, const char*) override;
 
 private:
 
@@ -100,19 +116,17 @@ public:
               structdecl(structdecl) {
         // do nothing
     }
-    virtual ~xi_struct_context() = default;
 
 protected:
 
-    virtual ptr<ast_decl> find_first_impl(const char*) override;
-    virtual void          find_all_impl(ptr<list<ast_decl>>, const char*) override;
+    ptr<ast_decl>   find_first_impl(const char*) override;
+    void            find_all_impl(ptr<list<ast_decl>>, const char*) override;
 
 private:
 
     ptr<xi_struct_decl>                                     structdecl;
 
 };
-
 
 
 }

@@ -28,6 +28,7 @@ struct __select_strong_property_type {
             __property_value<T>>                            type;
 };
 
+
 template<typename _Value>
 struct __property_value {
 public:
@@ -79,6 +80,7 @@ private:
     _Value                                                  _value;
 
 };
+
 
 template<typename T>
 using property = typename __select_strong_property_type<T>::type;

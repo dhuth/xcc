@@ -6,6 +6,7 @@
 
 namespace xcc {
 
+
 /**
  * Common properties for all nodes that belong to a namespace
  */

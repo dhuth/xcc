@@ -42,6 +42,20 @@ typedef __tree_base             tree_t;
 
 typedef                         __tree_base*(*__tree_clone_func_t)(const __tree_base*);
 
+#ifdef TREE_TYPE
+#error "TREE_TYPE Already defined"
+#endif
+#define TREE_TYPE(name, ...)                                    struct name;
+#include "all_tree_types.def.hpp"
+#undef  TREE_TYPE
+
+#ifdef TREE_TYPE
+#error "TREE_TYPE Already defined"
+#endif
+#define TREE_TYPE(name, ...)                                    typename ptr<name> ptr_##name;
+#include "all_tree_types.def.hpp"
+#undef  TREE_TYPE
+
 /* ==================== *
  * Type Trait Utilities *
  * ==================== */
@@ -96,13 +110,6 @@ struct tree_type {
         return false;
     }
 };
-
-#ifdef TREE_TYPE
-#error "TREE_TYPE Already defined"
-#endif
-#define TREE_TYPE(name, ...)                                    struct name;
-#include "all_tree_types.def.hpp"
-#undef  TREE_TYPE
 
 template<tree_type_id Id> struct __tree_id_to_type { };
 template<tree_type_id Id> struct __tree_id_to_base { };

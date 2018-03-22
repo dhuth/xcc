@@ -9,8 +9,16 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_RANLIB
 
-m4_esyscmd([env top_srcdir=. src_dir_expr=\$srcdir sh ./generate_front_ends.sh])
+#                 #
+# - M4 lib info - #
+#                 #
 
+AC_ARG_WITH([m4lib], [AS_HELP_STRING([--m4lib],     [Where m4lib is located (usually /usr/local/share/m4lib)])],
+        [m4lib_dir="$withval/"],
+        [m4lib_dir="/usr/local/share/m4lib"])
+
+#TODO: check m4lib
+#AC_M4LIB
 
 #               #
 # - LLVM Info - #
@@ -20,21 +28,21 @@ AC_ARG_WITH([llvm-prefix],  [AS_HELP_STRING([--llvm-prefix],    [Where llvm is i
         [llvm_prefix="$withval/"],
         [llvm_prefix="/usr"])
 
-AC_SUBST([llvm_config],                 [${llvm_prefix}/bin/llvm-config])
-AC_SUBST([CXXFLAGS],                    ['-g2 -O0'])
+AC_SUBST([llvm_config],                     [${llvm_prefix}/bin/llvm-config])
+AC_SUBST([CXXFLAGS],                        ['-g2 -O0'])
 
-AC_SUBST([llvm_version],                [`$llvm_config --version`])
-AC_SUBST([llvm_version_major],          [${llvm_version:0:1}])
-AC_SUBST([llvm_version_minor],          [${llvm_version:2:1}])
-AC_SUBST([llvm_libs],                   [`$llvm_config --libs core engine scalaropts`])
-AC_SUBST([llvm_syslibs],                [`$llvm_config --system-libs`])
-AC_SUBST([llvm_cppflags],               [`$llvm_config --cppflags`])
-AC_SUBST([llvm_cxxflags],               [`$llvm_config --cxxflags`])
-AC_SUBST([llvm_libdir],                 [`$llvm_config --libdir`])
-AC_SUBST([llvm_ldflags],                [`$llvm_config --ldflags`])
+AC_SUBST([llvm_version],                    [`$llvm_config --version`])
+AC_SUBST([llvm_version_major],              [${llvm_version:0:1}])
+AC_SUBST([llvm_version_minor],              [${llvm_version:2:1}])
+AC_SUBST([llvm_libs],                       [`$llvm_config --libs core engine scalaropts`])
+AC_SUBST([llvm_syslibs],                    [`$llvm_config --system-libs`])
+AC_SUBST([llvm_cppflags],                   [`$llvm_config --cppflags`])
+AC_SUBST([llvm_cxxflags],                   [`$llvm_config --cxxflags`])
+AC_SUBST([llvm_libdir],                     [`$llvm_config --libdir`])
+AC_SUBST([llvm_ldflags],                    [`$llvm_config --ldflags`])
 
-AC_DEFINE_UNQUOTED([LLVM_MAJOR_VERSION], [${llvm_version_major}], [LLVM major version])
-AC_DEFINE_UNQUOTED([LLVM_MINOR_VERSION], [${llvm_version_minor}], [LLVM minor version])
+AC_DEFINE_UNQUOTED([LLVM_MAJOR_VERSION],    [${llvm_version_major}], [LLVM major version])
+AC_DEFINE_UNQUOTED([LLVM_MINOR_VERSION],    [${llvm_version_minor}], [LLVM minor version])
 
 
 #                        #
@@ -47,6 +55,7 @@ AS_IF([test "x$enable_dev_trace_managed_pointers" == xyes],
     [AC_DEFINE([DEV_TRACE_MANAGED_PTRS], [], [Enable development tracing of managed pointers])])
 
 
+m4_esyscmd([env top_srcdir=. src_dir_expr=\$srcdir sh ./generate_front_ends.sh])
 
 AC_CONFIG_HEADERS([xcc/config.h])
 
