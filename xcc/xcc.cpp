@@ -176,21 +176,30 @@ static bool run_compiler_function(const xcc::compiler_function& f, std::string i
     return true;
 }
 
-static std::string handle_pp_from_file(const std::string& filename, xcc_program_args* args) {
-    //TODO: preprocess input file
-    return filename;
+static std::string handle_pp_from_file(const xcc::frontend* lang, const std::string& filename, xcc_program_args* args) {
+
+    std::string outfile;
+    if((args->terminal_stage == xcc::compiler_stage::preprocessor) &&
+            (args->override_out_filename)) {
+        outfile = args->out_filename;
+    }
+    else {
+        outfile = filename + ".pp";
+    }
+    //TODO: get pre processor
+    xcc::all_preprocessors[0].pp_compiler(filename.c_str(), outfile.c_str(), args->pp_args);
+
+
+    return outfile;
 }
 
-static std::string maybe_handle_pp(const std::string& filename, xcc_program_args* args) {
+static std::string maybe_handle_pp(const xcc::frontend* lang, const std::string& filename, xcc_program_args* args) {
     //TODO: maybe?
-    return handle_pp_from_file(filename, args);
+    return handle_pp_from_file(lang, filename, args);
 }
 
 static std::string handle_compile_from_file(const std::string& src_filename, xcc_program_args* args) {
     std::string module_name = src_filename;
-    std::string pp_filename = maybe_handle_pp(src_filename, args);
-
-    assert(args->terminal_stage >= xcc::compiler_stage::compiler_proper);
 
     const xcc::frontend* lang;
     if(!args->override_compiler_name) {
@@ -198,6 +207,11 @@ static std::string handle_compile_from_file(const std::string& src_filename, xcc
     }
     else {
         lang    = get_frontend_by_name(args->compiler_name, args->compiler_version);
+    }
+
+    std::string pp_filename = maybe_handle_pp(lang, src_filename, args);
+    if(args->terminal_stage < xcc::compiler_stage::compiler_proper) {
+        return pp_filename;
     }
 
     std::string outfile;
@@ -227,12 +241,12 @@ static std::string handle_compile_from_file(const std::string& src_filename, xcc
 }
 
 static std::string handle_single_input_file(xcc_program_args* args) {
-    if(args->terminal_stage == xcc::compiler_stage::preprocessor) {
-        return handle_pp_from_file(args->input_filenames[0], args);
-    }
-    else {
+    //if(args->terminal_stage == xcc::compiler_stage::preprocessor) {
+    //    return handle_pp_from_file(args->input_filenames[0], args);
+    //}
+    //else {
         return handle_compile_from_file(args->input_filenames[0], args);
-    }
+    //}
 }
 
 static void handle_multiple_input_files(std::vector<std::string>& outfiles, xcc_program_args* args) {

@@ -12,6 +12,6 @@ tree_header(xi/xi_tree.hpp)
 //             Compiler functions               //
 //  (name, version, pp, extensions, function)   //
 // -------------------------------------------- //
-compiler(xi, dev, m4pp-dev, (xi, x++, hxi),  xcc::xi_dev)
+compiler(xi, dev, cpp, (xi, x++, hxi),  xcc::xi_dev)
 
 

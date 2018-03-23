@@ -1,0 +1,5 @@
+
+
+header(cpp/cpp.hpp)
+preproc(cpp, , xcc::cpp_main)
+
