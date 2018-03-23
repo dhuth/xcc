@@ -26,7 +26,7 @@ xcc_core_libs           = @xcc_lang_libs@ @llvm_libs@ @llvm_syslibs@
 xcc_core_ldflags        = @llvm_ldflags@
 
 ## Special source files
-xcc.cpp:                $(srcdir)/all_frontends.def.hpp
+xcc.cpp:                $(srcdir)/all_frontends.def.hpp $(srcdir)/all_preprocessors.def.hpp
 tree_base.cpp:          $(srcdir)/all_tree_types.def.hpp
 tree_base.hpp:          $(srcdir)/all_tree_types.def.hpp
 

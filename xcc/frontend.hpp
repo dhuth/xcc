@@ -24,6 +24,7 @@ struct translation_unit {
 };
 
 
+typedef int (*pp_function)      (const char*, const char*, const std::vector<std::string>&);
 typedef int (*compiler_function)(const char*, const char*, const std::vector<std::string>&);
 
 enum class compiler_stage : uint32_t {
@@ -33,14 +34,22 @@ enum class compiler_stage : uint32_t {
     linker,
 };
 
+struct preprocessor {
+    std::string                                                         pp_name;
+    std::string                                                         pp_version;
+    pp_function                                                         pp_compiler;
+};
+
 struct frontend {
     std::string                                                         language_name;
     std::string                                                         language_version;
+    std::string                                                         language_default_pp;
     std::vector<std::string>                                            language_extensions;
     compiler_function                                                   language_compiler;
 };
 
 extern const frontend all_frontends[];
+extern const preprocessor all_preprocessors[];
 
 inline void __string_concat(std::stringstream& ss) noexcept {
     // do nothing

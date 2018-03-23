@@ -19,8 +19,8 @@ AC_ARG_WITH([m4lib], [AS_HELP_STRING([--m4lib],     [Where m4lib is located (usu
         [m4lib_dir="$withval/"],
         [m4lib_dir="/usr/local/share/m4lib"])
 
-#TODO: check m4lib
-#AC_M4LIB
+AC_DEFINE_UNQUOTED([M4LIB_DIR],                     ["${m4lib_dir}"],  [m4lib data directory])
+
 
 #               #
 # - LLVM Info - #
@@ -66,7 +66,7 @@ AS_IF([test "x$enable_dev_trace_managed_pointers" == xyes],
     [AC_DEFINE([DEV_TRACE_MANAGED_PTRS], [], [Enable development tracing of managed pointers])])
 
 
-m4_esyscmd([env top_srcdir=. src_dir_expr=\$srcdir sh ./generate_front_ends.sh])
+m4_esyscmd([env m4lib_dir=/usr/local/share/m4lib top_srcdir=. sh ./generate_front_ends.sh])
 
 AC_CONFIG_HEADERS([xcc/config.h])
 

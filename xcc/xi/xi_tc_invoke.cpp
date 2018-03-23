@@ -6,6 +6,7 @@
  */
 
 #include "xi_semantic.hpp"
+#include "xi_builder.hpp"
 #include "error.hpp"
 
 #include <algorithm>

@@ -6,6 +6,7 @@
  */
 
 #include "xi_semantic.hpp"
+#include "xi_builder.hpp"
 
 namespace xcc {
 
@@ -34,7 +35,7 @@ ast_stmt* xi_tc_walker::tc_return_stmt(ast_return_stmt* s, xi_builder& b) {
         ast_type* rtype = b.get_return_type();
         ast_expr* rexpr = tc_single_expr(s->expr, b);
 
-        //TODO: may infer return type
+        //TODO: maybe infer return type
         s->expr = b.cast(rtype, rexpr);
     }
     return s;

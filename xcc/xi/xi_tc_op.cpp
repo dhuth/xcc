@@ -6,6 +6,7 @@
  */
 
 #include "xi_semantic.hpp"
+#include "xi_builder.hpp"
 #include "error.hpp"
 
 namespace xcc {
@@ -52,7 +53,9 @@ ast_expr* xi_tc_walker::tc_op_expr(xi_op_expr* e, xi_builder& b) {
         auto ue = tc_single_expr((ast_expr*) e->operands[0], b);
 
         switch((xi_operator) e->op) {
-        case xi_operator::__neg__:      return b.make_op_expr(ast_op::neg, ue);
+        case xi_operator::__neg__:      return b.make_op_expr(ast_op::neg,  ue);
+        case xi_operator::__not__:      return b.make_op_expr(ast_op::lnot, ue);
+        case xi_operator::__bnot__:     return b.make_op_expr(ast_op::bnot, ue);
         default:
             __throw_unhandled_operator(__FILE__, __LINE__, (xi_operator) e->op, "xi_tc_walker::tc_op_expr");
         }

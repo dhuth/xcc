@@ -20,9 +20,13 @@ void translation_unit::append(ast_variable_decl* decl) noexcept {
 
 const frontend all_frontends[] = {
 #include "all_frontend_compilers.def.hpp"
-        {"", "", {""}, NULL}
+        {"", "", "", {""}, NULL}
 };
 
+const preprocessor all_preprocessors[] = {
+#include "all_preprocessors.def.hpp"
+        {"", "", NULL}
+};
 
 }
 

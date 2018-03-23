@@ -28,5 +28,8 @@ tree_type(xi_op_expr,                   ast_expr,           parse,              
 tree_type(xi_invoke_expr,               ast_expr,           parse,                              semantic-type-check)
 tree_type(xi_index_expr,                ast_expr,           parse,                              semantic-type-check)
 tree_type(xi_tuple_expr,                ast_expr,           parse,                              lower-ast)
+//tree_type(xi_get_expr,                  ast_expr,           semantic-type-check,                ??)
+//tree_type(xi_move_expr,                 ast_expr,           semantic-type-check,                ??)
+//tree_type(xi_copy_expr,                 ast_expr,           semantic-type-check,                ??)
 tree_type(xi_member_expr,               ast_expr,           semantic-type-check,                lower-ast)
 tree_type(xi_deref_expr,                ast_expr,           semantic-type-check,                lower-ast)

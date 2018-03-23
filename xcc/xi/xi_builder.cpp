@@ -16,6 +16,7 @@ namespace xcc {
 xi_builder::xi_builder(translation_unit& tu) noexcept
         : ast_builder<xi_name_mangler, xi_type_provider>(tu) {
     _the_auto_type = this->get_typeset()->get_new<xi_auto_type>();
+    _decl_implementations = this->create_declmap<xi_struct_decl, xi_structimpl_info>();
 }
 
 xi_builder::~xi_builder() noexcept {
@@ -39,31 +40,6 @@ xi_decl_type* xi_builder::get_object_type(ast_decl* decl) noexcept {
 
 xi_tuple_type* xi_builder::get_tuple_type(list<ast_type>* types) noexcept {
     return this->get_typeset()->get_new<xi_tuple_type>(types);
-}
-
-ast_type* xi_builder::get_declaration_type(ast_decl* decl) noexcept {
-    switch(decl->get_tree_type()) {
-    case tree_type_id::xi_parameter_decl:                   return decl->as<xi_parameter_decl>()->type;
-    case tree_type_id::xi_field_decl:                       return decl->as<xi_field_decl>()->type;
-    case tree_type_id::xi_function_decl:
-    case tree_type_id::xi_operator_function_decl:
-        return this->get_function_type(
-                decl->as<xi_function_decl>()->return_type,
-                map(decl->as<xi_function_decl>()->parameters,
-                        [&](xi_parameter_decl* d)->ast_type* {
-                            return this->get_declaration_type(d);
-        }), decl->as<xi_function_decl>()->is_vararg);
-    case tree_type_id::xi_method_decl:
-    case tree_type_id::xi_operator_method_decl:
-        return this->get_function_type(
-                decl->as<xi_method_decl>()->return_type,
-                map(decl->as<xi_method_decl>()->parameters,
-                        [&](xi_parameter_decl* d)->ast_type* {
-                            return this->get_declaration_type(d);
-        }), decl->as<xi_method_decl>()->is_vararg);
-    default:
-        return __ast_builder_impl::get_declaration_type(decl);
-    }
 }
 
 xi_id_type* xi_builder::get_id_type(xi_qname* name) const noexcept {

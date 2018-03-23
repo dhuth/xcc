@@ -8,8 +8,8 @@
 #ifndef XCC_XI_XI_SEMANTIC_HPP_
 #define XCC_XI_XI_SEMANTIC_HPP_
 
-#include "xi_builder.hpp"
 #include "xi_walker.hpp"
+#include "xi_tree.hpp"
 
 #include <functional>
 

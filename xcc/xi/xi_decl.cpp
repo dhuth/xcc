@@ -99,6 +99,31 @@ bool xi_builder::samedecl(ast_decl* lhs, ast_decl* rhs) const noexcept {
     }
 }
 
+ast_type* xi_builder::get_declaration_type(ast_decl* decl) noexcept {
+    switch(decl->get_tree_type()) {
+    case tree_type_id::xi_parameter_decl:                   return decl->as<xi_parameter_decl>()->type;
+    case tree_type_id::xi_field_decl:                       return decl->as<xi_field_decl>()->type;
+    case tree_type_id::xi_function_decl:
+    case tree_type_id::xi_operator_function_decl:
+        return this->get_function_type(
+                decl->as<xi_function_decl>()->return_type,
+                map(decl->as<xi_function_decl>()->parameters,
+                        [&](xi_parameter_decl* d)->ast_type* {
+                            return this->get_declaration_type(d);
+        }), decl->as<xi_function_decl>()->is_vararg);
+    case tree_type_id::xi_method_decl:
+    case tree_type_id::xi_operator_method_decl:
+        return this->get_function_type(
+                decl->as<xi_method_decl>()->return_type,
+                map(decl->as<xi_method_decl>()->parameters,
+                        [&](xi_parameter_decl* d)->ast_type* {
+                            return this->get_declaration_type(d);
+        }), decl->as<xi_method_decl>()->is_vararg);
+    default:
+        return __ast_builder_impl::get_declaration_type(decl);
+    }
+}
+
 
 }
 

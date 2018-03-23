@@ -12,6 +12,7 @@
 #include "ast_builder.hpp"
 #include "ast_type.hpp"
 #include "xi_tree.hpp"
+#include "xi_struct.hpp"
 #include "xi_name_mangler.hpp"
 #include <stack>
 
@@ -141,10 +142,17 @@ public:
      * Utilities *
      * --------- */
 
-    //template<typename T>
-    //inline treemap<ast_type, T> create_typemap() const noexcept {
-    //    return this->get_type_provider()->create_typemap<T>();
-    //}
+    template<typename T>
+    inline treemap<ast_type, T> create_typemap() const noexcept {
+        return this->get_type_provider()->create_typemap<T>();
+    }
+
+    template<typename Tdecl, typename T>
+    inline treemap<Tdecl, T> create_declmap() const noexcept {
+        return treemap<Tdecl, T>([=](Tdecl* r, Tdecl* l)->bool {
+            return this->samedecl(r, l);
+        });
+    }
 
 private:
 
@@ -153,6 +161,8 @@ private:
     std::stack<ptr<ast_namespace_decl>>                     _nesting_namespaces;
     std::stack<ptr<ast_type>>                               _nesting_types;
     std::stack<ptr<ast_decl>>                               _nesting_closure_decls;
+
+    treemap<xi_struct_decl, xi_structimpl_info>             _decl_implementations;
 
 };
 

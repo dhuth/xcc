@@ -12,7 +12,9 @@
 #include "error.hpp"
 
 namespace xcc {
-
+    struct xi_structimpl_info {
+        //...
+    };
 }
 
 

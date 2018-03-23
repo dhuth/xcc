@@ -6,6 +6,7 @@
  */
 
 #include "xi_semantic.hpp"
+#include "xi_builder.hpp"
 
 namespace xcc {
 
@@ -42,9 +43,13 @@ void xi_tc_walker::visit_xi_operator_method_decl(xi_operator_method_decl* fdecl,
 }
 
 bool xi_builder::semantic_pass() noexcept {
+    // type check
+    // ----------
     xi_tc_walker tcwalker;
-
     tcwalker.visit(this->global_namespace, *this);
+
+    // TODO: conditional operators and short circuiting
+    // ------------------------------------------------
 
     return true;
 }
