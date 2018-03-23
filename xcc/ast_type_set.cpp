@@ -5,8 +5,9 @@
  *      Author: derick
  */
 
-#include "ast_type_set.hpp"
+#include "ast.hpp"
 #include "ast_type_func.hpp"
+#include "ast_type_set.hpp"
 
 namespace xcc {
 

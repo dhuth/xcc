@@ -9,8 +9,9 @@
 #define XCC_XI_XI_BUILDER_HPP_
 
 
-#include "xi_tree.hpp"
 #include "ast_builder.hpp"
+#include "ast_type.hpp"
+#include "xi_tree.hpp"
 #include "xi_name_mangler.hpp"
 #include <stack>
 
@@ -114,6 +115,16 @@ public:
     // Defined in xi_decl.cpp
     bool                                        samedecl(ast_decl*, ast_decl*)                                                                          const noexcept;
 
+
+    /* ---------------------- *
+     * Implementation details *
+     * ---------------------- */
+
+    // Defined in xi_struct.cpp
+    void                                        implement_type(ast_type*)                                                                                     noexcept;
+    void                                        implement_decl(ast_decl*)                                                                                     noexcept;
+
+
     /* --------------------- *
      * Major compiler passes *
      * --------------------- */
@@ -124,6 +135,16 @@ public:
     bool                                        semantic_pass(/* error log info*/)                                                                            noexcept;
     bool                                        mangle_names_pass()                                                                                           noexcept;
     bool                                        lower_pass(ircode_context&/* error log info*/)                                                                noexcept;
+
+
+    /* --------- *
+     * Utilities *
+     * --------- */
+
+    //template<typename T>
+    //inline treemap<ast_type, T> create_typemap() const noexcept {
+    //    return this->get_type_provider()->create_typemap<T>();
+    //}
 
 private:
 

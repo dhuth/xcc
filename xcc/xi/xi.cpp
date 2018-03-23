@@ -65,7 +65,7 @@ int ximain(const char* input_filename, const char* output_filename, std::map<std
     // TODO: read options
 
     translation_unit        tu;
-    ircode_context          ctx(output_filename);
+    ircode_context          ctx(args["--module-name"]);
     xi_builder              builder(tu);
 
     // TODO: loop over included library objects

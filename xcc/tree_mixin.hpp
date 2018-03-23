@@ -14,18 +14,20 @@
 
 namespace xcc {
 
-template<typename           _MixinType>
+template<typename       _MixinType>
 struct mixin : public _MixinType {
 public:
 
     template<typename...    _Args>
-    explicit inline mixin(tree_t* p, _Args&&... args) noexcept
-            : _MixinType(p, std::forward<_Args>(args)...) {
+    explicit inline mixin(tree_t* t, _Args&&... args) noexcept
+            : _MixinType(t, std::forward<_Args>(args)...) {
         // do nothing
     }
 
-    mixin(const mixin&) = delete;
-    mixin(mixin&&) = delete;
+    explicit inline mixin(tree_t* t, const _MixinType& m) noexcept
+            : _MixinType(t, m) {
+        // do nothing
+    }
 
 };
 

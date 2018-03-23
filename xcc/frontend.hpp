@@ -29,8 +29,8 @@ typedef int (*compiler_function)(const char*, const char*, const std::vector<std
 enum class compiler_stage : uint32_t {
     preprocessor,
     compiler_proper,
+    assembler,
     linker,
-    assembler
 };
 
 struct frontend {
@@ -41,6 +41,23 @@ struct frontend {
 };
 
 extern const frontend all_frontends[];
+
+inline void __string_concat(std::stringstream& ss) noexcept {
+    // do nothing
+}
+
+template<typename T, typename... R>
+inline void __string_concat(std::stringstream& ss, T&& v0, R&&... r) noexcept {
+    ss << v0;
+    __string_concat(ss, std::forward<R>(r)...);
+}
+
+template<typename... T>
+inline std::string string_concat(T&&... args) noexcept {
+    std::stringstream ss;
+    __string_concat(ss, std::forward<T>(args)...);
+    return ss.str();
+}
 
 }
 

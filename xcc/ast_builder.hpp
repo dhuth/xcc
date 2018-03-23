@@ -10,11 +10,11 @@
 
 #include "ast.hpp"
 #include "ast_context.hpp"
+#include "ast_type_fwd.hpp"
+
 #include <map>
 #include <unordered_map>
 #include <functional>
-
-#include "ast_type_fwd.hpp"
 
 namespace xcc {
 
@@ -397,6 +397,7 @@ public:
 protected:
 
     inline ast_typeset* get_typeset() const noexcept { return _the_typeset; }
+    inline ast_type_provider* get_type_provider() const noexcept { return _type_provider_ptr; }
 
 };
 

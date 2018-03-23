@@ -52,13 +52,16 @@ typedef                         __tree_base*(*__tree_clone_func_t)(const __tree_
 #ifdef TREE_TYPE
 #error "TREE_TYPE Already defined"
 #endif
-#define TREE_TYPE(name, ...)                                    typename ptr<name> ptr_##name;
+#define TREE_TYPE(name, ...)                                    typedef ptr<name> ptr_##name;
 #include "all_tree_types.def.hpp"
 #undef  TREE_TYPE
 
 /* ==================== *
  * Type Trait Utilities *
  * ==================== */
+
+template<typename T>
+using tree_vector_t = std::vector<T>;
 
 template<typename T>
 using is_tree = std::is_base_of<__tree_base, T>;
@@ -192,8 +195,8 @@ protected:
     }
 
     const tree_type_id                                          _type;
-    std::vector<ptr<__tree_base>>                               _strong_references;
-    std::vector<ptr<__tree_base>>                               _weak_references;
+    tree_vector_t<ptr<__tree_base>>                             _strong_references;
+    tree_vector_t<ptr<__tree_base>>                             _weak_references;
 
 };
 

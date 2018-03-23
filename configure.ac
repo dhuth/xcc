@@ -9,6 +9,8 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_RANLIB
 
+#TODO: define somewhere else
+
 #                 #
 # - M4 lib info - #
 #                 #
@@ -29,7 +31,6 @@ AC_ARG_WITH([llvm-prefix],  [AS_HELP_STRING([--llvm-prefix],    [Where llvm is i
         [llvm_prefix="/usr"])
 
 AC_SUBST([llvm_config],                     [${llvm_prefix}/bin/llvm-config])
-AC_SUBST([CXXFLAGS],                        ['-g2 -O0'])
 
 AC_SUBST([llvm_version],                    [`$llvm_config --version`])
 AC_SUBST([llvm_version_major],              [${llvm_version:0:1}])
@@ -41,8 +42,13 @@ AC_SUBST([llvm_cxxflags],                   [`$llvm_config --cxxflags`])
 AC_SUBST([llvm_libdir],                     [`$llvm_config --libdir`])
 AC_SUBST([llvm_ldflags],                    [`$llvm_config --ldflags`])
 
-AC_DEFINE_UNQUOTED([LLVM_MAJOR_VERSION],    [${llvm_version_major}], [LLVM major version])
-AC_DEFINE_UNQUOTED([LLVM_MINOR_VERSION],    [${llvm_version_minor}], [LLVM minor version])
+AC_DEFINE_UNQUOTED([LLVM_MAJOR_VERSION],    [${llvm_version_major}],            [LLVM major version])
+AC_DEFINE_UNQUOTED([LLVM_MINOR_VERSION],    [${llvm_version_minor}],            [LLVM minor version])
+AC_DEFINE_UNQUOTED([LLVM_EXEC_LLI],         ["${llvm_prefix}/bin/lli"],         [LLVM interpreter])
+AC_DEFINE_UNQUOTED([LLVM_EXEC_LLC],         ["${llvm_prefix}/bin/llc"],         [LLVM compiler])
+AC_DEFINE_UNQUOTED([LLVM_EXEC_AR],          ["${llvm_prefix}/bin/llvm-ar"],     [LLVM archiver])
+AC_DEFINE_UNQUOTED([LLVM_EXEC_AS],          ["${llvm_prefix}/bin/llvm-as"],     [LLVM assembler])
+AC_DEFINE_UNQUOTED([LLVM_EXEC_LINK],        ["${llvm_prefix}/bin/llvm-link"],   [LLVM linker])
 
 
 #                        #
@@ -50,6 +56,11 @@ AC_DEFINE_UNQUOTED([LLVM_MINOR_VERSION],    [${llvm_version_minor}], [LLVM minor
 #                        #
 
 AC_ARG_ENABLE([dev-trace-managed-pointers], [], [], [])
+AC_ARG_ENABLE([debug],                      [], [], [])
+
+AS_IF([test "x$enable_debug" == xyes],
+    [AC_SUBST([CXXFLAGS],                        ['-g2 -O0'])],
+    [AC_SUBST([CXXFLAGS],                        ['-O3'])])
 
 AS_IF([test "x$enable_dev_trace_managed_pointers" == xyes],
     [AC_DEFINE([DEV_TRACE_MANAGED_PTRS], [], [Enable development tracing of managed pointers])])

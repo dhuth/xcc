@@ -36,10 +36,6 @@ template<typename T> struct __is_tree : std::false_type { };
 template<typename T> struct __is_tree<__tree_list_tree<T>>  : std::true_type { };
 template<typename T> struct __is_tree<__tree_list_value<T>> : std::true_type { };
 
-template<typename T, typename R = T>
-using enable_if_tree_t = typename std::enable_if<
-        __is_tree<T>::value, R>::type;
-
 /**
  * Controls tree type conversion to and from the underlying list
  */
@@ -56,7 +52,7 @@ public:
 
     typedef _Element                                        element_t;
     typedef _Element&                                       element_ref_t;
-    typedef std::vector<_Element>                           vector_t;
+    typedef tree_vector_t<_Element>                         vector_t;
     typedef typename vector_t::iterator                     iterator_t;
     typedef typename vector_t::const_iterator               const_iterator_t;
 
@@ -155,7 +151,7 @@ public:
     __tree_list_iterator(const __tree_list_iterator& i)  noexcept : _IterBase(i) { };
     __tree_list_iterator(const __tree_list_iterator&& i) noexcept : _IterBase(i) { };
 
-    // Use vectors iterator for most everything
+    // Use _IterBase iterator for most everything
     using _IterBase::operator++;
     using _IterBase::operator+;
     using _IterBase::operator-;
@@ -177,7 +173,7 @@ public:
 
     typedef _TreeType*                                                          element_t;
     typedef _TreeType*                                                          element_ref_t;  // TODO
-    typedef std::vector<ptr<tree_t>>                                            vector_t;
+    typedef tree_vector_t<ptr<tree_t>>                                          vector_t;
     typedef __tree_list_iterator<_TreeType, typename vector_t::iterator>        iterator_t;
     typedef __tree_list_iterator<_TreeType, typename vector_t::const_iterator>  const_iterator_t;
 
@@ -354,7 +350,7 @@ public:
         adapter::insert(_vector, vec.end(), l.begin(), l.end());
     }
 
-    explicit inline __tree_list_base(vector_t& vec, const std::vector<element_t>& v) noexcept
+    explicit inline __tree_list_base(vector_t& vec, const tree_vector_t<element_t>& v) noexcept
             : base_type(),
               _vector(vec) {
         adapter::insert(_vector, vec.end(), v.begin(), v.end());
@@ -470,7 +466,7 @@ public:
 
 private:
 
-    std::vector<_VecElement>&                               _vector;
+    tree_vector_t<_VecElement>&                             _vector;
 
 };
 
@@ -527,7 +523,7 @@ public:
 
 protected:
 
-    std::vector<_Element>                                               _list;
+    tree_vector_t<_Element>                                             _list;
 
 };
 

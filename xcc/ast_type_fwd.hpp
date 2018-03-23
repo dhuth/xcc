@@ -8,8 +8,6 @@
 #ifndef XCC_AST_TYPE_FWD_HPP_
 #define XCC_AST_TYPE_FWD_HPP_
 
-#include "ast.hpp"
-
 namespace xcc {
 
 // defined in ast_type.hpp

@@ -8,7 +8,9 @@
 #ifndef XCC_AST_TYPE_SET_HPP_
 #define XCC_AST_TYPE_SET_HPP_
 
-#include "ast_builder.hpp"
+#include "ast.hpp"
+#include "ast_type_fwd.hpp"
+#include "ast_type_func.hpp"
 #include <map>
 #include <set>
 

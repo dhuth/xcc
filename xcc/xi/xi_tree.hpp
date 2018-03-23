@@ -6,7 +6,6 @@
 
 namespace xcc {
 
-
 /**
  * Common properties for all nodes that belong to a namespace
  */
@@ -29,6 +28,39 @@ struct xi_namespace_member_base {
 
     weak_ref<ast_namespace_decl>                                    ns;
 };
+
+
+/**
+ * Common properties for forward declarations
+ */
+template<typename T>
+struct xi_forwardable {
+
+    explicit inline xi_forwardable(T* t) noexcept
+            : is_forward_decl(t, false),
+              definition(t, nullptr) {
+        /* do nothing */
+    }
+
+    explicit inline xi_forwardable(T* t, bool is_forward_decl, T* definition) noexcept
+            : is_forward_decl(t, is_forward_decl),
+              definition(t, definition) {
+        /* do nothing */
+    }
+
+    explicit inline xi_forwardable(T* t, const xi_forwardable<T>& o) noexcept
+            : is_forward_decl(t, o.is_forward_decl),
+              definition(t, o.definition) {
+        /* do nothing */
+    }
+
+    property<bool>                                          is_forward_decl;
+    weak_ref<T>                                             definition;
+};
+
+template<typename T, typename U = T>
+using enable_if_forwardable_t =
+        typename enable_if_base_of<xi_forwardable<T>, T, U>::type;
 
 
 /**
@@ -259,7 +291,8 @@ struct xi_function_base {
 struct xi_function_decl : public implement_tree<tree_type_id::xi_function_decl>,
                           public ast_externable,
                           public xi_function_base,
-                          public xi_namespace_member_base {
+                          public xi_namespace_member_base,
+                          public xi_forwardable<xi_function_decl> {
 public:
 
     explicit inline xi_function_decl(
@@ -272,9 +305,9 @@ public:
                       ast_externable(this, false, true),
                       xi_function_base(this, return_type, parameters, is_vararg, body),
                       xi_namespace_member_base(this),
+                      xi_forwardable<xi_function_decl>(this),
                       lowered_func(this, nullptr),
                       is_inline(this, false),
-                      is_forward_decl(this, false),
                       is_c_extern(this, false) {
         /* do nothing */
     }
@@ -290,9 +323,9 @@ public:
                       ast_externable(this, false, true),
                       xi_function_base(this, return_type, parameters, is_vararg, body),
                       xi_namespace_member_base(this),
+                      xi_forwardable<xi_function_decl>(this),
                       lowered_func(this, nullptr),
                       is_inline(this, false),
-                      is_forward_decl(this, false),
                       is_c_extern(this, false) {
         /* do nothing */
     }
@@ -302,15 +335,14 @@ public:
               ast_externable(this, f),
               xi_function_base(this, f),
               xi_namespace_member_base(this, f),
+              xi_forwardable<xi_function_decl>(this, f),
               lowered_func(this, f.lowered_func),
               is_inline(this, f.is_inline),
-              is_forward_decl(this, f.is_forward_decl),
               is_c_extern(this, false) {
         /* do nothing */
     }
 
     property<bool>                                                  is_inline;          //! the code generator should try to inline this function
-    property<bool>                                                  is_forward_decl;    //! is a forward declaration
     property<bool>                                                  is_c_extern;        //! is this a C function
     weak_ref<ast_function_decl>                                     lowered_func;
 
@@ -374,7 +406,8 @@ public:
  */
 struct xi_method_decl : public implement_tree<tree_type_id::xi_method_decl>,
                         public ast_externable,
-                        public xi_function_base {
+                        public xi_function_base,
+                        public xi_forwardable<xi_method_decl> {
 public:
 
     explicit inline xi_method_decl(
@@ -386,8 +419,8 @@ public:
                     : base_type(name),
                       ast_externable(this),
                       xi_function_base(this, return_type, parameters, is_vararg, body),
-                      lowered_func(this, nullptr),
-                      is_forward_decl(this, false) {
+                      xi_forwardable<xi_method_decl>(this),
+                      lowered_func(this, nullptr) {
         /* do nothing */
     }
 
@@ -401,8 +434,8 @@ public:
                     : base_type(id, name),
                       ast_externable(this),
                       xi_function_base(this, return_type, parameters, is_vararg, body),
-                      lowered_func(this, nullptr),
-                      is_forward_decl(this, false) {
+                      xi_forwardable<xi_method_decl>(this),
+                      lowered_func(this, nullptr) {
         /* do nothing */
     }
 
@@ -410,12 +443,11 @@ public:
             : base_type((base_type&) m),
               ast_externable(this, m),
               xi_function_base(this, m),
-              lowered_func(this, m.lowered_func),
-              is_forward_decl(this, m.is_forward_decl) {
+              xi_forwardable<xi_method_decl>(this, m),
+              lowered_func(this, m.lowered_func) {
         /* do nothing */
     }
 
-    property<bool>                                                  is_forward_decl;    //! is a forward declaration
     weak_ref<xi_function_decl>                                      lowered_func;
 
 };
@@ -447,47 +479,48 @@ public:
 /**
  * A struct declarations
  */
-struct xi_struct_decl : public implement_tree<tree_type_id::xi_struct_decl> {
+struct xi_struct_decl : public implement_tree<tree_type_id::xi_struct_decl>,
+                        public xi_forwardable<xi_struct_decl> {
 public:
 
 
     explicit inline xi_struct_decl(std::string name, list<xi_member_decl>* members) noexcept
             : base_type(name, nullptr, members),
-              base_types(this, new list<ast_type>()),
-              is_forward_decl(this, false) {
+              xi_forwardable<xi_struct_decl>(this),
+              base_types(this, new list<ast_type>()) {
         /* do nothing */
     }
 
     explicit inline xi_struct_decl(std::string name, list<xi_member_decl>* members, list<ast_type>* base_types) noexcept
             : base_type(name, nullptr, members),
-              base_types(this, base_types),
-              is_forward_decl(this, false) {
+              xi_forwardable<xi_struct_decl>(this),
+              base_types(this, base_types) {
         /* do nothing */
     }
 
     explicit inline xi_struct_decl(tree_type_id id, std::string name, list<xi_member_decl>* members) noexcept
             : base_type(id, name, nullptr, members),
-              base_types(this, new list<ast_type>()),
-              is_forward_decl(this, false) {
+              xi_forwardable<xi_struct_decl>(this),
+              base_types(this, new list<ast_type>()) {
         /* do nothing */
     }
 
     explicit inline xi_struct_decl(tree_type_id id, std::string name, list<xi_member_decl>* members, list<ast_type>* base_types) noexcept
             : base_type(id, name, nullptr, members),
-              base_types(this, base_types),
-              is_forward_decl(this, false) {
+              xi_forwardable<xi_struct_decl>(this),
+              base_types(this, base_types) {
         /* do nothing */
     }
 
     explicit inline xi_struct_decl(const xi_struct_decl& s) noexcept
             : base_type((base_type&) s),
-              base_types(this, s.base_types),
-              is_forward_decl(this, s.is_forward_decl) {
+              xi_forwardable<xi_struct_decl>(this, s),
+              base_types(this, s.base_types) {
         /* do nothing */
     }
 
-    property<bool>                                                  is_forward_decl;
     property<list<ast_type>>                                        base_types;
+
 };
 
 

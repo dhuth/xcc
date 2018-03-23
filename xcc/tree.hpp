@@ -15,6 +15,7 @@
 #include "tree_algorithms.hpp"
 #include "tree_property.hpp"
 #include "tree_dispatch.hpp"
+#include "tree_map.hpp"
 
 
 

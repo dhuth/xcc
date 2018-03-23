@@ -8,10 +8,10 @@
 #ifndef XCC_XI_XI_DECL_HPP_
 #define XCC_XI_XI_DECL_HPP_
 
-#include "xi_builder.hpp"
+#include "xi_tree.hpp"
+#include "error.hpp"
 
 namespace xcc {
-
 
 }
 

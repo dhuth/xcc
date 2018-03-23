@@ -5,6 +5,7 @@
  *      Author: derick
  */
 
+#include "xi_builder.hpp"
 #include "xi_decl.hpp"
 #include "error.hpp"
 

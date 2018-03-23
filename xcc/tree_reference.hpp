@@ -12,7 +12,7 @@
 
 namespace xcc {
 
-using tvec_t = std::vector<ptr<__tree_base>>;
+using tvec_t = tree_vector_t<ptr<__tree_base>>;
 
 template<typename>                          struct __reference;
 template<typename>                          struct __reference_impl_base;

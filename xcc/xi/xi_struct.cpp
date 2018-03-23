@@ -5,7 +5,8 @@
  *      Author: derick
  */
 
-#include "xi_struct.cpp"
+#include "xi_builder.hpp"
+#include "xi_struct.hpp"
 
 
 namespace xcc {
