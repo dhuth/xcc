@@ -12,18 +12,18 @@
 
 namespace xcc {
 
-using tvec_t = tree_vector_t<ptr<__tree_base>>;
+using tvec_t = tree_vector_t<ptr<tree_t>>;
 
 template<typename>                          struct __reference;
 template<typename>                          struct __reference_impl_base;
 template<typename>                          struct __pick_reference_impl;
-template<typename, tvec_t __tree_base::*>   struct __bound_vec_reference;
+template<typename, tvec_t tree_t::*>        struct __bound_vec_reference;
 
 template<typename T>                        using reference             = __reference<T>;
 template<typename T>                        using reference_impl_base   = __reference_impl_base<T>;
 
-template<typename T>                        using strong_ref    = __bound_vec_reference<T, &__tree_base::_strong_references>;
-template<typename T>                        using weak_ref      = __bound_vec_reference<T, &__tree_base::_weak_references>;
+template<typename T>                        using strong_ref    = __bound_vec_reference<T, &tree_t::_strong_references>;
+template<typename T>                        using weak_ref      = __bound_vec_reference<T, &tree_t::_weak_references>;
 
 template<typename _TreeType>
 struct __reference_base {
@@ -33,6 +33,8 @@ public:
     typedef std::function<void(_TreeType*)>                 setfunc_t;
 
     typedef _TreeType*                                      pointer_t;
+    typedef ptr<_TreeType>                                  managed_ptr_t;
+
     explicit inline __reference_base(getfunc_t get, setfunc_t set) noexcept
             : get(get),
               set(set) {
@@ -54,6 +56,21 @@ public:
             vec[idx] = box<tree_t>(t);
         };
     }
+
+    // by reference to managed pointer
+    // -------------------------------
+    static getfunc_t getbyptrref(managed_ptr_t& p) noexcept {
+        return [=,&p]() -> _TreeType* {
+            return unbox(p);
+        };
+    }
+
+    static setfunc_t setbyptrref(managed_ptr_t& p) noexcept {
+        return [=,&p](_TreeType* t) {
+            p = box(t);
+        };
+    }
+
 
 protected:
 
@@ -166,7 +183,7 @@ public:
 };
 
 
-template<typename _TreeType, tvec_t __tree_base::* _VecMember>
+template<typename _TreeType, tvec_t tree_t::* _VecMember>
 struct __bound_vec_reference : public __reference<_TreeType> {
 public:
 

@@ -129,6 +129,7 @@ private:
     }
 
     tree_t* read_node(llvm::Metadata*) noexcept;
+    tree_type_id read_tree_type_id(llvm::Metadata*) noexcept;
 
     template<typename T>
     list<T>* read_list(llvm::Metadata* md) {
@@ -215,7 +216,8 @@ private:
     template<typename> friend struct __llvm_io_writer;
     template<typename> friend struct __llvm_io_tree_writer;
 
-    llvm::Metadata* write_node(tree_t* t) noexcept;
+    llvm::Metadata* write_node(tree_t*) noexcept;
+    llvm::Metadata* write_tree_type_id(tree_type_id) noexcept;
 
     template<typename T>
     llvm::Metadata* write_list(tree_list<T>* tlist) noexcept {

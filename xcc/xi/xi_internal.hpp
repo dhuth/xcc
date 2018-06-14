@@ -36,42 +36,42 @@ typedef xcc::xi_builder                                         xi_builder_t;
 // Parser helper functions
 
 template<typename Tptr, typename T = typename std::remove_pointer<Tptr>::type>
-inline xcc::list<T>* make_list() {
+static inline xcc::list<T>* make_list() {
     return new xcc::list<T>();
 }
 
 template<typename Tptr, typename T = typename std::remove_pointer<Tptr>::type>
-inline xcc::list<T>* make_list(Tptr el) {
+static inline xcc::list<T>* make_list(Tptr el) {
     return new xcc::list<T>(el);
 }
 
 template<typename Tptr, typename T = typename std::remove_pointer<Tptr>::type>
-inline xcc::list<T>* make_list(xcc::list<T>* l, Tptr el) {
+static inline xcc::list<T>* make_list(xcc::list<T>* l, Tptr el) {
     l->push_back(el);
     return l;
 }
 
 template<typename Tptr, typename T = typename std::remove_pointer<Tptr>::type>
-inline xcc::list<T>* make_list(Tptr lexpr, Tptr rexpr) {
+static inline xcc::list<T>* make_list(Tptr lexpr, Tptr rexpr) {
     return make_list<Tptr>(make_list<Tptr>(lexpr), rexpr);
 }
 
 template<typename Tptr, typename T = typename std::remove_pointer<Tptr>::type>
-inline xcc::list<T>* make_list(Tptr el, xcc::list<T>* l) {
+static inline xcc::list<T>* make_list(Tptr el, xcc::list<T>* l) {
     l->push_front(el);
     return l;
 }
 
-inline xcc::xi_qname* make_xi_qname(const char* name) {
+static inline xcc::xi_qname* make_xi_qname(const char* name) {
     return new xcc::xi_qname(std::string(name));
 }
 
-inline xcc::xi_qname* make_xi_qname(xcc::xi_qname* qname, const char* name) {
+static inline xcc::xi_qname* make_xi_qname(xcc::xi_qname* qname, const char* name) {
     return new xcc::xi_qname(qname, std::string(name));
 }
 
 template<typename Tptr>
-inline Tptr setloc(Tptr e, const xi::location& loc) {
+static inline Tptr setloc(Tptr e, const xi::location& loc) {
     xcc::source_span span;
     span.first.line_number      = loc.begin.line;
     span.first.column_number    = loc.begin.column;
@@ -89,7 +89,7 @@ inline Tptr setloc(Tptr e, const xi::location& loc) {
 }
 
 template<typename Tptr>
-inline Tptr setloc(Tptr e, const xi::location& begin, const xi::location& end) {
+static inline Tptr setloc(Tptr e, const xi::location& begin, const xi::location& end) {
     xcc::source_span span;
     span.first.line_number      = begin.begin.line;
     span.first.column_number    = begin.begin.column;
@@ -104,6 +104,11 @@ inline Tptr setloc(Tptr e, const xi::location& begin, const xi::location& end) {
     }
 
     return xcc::setloc(e, span);
+}
+
+static inline void set_file_and_line(xi::location* loc, const char* fname, int line) {
+    //TODO: manage these pointers
+    loc->initialize(new std::string(fname), line);
 }
 
 #endif

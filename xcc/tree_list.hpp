@@ -36,6 +36,7 @@ template<typename T> struct __is_tree : std::false_type { };
 template<typename T> struct __is_tree<__tree_list_tree<T>>  : std::true_type { };
 template<typename T> struct __is_tree<__tree_list_value<T>> : std::true_type { };
 
+
 /**
  * Controls tree type conversion to and from the underlying list
  */
@@ -138,6 +139,7 @@ public:
 };
 
 
+
 /**
  * Tree list iterator over node types
  */
@@ -162,6 +164,7 @@ public:
         return (_TreeType*) unbox(ptr);
     }
 };
+
 
 
 /**
@@ -297,11 +300,12 @@ public:
 };
 
 
+
 /**
  * The base list class for all lists that exist as tree nodes
  */
 template<typename _Element, typename _VecElement>
-struct __tree_list_base : public __extend_tree<tree_type_id::tree_list, __tree_base> {
+struct __tree_list_base : public __extend_tree<tree_type_id::tree_list, tree_t> {
 public:
 
     typedef __tree_list_base<_Element, _VecElement>         base_list_t;
@@ -471,6 +475,7 @@ private:
 };
 
 
+
 /**
  * A list of values
  */
@@ -528,6 +533,7 @@ protected:
 };
 
 
+
 /**
  * A list of tree nodes
  */
@@ -550,11 +556,13 @@ public:
 
 };
 
+
+
 /**
  * Select a list type based on the type of element
  */
 template<typename T> struct __list_type_selector {
-    typedef typename std::conditional<std::is_base_of<__tree_base, T>::value,
+    typedef typename std::conditional<std::is_base_of<tree_t, T>::value,
                             __tree_list_tree<T>,
                             __tree_list_value<T>>::type         type;
 };

@@ -29,8 +29,7 @@ protected:
         throw std::runtime_error(std::string("No registered function for type id ") + __all_tree_types[(uint64_t) id].name);
     }
 
-    typedef std::function<TReturnType(__tree_base*, TParamTypes...)>
-                                                                    dispatch_wrapper_t;
+    typedef std::function<TReturnType(tree_t*, TParamTypes...)>     dispatch_wrapper_t;
 
     bool find_visitor_function(tree_type_id id, dispatch_wrapper_t& func) {
         while(true) {
@@ -47,7 +46,7 @@ protected:
         }
     }
 
-    std::map<tree_type_id, dispatch_wrapper_t>                  _function_map;
+    std::map<tree_type_id, dispatch_wrapper_t>                      _function_map;
 };
 
 template<typename    TReturnType,
@@ -56,7 +55,7 @@ struct __dispatch_visitor_base_notvoid : public __dispatch_visitor_base<TReturnT
 protected:
 
     typedef typename __dispatch_visitor_base<TReturnType, TParamTypes...>::dispatch_wrapper_t
-                                                                dispatch_wrapper_t;
+                                                                    dispatch_wrapper_t;
 
 public:
 
@@ -79,7 +78,7 @@ public:
 
     template<typename T>
     inline TReturnType visit(reference<tree_list<T>>& p, TParamTypes... args) {
-        return this->visit((__tree_base*)p, args...);
+        return this->visit((tree_t*)p, args...);
     }
 
     template<typename TFuncReturnType,
@@ -94,7 +93,7 @@ public:
     template<typename TFuncReturnType,
              typename TTreeType>
     void addfunction(dispatch_function_type<TFuncReturnType, TTreeType> func) {
-        auto wfunc = [=](__tree_base* t, TParamTypes... args) {
+        auto wfunc = [=](tree_t* t, TParamTypes... args) {
             return func(t->as<TTreeType>(), args...);
         };
         this->_function_map[tree_type_id_from<TTreeType>()] = wfunc;
@@ -106,7 +105,7 @@ protected:
              typename TClassType,
              typename TTreeType>
     void addmethod(dispatch_method_type<TFuncReturnType, TClassType, TTreeType> func) {
-        auto wfunc = [=](__tree_base* t, TParamTypes... args) -> TReturnType {
+        auto wfunc = [=](tree_t* t, TParamTypes... args) -> TReturnType {
             return (TReturnType) (static_cast<TClassType*>(this)->*func)(t->as<TTreeType>(), args...);
         };
         this->_function_map[tree_type_id_from<TTreeType>()] = wfunc;
@@ -124,7 +123,7 @@ public:
     __dispatch_visitor_base_void() = default;
     virtual ~__dispatch_visitor_base_void() = default;
 
-    inline void visit(__tree_base* t, TParamTypes... args) {
+    inline void visit(tree_t* t, TParamTypes... args) {
         if(t == nullptr) {
             this->handle_null_tree(args...);
         }
@@ -139,7 +138,7 @@ public:
     }
     template<typename T>
     inline void visit(reference<tree_list<T>>& p, TParamTypes... args) {
-        return this->visit((__tree_base*)p, args...);
+        return this->visit((tree_t*)p, args...);
     }
 
     template<typename TTreeType>
@@ -151,7 +150,7 @@ public:
 
     template<typename TTreeType>
     void addfunction(dispatch_function_type<TTreeType> func) {
-        auto wfunc = [=](__tree_base* t, TParamTypes... args) {
+        auto wfunc = [=](tree_t* t, TParamTypes... args) {
             return func(t->as<TTreeType>(), args...);
         };
         this->_function_map[tree_type_id_from<TTreeType>()] = wfunc;
@@ -162,7 +161,7 @@ protected:
     template<typename TClassType,
              typename TTreeType>
     void addmethod(dispatch_method_type<TClassType, TTreeType> func) {
-        auto wfunc = [=](__tree_base* t, TParamTypes... args) {
+        auto wfunc = [=](tree_t* t, TParamTypes... args) {
             return (static_cast<TClassType*>(this)->*func)(t->as<TTreeType>(), args...);
         };
         this->_function_map[tree_type_id_from<TTreeType>()] = wfunc;
@@ -172,13 +171,14 @@ protected:
 
 template<typename T, typename... TArgs>
 struct __dispatch_visitor_selector {
-    typedef __dispatch_visitor_base_notvoid<T, TArgs...> type;
+    typedef __dispatch_visitor_base_notvoid<T, TArgs...>            type;
 };
 
 template<typename... TArgs>
 struct __dispatch_visitor_selector<void, TArgs...> {
-    typedef __dispatch_visitor_base_void<TArgs...>         type;
+    typedef __dispatch_visitor_base_void<TArgs...>                  type;
 };
+
 
 
 /* ==================================== *
@@ -226,7 +226,7 @@ public:
 
     template<typename TTreeType>
     inline void add(visit_func_t<TTreeType> func) {
-        auto wfunc = [=](__tree_base**, __tree_base* node, TParamTypes... args) {
+        auto wfunc = [=](tree_t**, tree_t* node, TParamTypes... args) {
             func(node->as<TTreeType>(), args...);
         };
         this->_functions[tree_type_id_from<TTreeType>()] = wfunc;
@@ -234,8 +234,8 @@ public:
 
     template<typename TReturnType, typename TTreeType>
     inline void add(translate_func_t<TReturnType, TTreeType> func) {
-        auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
-            *retv = static_cast<__tree_base*>(
+        auto wfunc = [=](tree_t** retv, tree_t* node, TParamTypes... args) {
+            *retv = static_cast<tree_t*>(
                     func(node->as<TTreeType>(), args...));
         };
         this->_functions[tree_type_id_from<TTreeType>()] = wfunc;
@@ -245,8 +245,8 @@ public:
              typename TTreeType,
              typename TClassType>
     inline void add(translate_method_t<TReturnType, TTreeType, TClassType> mtd) {
-        auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
-            *retv = static_cast<__tree_base*>(
+        auto wfunc = [=](tree_t** retv, tree_t* node, TParamTypes... args) {
+            *retv = static_cast<tree_t*>(
                     (static_cast<TClassType*>(this)->*mtd)(node->as<TTreeType>(), args...));
         };
         this->_functions[tree_type_id_from<TTreeType>()] = wfunc;
@@ -254,7 +254,7 @@ public:
 
     template<typename TTreeType, typename TClassType>
     inline void add(visit_method_t<TTreeType, TClassType> mtd) {
-        auto wfunc = [=](__tree_base** retv, __tree_base* node, TParamTypes... args) {
+        auto wfunc = [=](tree_t** retv, tree_t* node, TParamTypes... args) {
             (static_cast<TClassType*>(this)->*mtd)(node->as<TTreeType>(), args...);
         };
         this->_functions[tree_type_id_from<TTreeType>()] = wfunc;
@@ -265,11 +265,11 @@ public:
     virtual void postvisit(tree_type_id, TBaseType*, TParamTypes...) { } // ???
 
     TBaseType* visit(TBaseType* t, TParamTypes... args) {
-        return static_cast<TBaseType*>(this->visit_internal(static_cast<__tree_base*>(t), args...));
+        return static_cast<TBaseType*>(this->visit_internal(static_cast<tree_t*>(t), args...));
     }
 
     inline void set(TBaseType* t, TBaseType* v) noexcept {
-        this->_visited[t] = box((__tree_base*)v);
+        this->_visited[t] = box((tree_t*)v);
     }
 
     inline void ignore(std::vector<tree_type_id>&& ignore_ids) {
@@ -290,7 +290,7 @@ public:
 
 private:
 
-    __tree_base* visit_internal(__tree_base* t, TParamTypes... args) {
+    tree_t* visit_internal(tree_t* t, TParamTypes... args) {
         if(t != nullptr) {
 
             if(this->_use_ignore) {
@@ -328,8 +328,8 @@ private:
 
 protected:
 
-    virtual __tree_base* visit_impl(__tree_base*, TParamTypes...) = 0;
-    inline void walk_children(__tree_base* t, TParamTypes... args) {
+    virtual tree_t* visit_impl(tree_t*, TParamTypes...) = 0;
+    inline void walk_children(tree_t* t, TParamTypes... args) {
         if(t->is<TBaseType>()) {
             this->begin(t->get_tree_type(), static_cast<TBaseType*>(t), args...);
         }
@@ -344,14 +344,13 @@ protected:
         }
     }
 
-    typedef std::function<void(__tree_base**,__tree_base*,TParamTypes...)>
-                                                                            fwalk_t;
+    typedef std::function<void(tree_t**,tree_t*,TParamTypes...)>    fwalk_t;
 
-    __tree_base* do_visit(__tree_base* t, TParamTypes... args) {
+    tree_t* do_visit(tree_t* t, TParamTypes... args) {
         auto tpid = t->get_tree_type();
         fwalk_t func;
         if(this->find_visitor_func(tpid, func)) {
-            __tree_base*    retval = t;
+            tree_t*    retval = t;
             func(&retval, t, args...);
             _visited[t] = retval;
             return retval;
@@ -360,7 +359,7 @@ protected:
     }
 
     std::map<tree_type_id, fwalk_t>                                     _functions;
-    std::map<__tree_base*, __tree_base*>                                _visited;
+    std::map<unique_tree_id_t, tree_t*>                                 _visited;
     std::vector<tree_type_id>                                           _ignore;
     std::vector<tree_type_id>                                           _include;
     bool                                                                _use_ignore;
@@ -394,7 +393,7 @@ public:
 
 protected:
 
-    virtual __tree_base* visit_impl(__tree_base* t, TParamTypes... args) final override {
+    virtual tree_t* visit_impl(tree_t* t, TParamTypes... args) final override {
         auto new_t = this->do_visit(t, args...);
         this->walk_children(new_t, args...);
         return new_t;
@@ -409,7 +408,7 @@ public:
 
 protected:
 
-    virtual __tree_base* visit_impl(__tree_base* t, TParamTypes... args) final override {
+    virtual tree_t* visit_impl(tree_t* t, TParamTypes... args) final override {
         this->walk_children(t, args...);
         auto new_t = this->do_visit(t, args...);
         return new_t;

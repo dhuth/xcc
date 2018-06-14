@@ -74,6 +74,7 @@ static void merge_namespaces_in(xi_namespace_decl* ns) noexcept {
 }
 
 
+
 /* ======================= *
  * = Declaration Nesting = *
  * ======================= */
@@ -90,6 +91,7 @@ void dom_nesting_walker::visit_xi_member_decl(xi_member_decl* mdecl, xi_builder&
     mdecl->ns           = b.get_nesting_namespace();
     mdecl->parent       = b.get_nesting_type();
 }
+
 
 
 /* =================== *
@@ -114,6 +116,7 @@ ast_type* dom_qname_resolver::resolve_id_type(xi_id_type* t, xi_builder& b) {
         }
     }
 }
+
 
 
 /* ============================ *

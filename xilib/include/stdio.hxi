@@ -4,5 +4,10 @@
 
 #include "stdstring.hxi"
 
+namespace std {
+
+
+}
+
 
 #endif  // __XI_STD_IO_HXI_

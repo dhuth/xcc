@@ -8,6 +8,7 @@
 #include "xi-parser.hpp"
 #include "source.hpp"
 #include <cstring>
+#include <cstdio>
 #include <ctype.h>
 
 #define     SHIFTLOC                                    yyloc->columns(strlen(yytext));
@@ -38,6 +39,15 @@ static inline char* copy_cstring(const char* s) {
     return d;
 }
 
+static inline void handle_pp_line(char* txt, XILTYPE* yyloc) {
+    char    fname[256];
+    int     line;
+    int     flags;
+    
+    sprintf(txt, "# %d %s %d", line, fname, flags);
+    set_file_and_line(yyloc, fname, line);
+}
+
 %}
 
 IDENTIFIER                                              [a-zA-Z_][a-zA-Z0-9_]*
@@ -57,6 +67,8 @@ DBL_STRING_CHAR                                         [^\\"]
 DBL_STRING_ESCAPE                                       \\.
 DBL_STRING_LITERAL                                      ["]({DBL_STRING_CHAR}|{DBL_STRING_ESCAPE})*["]
 
+PP_LINE                                                 ^#[^\n]*\n
+
 
 %x                                                      XI_STATE_BLOCK_COMMENT
 
@@ -67,6 +79,10 @@ DBL_STRING_LITERAL                                      ["]({DBL_STRING_CHAR}|{D
         /* white space */
 \n                                                      NEWLINE
 [ \t]+                                                  IGNORE
+
+
+        /* pre processor */
+{PP_LINE}                                               handle_pp_line(yytext, yyloc);
 
 
         /* comments */

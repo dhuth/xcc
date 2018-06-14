@@ -10,7 +10,7 @@
 
 namespace xcc {
 
-int cpp_main(const char* infile, const char* outfile, std::vector<std::string>& args) {
+int cpp_main(const char* infile, const char* outfile, const std::vector<std::string>& args) {
     std::stringstream cmd;
     cmd << "/usr/bin/cpp";
     for(auto a: args) {

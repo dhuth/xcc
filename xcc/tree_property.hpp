@@ -19,12 +19,19 @@ namespace xcc {
 
 
 template<typename>  struct __property_value;
-template<typename>  struct __property_value_base;
 
 template<typename T>
 struct __select_strong_property_type {
     typedef std::conditional_t<is_tree<T>::value,
             strong_ref<T>,
+            __property_value<T>>                            type;
+};
+
+
+template<typename T>
+struct __select_weak_property_type {
+    typedef std::conditional_t<is_tree<T>::value,
+            weak_ref<T>,
             __property_value<T>>                            type;
 };
 
@@ -84,6 +91,9 @@ private:
 
 template<typename T>
 using property = typename __select_strong_property_type<T>::type;
+
+template<typename T>
+using weak_property = typename __select_weak_property_type<T>::type;
 
 template<typename T>
 using property_value = __property_value<T>;

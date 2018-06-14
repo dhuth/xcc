@@ -8,6 +8,8 @@
 #ifndef XCC_TREE_BASE_HPP_
 #define XCC_TREE_BASE_HPP_
 
+#include "cppdefs.hpp"
+
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -20,7 +22,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "cppdefs.hpp"
 #include "cpp_type_traits_ext.hpp"
 #include "managed_ptr.hpp"
 
@@ -31,16 +32,17 @@ template<typename T>
 using ptr = managed_ptr<T>;
 
 
+
 /* ==================== *
  * Forward declarations *
  * ==================== */
 
-struct tree_type;
+struct tree_type;                                                               // tree type info class
 struct __tree_base;
 
-typedef __tree_base             tree_t;
-
-typedef                         __tree_base*(*__tree_clone_func_t)(const __tree_base*);
+typedef __tree_base                                         tree_t;             // global name for tree base type
+typedef __tree_base*                                        unique_tree_id_t;   // unique tree identifier type
+typedef __tree_base*(*__tree_clone_func_t)(const __tree_base*);                 // __tree_clone_func_t
 
 #ifdef TREE_TYPE
 #error "TREE_TYPE Already defined"
@@ -56,21 +58,24 @@ typedef                         __tree_base*(*__tree_clone_func_t)(const __tree_
 #include "all_tree_types.def.hpp"
 #undef  TREE_TYPE
 
+
+
 /* ==================== *
  * Type Trait Utilities *
  * ==================== */
 
 template<typename T>
-using tree_vector_t = std::vector<T>;
+using tree_vector_t = std::vector<T>;                                   // tree_vector_t (typename)
 
 template<typename T>
-using is_tree = std::is_base_of<__tree_base, T>;
+using is_tree = std::is_base_of<__tree_base, T>;                        // is_tree (struct integral_const<bool, V>)
 
 template<typename TTree, typename T>
-struct enable_if_tree : std::enable_if<is_tree<TTree>::value, T> { };
+struct enable_if_tree : std::enable_if<is_tree<TTree>::value, T> { };   // enable_if_tree (struct enable_if<...>)
 
 template<typename TTree, typename T = int>
-using enable_if_tree_t = typename enable_if_tree<TTree, T>::type;
+using enable_if_tree_t = typename enable_if_tree<TTree, T>::type;       // enable_if_tree_t (typename)
+
 
 
 /* ============== *
@@ -136,6 +141,7 @@ struct tree_type_info {
     typedef typename __tree_id_to_type<Id>::type                type;
     typedef typename __tree_id_to_base<Id>::type                base_type;
 };
+
 
 
 /* =============== *
@@ -215,6 +221,8 @@ public:
     typedef __extend_tree<VType, TBase>                         base_type;
     static const tree_type_id                                   type_id = VType;
 
+protected:
+
     template<typename... TArgs>
     explicit inline __extend_tree(TArgs... args): TBase(VType, args...) { }
 
@@ -229,7 +237,7 @@ public:
 
 
 template<tree_type_id tp, typename base = __tree_base>
-using extend_tree = __extend_tree<tp, base>;
+using extend_tree = __attribute__((depricated("Use implement_tree"))) __extend_tree<tp, base>;
 
 template<tree_type_id tp>
 using implement_tree = __extend_tree<tp, typename tree_type_info<tp>::base_type>;

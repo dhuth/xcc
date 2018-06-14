@@ -23,8 +23,6 @@
 
 namespace xcc {
 
-extern void setup_xi_printer();
-
 int ximain(const char*, const char*, std::map<std::string, std::string>&);
 int xi_dev(const char*, const char*, const std::vector<std::string>&);
 
@@ -60,8 +58,6 @@ static void parse_file(const char* filename, xi_builder& builder) noexcept {
 //  [.]     functions                       lower xi_function_decls to ast_function_decls (including operators and overloads and function bodies)
 
 int ximain(const char* input_filename, const char* output_filename, std::map<std::string, std::string>& args) {
-    setup_xi_printer();
-
     // TODO: read options
 
     translation_unit        tu;
